@@ -275,15 +275,92 @@ class FaithConnectApp extends StatelessWidget {
         '/messages': (_) => const ChatListScreen(),
       },
 
-      home: ValueListenableBuilder(
-        valueListenable: AuthService.instance.currentUser,
+      home: const _AppRoot(),
+    );
+  }
+}
 
-        builder: (context, value, _) {
-          if (value == null) return const LoginScreen();
+// ============================================
+// SPLASH + AUTH ROOT
+// ============================================
 
-          return const HomePage();
-        },
-      ),
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> with SingleTickerProviderStateMixin {
+  bool _showSplash = true;
+  late final AnimationController _fadeCtrl;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (!mounted) return;
+      _fadeCtrl.reverse().then((_) {
+        if (mounted) setState(() => _showSplash = false);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showSplash) {
+      return FadeTransition(
+        opacity: _fadeAnim,
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'lib/LOGO/playstore.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'FaithConnect',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD4AF37),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return ValueListenableBuilder(
+      valueListenable: AuthService.instance.currentUser,
+      builder: (context, value, _) {
+        if (value == null) return const LoginScreen();
+        return const HomePage();
+      },
     );
   }
 }
@@ -589,7 +666,15 @@ class TopAppBarSection extends StatelessWidget {
               ],
             ),
 
-            child: const Icon(Icons.add, color: Colors.white, size: 24),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'lib/LOGO/playstore.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
 
           const SizedBox(width: 12),

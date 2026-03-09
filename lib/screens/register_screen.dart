@@ -165,17 +165,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                 opacity: _fadeAnim,
                 child: Column(
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(
-                        Icons.person_add_rounded,
-                        color: Colors.white,
-                        size: 30,
+                    // FaithConnect logo
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.asset(
+                        'lib/LOGO/playstore.png',
+                        width: 70,
+                        height: 70,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(height: 14),

@@ -127,18 +127,14 @@ class _LoginScreenState extends State<LoginScreen>
                 opacity: _fadeAnim,
                 child: Column(
                   children: [
-                    // Cross icon
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 36,
+                    // FaithConnect logo
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'lib/LOGO/playstore.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(height: 16),
