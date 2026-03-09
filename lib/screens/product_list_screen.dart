@@ -79,10 +79,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
   List<Product> _applySearch(List<Product> products) {
     if (_searchQuery.isEmpty) return products;
     return products
-        .where((p) =>
-            p.productName.toLowerCase().contains(_searchQuery) ||
-            p.description.toLowerCase().contains(_searchQuery) ||
-            p.category.toLowerCase().contains(_searchQuery))
+        .where(
+          (p) =>
+              p.productName.toLowerCase().contains(_searchQuery) ||
+              p.description.toLowerCase().contains(_searchQuery) ||
+              p.category.toLowerCase().contains(_searchQuery),
+        )
         .toList();
   }
 
@@ -95,8 +97,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
         elevation: 0,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF444444), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF444444),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -119,34 +124,41 @@ class _ProductListScreenState extends State<ProductListScreen> {
               decoration: InputDecoration(
                 hintText: 'Search products…',
                 hintStyle: const TextStyle(
-                    color: Color(0xFFAAAAAA), fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: _gold, size: 20),
+                  color: Color(0xFFAAAAAA),
+                  fontSize: 14,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: _gold,
+                  size: 20,
+                ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            size: 18, color: Color(0xFF888888)),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Color(0xFF888888),
+                        ),
                         onPressed: () => _searchCtrl.clear(),
                       )
                     : null,
                 filled: true,
                 fillColor: const Color(0xFFFAF9F6),
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      const BorderSide(color: Color(0xFFE8E8E8)),
+                  borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      const BorderSide(color: Color(0xFFE8E8E8)),
+                  borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      const BorderSide(color: _gold, width: 1.5),
+                  borderSide: const BorderSide(color: _gold, width: 1.5),
                 ),
               ),
             ),
@@ -169,19 +181,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   final cat = _categories[index];
                   final isActive = cat == _selectedCategory;
                   return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedCategory = cat),
+                    onTap: () => setState(() => _selectedCategory = cat),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: isActive ? _gold : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isActive
-                              ? _gold
-                              : const Color(0xFFE0E0E0),
+                          color: isActive ? _gold : const Color(0xFFE0E0E0),
                         ),
                       ),
                       child: Text(
@@ -202,9 +213,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
 
           Divider(
-              height: 1,
-              thickness: 0.8,
-              color: Colors.grey.withValues(alpha: 0.15)),
+            height: 1,
+            thickness: 0.8,
+            color: Colors.grey.withValues(alpha: 0.15),
+          ),
 
           // ── Product Grid via StreamBuilder ─────────────────────────────
           // StreamBuilder subscribes to the Firestore "products" collection.
@@ -213,8 +225,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Expanded(
             child: StreamBuilder<List<Product>>(
               // Firestore read: stream of products, filtered by category.
-              stream: MarketplaceService.instance
-                  .getProductsStream(category: _selectedCategory),
+              stream: MarketplaceService.instance.getProductsStream(
+                category: _selectedCategory,
+              ),
               builder: (context, snapshot) {
                 // ── Loading state ─────────────────────────────────────
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -226,22 +239,37 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   );
                 }
 
-                // ── Error state ───────────────────────────────────────
-                if (snapshot.hasError) {
+                // ── Error state (only when no cached data available) ──────
+                if (snapshot.hasError &&
+                    (snapshot.data == null || snapshot.data!.isEmpty)) {
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(40),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.error_outline_rounded,
-                              color: _gold, size: 48),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Could not load products.\n${snapshot.error}',
+                          Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 56,
+                            color: _gold.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No products found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF444444),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Check back later for new listings.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Color(0xFF666666), fontSize: 14),
+                            style: TextStyle(
+                              color: Color(0xFF888888),
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -250,8 +278,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 }
 
                 // Apply client-side search on top of Firestore results.
-                final products =
-                    _applySearch(snapshot.data ?? []);
+                final products = _applySearch(snapshot.data ?? []);
 
                 // ── Empty state ───────────────────────────────────────
                 if (products.isEmpty) {
@@ -261,9 +288,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shopping_bag_outlined,
-                              size: 56,
-                              color: _gold.withValues(alpha: 0.5)),
+                          Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 56,
+                            color: _gold.withValues(alpha: 0.5),
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             'No products found',
@@ -278,7 +307,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             'Try a different category or search term.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                fontSize: 13, color: Color(0xFF888888)),
+                              fontSize: 13,
+                              color: Color(0xFF888888),
+                            ),
                           ),
                         ],
                       ),
@@ -289,8 +320,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 // ── Product Grid ──────────────────────────────────────
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
@@ -349,7 +379,8 @@ class _ProductCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16)),
+                  top: Radius.circular(16),
+                ),
                 child: product.imageUrl.isNotEmpty
                     ? Image.network(
                         product.imageUrl,
@@ -362,12 +393,13 @@ class _ProductCard extends StatelessWidget {
                             color: _goldLight.withValues(alpha: 0.3),
                             child: const Center(
                               child: CircularProgressIndicator(
-                                  color: _gold, strokeWidth: 2),
+                                color: _gold,
+                                strokeWidth: 2,
+                              ),
                             ),
                           );
                         },
-                        errorBuilder: (ctx, err, st) =>
-                            _imagePlaceholder(),
+                        errorBuilder: (ctx, err, st) => _imagePlaceholder(),
                       )
                     : _imagePlaceholder(),
               ),
@@ -382,7 +414,9 @@ class _ProductCard extends StatelessWidget {
                   // Category badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: _goldLight.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(6),
@@ -432,8 +466,7 @@ class _ProductCard extends StatelessWidget {
     return Container(
       color: _goldLight.withValues(alpha: 0.3),
       child: const Center(
-        child: Icon(Icons.image_outlined,
-            size: 40, color: Color(0xFFCCB060)),
+        child: Icon(Icons.image_outlined, size: 40, color: Color(0xFFCCB060)),
       ),
     );
   }

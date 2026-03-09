@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() => _loading = false);
     if (err == null) {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/profile');
+      Navigator.pushReplacementNamed(context, '/login');
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,7 +304,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
-                        value: _gender.isEmpty ? null : _gender,
+                        initialValue: _gender.isEmpty ? null : _gender,
                         decoration: _dropdownDec('Gender', Icons.wc_outlined),
                         dropdownColor: Colors.white,
                         borderRadius: BorderRadius.circular(14),

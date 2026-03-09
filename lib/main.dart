@@ -33,8 +33,9 @@ import 'screens/product_list_screen.dart';
 Widget _buildIconButton(BuildContext context, IconData icon) {
   return InkWell(
     onTap: () {
-      if (icon == Icons.chat_bubble_outline)
+      if (icon == Icons.chat_bubble_outline) {
         Navigator.pushNamed(context, '/messages');
+      }
     },
     borderRadius: BorderRadius.circular(12),
     child: Padding(
@@ -291,7 +292,8 @@ class _AppRoot extends StatefulWidget {
   State<_AppRoot> createState() => _AppRootState();
 }
 
-class _AppRootState extends State<_AppRoot> with SingleTickerProviderStateMixin {
+class _AppRootState extends State<_AppRoot>
+    with SingleTickerProviderStateMixin {
   bool _showSplash = true;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -410,23 +412,8 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 16),
 
-          // FEED POSTS SECTION
+          // FEED POSTS SECTION (marketplace & music embedded inside)
           const FeedPostsSection(),
-
-          const SizedBox(height: 16),
-
-          // REELS PREVIEW SECTION
-          const ReelsPreviewSection(),
-
-          const SizedBox(height: 16),
-
-          // MARKETPLACE PREVIEW SECTION
-          const MarketplacePreviewSection(),
-
-          const SizedBox(height: 16),
-
-          // MUSIC SECTION
-          const MusicSection(),
 
           const SizedBox(height: 16),
 
@@ -443,9 +430,6 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _buildFeed(),
-
-      // placeholders for Reels, Bible, Music
-      const Center(child: Text('Reels')),
 
       const BibleScreen(),
 
@@ -470,7 +454,7 @@ class _HomePageState extends State<HomePage> {
                 return const SizedBox.shrink();
               }
               return _MiniMusicPlayer(
-                onTap: () => setState(() => _selectedIndex = 4),
+                onTap: () => setState(() => _selectedIndex = 3),
               );
             },
           ),
@@ -554,7 +538,9 @@ class _MiniMusicPlayer extends StatelessWidget {
                   Text(
                     song.artist,
                     style: const TextStyle(
-                        fontSize: 11.5, color: Color(0xFF888888)),
+                      fontSize: 11.5,
+                      color: Color(0xFF888888),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -564,8 +550,10 @@ class _MiniMusicPlayer extends StatelessWidget {
             // Controls
             IconButton(
               onPressed: service.playPrevious,
-              icon: const Icon(Icons.skip_previous_rounded,
-                  color: Color(0xFF5C5C5C)),
+              icon: const Icon(
+                Icons.skip_previous_rounded,
+                color: Color(0xFF5C5C5C),
+              ),
               iconSize: 24,
               padding: EdgeInsets.zero,
             ),
@@ -594,8 +582,10 @@ class _MiniMusicPlayer extends StatelessWidget {
             ),
             IconButton(
               onPressed: service.playNext,
-              icon: const Icon(Icons.skip_next_rounded,
-                  color: Color(0xFF5C5C5C)),
+              icon: const Icon(
+                Icons.skip_next_rounded,
+                color: Color(0xFF5C5C5C),
+              ),
               iconSize: 24,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -699,11 +689,7 @@ class TopAppBarSection extends StatelessWidget {
           // Icons
           _buildIconButton(context, Icons.search),
 
-          _buildIconButton(context, Icons.notifications_outlined),
-
           _buildIconButton(context, Icons.chat_bubble_outline),
-
-          _buildIconButton(context, Icons.more_horiz),
         ],
       ),
     );
@@ -716,15 +702,15 @@ class TopAppBarSection extends StatelessWidget {
 
 // ============================================
 
-// Daily gradient themes – cycles through by day-of-week.
+// Daily gradient themes � cycles through by day-of-week.
 const List<List<Color>> _verseGradients = [
-  [Color(0xFF8B2FC9), Color(0xFF3A1078)], // Sunday    – royal purple
-  [Color(0xFFB5451B), Color(0xFF6E2510)], // Monday    – warm terracotta
-  [Color(0xFF0F4C75), Color(0xFF1B262C)], // Tuesday   – deep ocean
-  [Color(0xFF2D6A4F), Color(0xFF1B4332)], // Wednesday – forest green
-  [Color(0xFFB98B2D), Color(0xFF7A5B10)], // Thursday  – golden amber
-  [Color(0xFF1D3461), Color(0xFF5E3384)], // Friday    – midnight violet
-  [Color(0xFF6B2D5E), Color(0xFF3A1042)], // Saturday  – deep rose
+  [Color(0xFF8B2FC9), Color(0xFF3A1078)], // Sunday    � royal purple
+  [Color(0xFFB5451B), Color(0xFF6E2510)], // Monday    � warm terracotta
+  [Color(0xFF0F4C75), Color(0xFF1B262C)], // Tuesday   � deep ocean
+  [Color(0xFF2D6A4F), Color(0xFF1B4332)], // Wednesday � forest green
+  [Color(0xFFB98B2D), Color(0xFF7A5B10)], // Thursday  � golden amber
+  [Color(0xFF1D3461), Color(0xFF5E3384)], // Friday    � midnight violet
+  [Color(0xFF6B2D5E), Color(0xFF3A1042)], // Saturday  � deep rose
 ];
 
 class DailyVerseSection extends StatefulWidget {
@@ -756,17 +742,19 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
     });
     try {
       final v = await BibleService.instance.getDailyVerse(language: _language);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _verse = v;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _loadError = e.toString();
         });
+      }
     }
   }
 
@@ -874,7 +862,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                   const SizedBox(height: 6),
                   if (!_loading && _verse != null)
                     Text(
-                      '${_verse!.reference} · ${_verse!.translationLabel}',
+                      '${_verse!.reference} � ${_verse!.translationLabel}',
                       style: const TextStyle(
                         color: Color(0xFFFFD700),
                         fontSize: 13,
@@ -905,7 +893,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                         const SizedBox(height: 6),
                         Text(
                           _loadError != null
-                              ? 'Bible database is loading…\nSwitch language to retry.'
+                              ? 'Bible database is loading�\nSwitch language to retry.'
                               : 'Verse not available.',
                           style: const TextStyle(
                             color: Colors.white54,
@@ -1376,67 +1364,107 @@ class _FeedPostsSectionState extends State<FeedPostsSection> {
         final posts = snap.data ?? [];
 
         if (posts.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 32,
+                  horizontal: 24,
+                ),
 
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
 
-                children: [
-                  Container(
-                    width: 70,
+                    children: [
+                      Container(
+                        width: 70,
 
-                    height: 70,
+                        height: 70,
 
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5E6B3).withValues(alpha: 0.4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5E6B3).withValues(alpha: 0.4),
 
-                      shape: BoxShape.circle,
-                    ),
+                          shape: BoxShape.circle,
+                        ),
 
-                    child: const Icon(
-                      Icons.article_outlined,
+                        child: const Icon(
+                          Icons.article_outlined,
 
-                      size: 36,
+                          size: 36,
 
-                      color: Color(0xFFD4AF37),
-                    ),
+                          color: Color(0xFFD4AF37),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        'No posts yet',
+
+                        style: TextStyle(
+                          fontSize: 16,
+
+                          fontWeight: FontWeight.w600,
+
+                          color: Color(0xFF444444),
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      const Text(
+                        'Be the first to share your testimony!',
+
+                        style: TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 13,
+                        ),
+
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    'No posts yet',
-
-                    style: TextStyle(
-                      fontSize: 16,
-
-                      fontWeight: FontWeight.w600,
-
-                      color: Color(0xFF444444),
-                    ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  const Text(
-                    'Be the first to share your testimony!',
-
-                    style: TextStyle(color: Color(0xFF888888), fontSize: 13),
-
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              const MarketplacePreviewSection(),
+              const SizedBox(height: 16),
+              const MusicSection(),
+            ],
           );
         }
 
         return Column(
-          children: posts
-              .map((post) => PostCard(post: post, onRefresh: () {}))
-              .toList(),
+          children: [
+            // First 3 posts
+            ...posts
+                .take(3)
+                .map((post) => PostCard(post: post, onRefresh: () {})),
+
+            // Marketplace preview � shown after first batch of posts
+            const SizedBox(height: 16),
+            const MarketplacePreviewSection(),
+            const SizedBox(height: 16),
+
+            // Next 3 posts
+            ...posts
+                .skip(3)
+                .take(3)
+                .map((post) => PostCard(post: post, onRefresh: () {})),
+
+            // Music preview � shown after second batch of posts
+            if (posts.length > 3) ...[
+              const SizedBox(height: 16),
+              const MusicSection(),
+              const SizedBox(height: 16),
+            ],
+
+            // Remaining posts
+            ...posts
+                .skip(6)
+                .map((post) => PostCard(post: post, onRefresh: () {})),
+          ],
         );
       },
     );
@@ -1633,7 +1661,7 @@ class _PostCardState extends State<PostCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Header ──────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 6, 0),
 
@@ -1815,7 +1843,7 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-            // â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Content ─────────────────────────────
             if (widget.post.content.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -1859,7 +1887,7 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-            // â”€â”€ Reaction Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Reaction Summary ─────────────────────
             if (totalReactions > 0 || widget.post.commentCount > 0)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -1930,7 +1958,7 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-            // â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Divider ──────────────────────────────
             const Padding(
               padding: EdgeInsets.fromLTRB(14, 10, 14, 0),
 
@@ -1943,7 +1971,7 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-            // â”€â”€ Reaction picker + Action row â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Reaction picker + Action row ─────────
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
 
@@ -2003,7 +2031,7 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
-// â”€â”€â”€ React Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── React Button ─────────────────────────────────────────────────────────────
 
 class _ReactButton extends StatelessWidget {
   final String? myReaction;
@@ -2062,7 +2090,7 @@ class _ReactButton extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Generic Action Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Generic Action Button ─────────────────────────────────────────────────────
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
@@ -2071,21 +2099,17 @@ class _ActionButton extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  final Color? color;
-
   const _ActionButton({
     required this.icon,
 
     required this.label,
 
     required this.onTap,
-
-    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF888888);
+    const c = Color(0xFF888888);
 
     return InkWell(
       onTap: onTap,
@@ -2121,9 +2145,9 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Reaction Picker Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Reaction Picker Bubble ───────────────────────────────────────────────────
 
-// ─── Shared Post Preview Card ─────────────────────────────────────────────────
+// --- Shared Post Preview Card -------------------------------------------------
 /// Shows the embedded original post inside a share post card.
 class SharedPostPreview extends StatelessWidget {
   final String authorEmail;
@@ -2338,7 +2362,7 @@ class _ReactionPickerBubble extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Comments Bottom Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Comments Bottom Sheet ────────────────────────────────────────────────────
 
 class CommentsSheet extends StatefulWidget {
   final Post post;
@@ -2577,188 +2601,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                     itemBuilder: (_, i) {
                       final c = _comments[i];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-
-                          children: [
-                            Container(
-                              width: 34,
-
-                              height: 34,
-
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFFE8D5B7),
-
-                                    Color(0xFFD4C4A8),
-                                  ],
-                                ),
-
-                                shape: BoxShape.circle,
-                              ),
-
-                              child: const Icon(
-                                Icons.person,
-
-                                color: Colors.white,
-
-                                size: 18,
-                              ),
-                            ),
-
-                            const SizedBox(width: 10),
-
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-
-                                  8,
-
-                                  12,
-
-                                  10,
-                                ),
-
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8F8F8),
-
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                                  children: [
-                                    Text(
-                                      c.author.contains('@')
-                                          ? c.author.split('@').first
-                                          : c.author,
-
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-
-                                        fontSize: 13,
-
-                                        color: Color(0xFF2C2C2C),
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 3),
-
-                                    Text(
-                                      c.text,
-
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-
-                                        color: Color(0xFF444444),
-
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        Builder(
-                                          builder: (ctx) {
-                                            final me = AuthService
-                                                .instance
-                                                .currentUser
-                                                .value;
-                                            final reacted =
-                                                me != null &&
-                                                (c.reactions['amen'] ?? [])
-                                                    .contains(me.id);
-                                            final count =
-                                                (c.reactions['amen'] ?? [])
-                                                    .length;
-                                            return InkWell(
-                                              onTap: () async {
-                                                if (me == null) {
-                                                  ScaffoldMessenger.of(
-                                                    ctx,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Please log in to react',
-                                                      ),
-                                                      backgroundColor: Color(
-                                                        0xFFD4AF37,
-                                                      ),
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
-                                                await PostService.instance
-                                                    .toggleCommentReaction(
-                                                      widget.post.id,
-                                                      c.id,
-                                                      'amen',
-                                                      me.id,
-                                                    );
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 4,
-                                                    ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      reacted
-                                                          ? Icons.thumb_up
-                                                          : Icons
-                                                                .thumb_up_outlined,
-                                                      size: 16,
-                                                      color: reacted
-                                                          ? const Color(
-                                                              0xFFD4AF37,
-                                                            )
-                                                          : const Color(
-                                                              0xFF888888,
-                                                            ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      '$count',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: reacted
-                                                            ? const Color(
-                                                                0xFFD4AF37,
-                                                              )
-                                                            : const Color(
-                                                                0xFF888888,
-                                                              ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      return _CommentCard(postId: widget.post.id, comment: c);
                     },
                   ),
           ),
@@ -2889,7 +2732,282 @@ class _CommentsSheetState extends State<CommentsSheet> {
   }
 }
 
-// â”€â”€â”€ Share Sheet (Facebook-style) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Share Sheet (Facebook-style) ─────────────────────────────────────────────
+
+// --- Comment Card (with full reaction picker) ------------------------------
+
+class _CommentCard extends StatefulWidget {
+  final String postId;
+  final Comment comment;
+
+  const _CommentCard({required this.postId, required this.comment});
+
+  @override
+  State<_CommentCard> createState() => _CommentCardState();
+}
+
+class _CommentCardState extends State<_CommentCard> {
+  bool _showPicker = false;
+
+  String? get _myReaction {
+    final me = AuthService.instance.currentUser.value;
+    if (me == null) return null;
+    for (final r in _reactions) {
+      if ((widget.comment.reactions[r.key] ?? []).contains(me.id)) {
+        return r.key;
+      }
+    }
+    return null;
+  }
+
+  int get _totalReactions {
+    int total = 0;
+    for (final r in _reactions) {
+      total += (widget.comment.reactions[r.key] ?? []).length;
+    }
+    return total;
+  }
+
+  Future<void> _react(String key) async {
+    final me = AuthService.instance.currentUser.value;
+    if (me == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to react'),
+          backgroundColor: Color(0xFFD4AF37),
+        ),
+      );
+      return;
+    }
+    setState(() => _showPicker = false);
+    await PostService.instance.toggleCommentReaction(
+      widget.postId,
+      widget.comment.id,
+      key,
+      me.id,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final myReaction = _myReaction;
+    final totalReactions = _totalReactions;
+    final active = myReaction != null
+        ? _reactions.firstWhere(
+            (r) => r.key == myReaction,
+            orElse: () => _reactions[0],
+          )
+        : null;
+    final authorName = widget.comment.author.contains('@')
+        ? widget.comment.author.split('@').first
+        : widget.comment.author;
+
+    return GestureDetector(
+      onTap: () {
+        if (_showPicker) setState(() => _showPicker = false);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFE8D5B7), Color(0xFFD4C4A8)],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F8F8),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF2C2C2C),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.comment.text,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: Color(0xFF444444),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showPicker)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 4),
+                      child: Material(
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(30),
+                        shadowColor: Colors.black.withValues(alpha: 0.12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: const Color(0xFFEEEEEE)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: _reactions.map((r) {
+                              final isActive = myReaction == r.key;
+                              return GestureDetector(
+                                onTap: () => _react(r.key),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 3,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? r.color.withValues(alpha: 0.15)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: isActive
+                                        ? Border.all(
+                                            color: r.color.withValues(
+                                              alpha: 0.4,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(r.icon, size: 20, color: r.color),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        r.label,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: r.color,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2, left: 4),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: () =>
+                              setState(() => _showPicker = !_showPicker),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  active?.icon ?? Icons.thumb_up_outlined,
+                                  size: 15,
+                                  color:
+                                      active?.color ?? const Color(0xFF888888),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  active?.label ?? 'React',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: active != null
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color:
+                                        active?.color ??
+                                        const Color(0xFF888888),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (totalReactions > 0) ...[
+                          const SizedBox(width: 6),
+                          ...widget.comment.reactions.entries
+                              .where((e) => e.value.isNotEmpty)
+                              .take(3)
+                              .map((entry) {
+                                final rd = _reactions.firstWhere(
+                                  (r) => r.key == entry.key,
+                                  orElse: () => _reactions[0],
+                                );
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 1),
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: rd.color.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    rd.icon,
+                                    size: 10,
+                                    color: rd.color,
+                                  ),
+                                );
+                              }),
+                          const SizedBox(width: 3),
+                          Text(
+                            '$totalReactions',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class ShareSheet extends StatefulWidget {
   final Post post;
@@ -3292,7 +3410,7 @@ class ShareSheetState extends State<ShareSheet> {
 
                       Text(
                         widget.post.content.length > 100
-                            ? '${widget.post.content.substring(0, 100)}â€¦'
+                            ? '${widget.post.content.substring(0, 100)}…'
                             : widget.post.content,
 
                         style: const TextStyle(
@@ -3729,9 +3847,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProductListScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const ProductListScreen()),
                 ),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFD4AF37),
@@ -3769,7 +3885,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               _buildProductCard(
                 'Christian T-Shirt',
 
-                'â‚±150.00',
+                '₱150.00',
 
                 'assets/Christian T-shrit.webp',
               ),
@@ -3777,7 +3893,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               _buildProductCard(
                 'Bible Cover',
 
-                'â‚±200.00',
+                '₱200.00',
 
                 'assets/Bible cover.jpg',
               ),
@@ -3785,7 +3901,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               _buildProductCard(
                 'Worship Journal',
 
-                'â‚±179.00',
+                '₱179.00',
 
                 'assets/worship journal.webp',
               ),
@@ -3793,7 +3909,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               _buildProductCard(
                 'Prayer Beads',
 
-                'â‚±100.00',
+                '₱100.00',
 
                 'assets/prayerbeeds.webp',
               ),
@@ -3954,7 +4070,14 @@ class MusicSection extends StatelessWidget {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Navigate to Music tab (index 3 in bottom nav)
+                  final state = context
+                      .findAncestorStateOfType<_HomePageState>();
+                  if (state != null) {
+                    state.setState(() => state._selectedIndex = 3);
+                  }
+                },
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFD4AF37),
                   padding: EdgeInsets.zero,
@@ -3982,7 +4105,7 @@ class MusicSection extends StatelessWidget {
             itemCount: 5,
 
             itemBuilder: (context, index) {
-              return _buildMusicCard(index);
+              return _buildMusicCard(context, index);
             },
           ),
         ),
@@ -3990,7 +4113,7 @@ class MusicSection extends StatelessWidget {
     );
   }
 
-  Widget _buildMusicCard(int index) {
+  Widget _buildMusicCard(BuildContext context, int index) {
     final titles = [
       'Goodness of God',
 
@@ -4027,127 +4150,135 @@ class MusicSection extends StatelessWidget {
       const Color(0xFF8B7355),
     ];
 
-    return Container(
-      width: 120,
+    return GestureDetector(
+      onTap: () {
+        final state = context.findAncestorStateOfType<_HomePageState>();
+        if (state != null) {
+          state.setState(() => state._selectedIndex = 3);
+        }
+      },
+      child: Container(
+        width: 120,
 
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
 
-      decoration: BoxDecoration(
-        color: Colors.white,
+        decoration: BoxDecoration(
+          color: Colors.white,
 
-        borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16),
 
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.15),
 
-            blurRadius: 10,
+              blurRadius: 10,
 
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
 
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
 
-        children: [
-          // Album Image
-          Container(
-            height: 100,
+          children: [
+            // Album Image
+            Container(
+              height: 100,
 
-            decoration: BoxDecoration(
-              color: colors[index % colors.length],
+              decoration: BoxDecoration(
+                color: colors[index % colors.length],
 
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+              ),
+
+              child: Stack(
+                children: [
+                  const Center(
+                    child: Icon(Icons.album, size: 50, color: Colors.white),
+                  ),
+
+                  Positioned(
+                    bottom: 8,
+
+                    right: 8,
+
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+
+                        shape: BoxShape.circle,
+
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+
+                      child: const Icon(
+                        Icons.play_arrow,
+
+                        size: 16,
+
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            child: Stack(
-              children: [
-                const Center(
-                  child: Icon(Icons.album, size: 50, color: Colors.white),
-                ),
+            // Song Info
+            Padding(
+              padding: const EdgeInsets.all(10),
 
-                Positioned(
-                  bottom: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
 
-                  right: 8,
+                children: [
+                  Text(
+                    titles[index],
 
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
+                    style: const TextStyle(
+                      fontSize: 12,
 
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
 
-                      shape: BoxShape.circle,
-
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-
-                          blurRadius: 4,
-                        ),
-                      ],
+                      color: Color(0xFF333333),
                     ),
 
-                    child: const Icon(
-                      Icons.play_arrow,
+                    maxLines: 1,
 
-                      size: 16,
+                    overflow: TextOverflow.ellipsis,
+                  ),
 
-                      color: Color(0xFFD4AF37),
+                  const SizedBox(height: 2),
+
+                  Text(
+                    artists[index],
+
+                    style: const TextStyle(
+                      fontSize: 10,
+
+                      color: Color(0xFF999999),
                     ),
+
+                    maxLines: 1,
+
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-
-          // Song Info
-          Padding(
-            padding: const EdgeInsets.all(10),
-
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                Text(
-                  titles[index],
-
-                  style: const TextStyle(
-                    fontSize: 12,
-
-                    fontWeight: FontWeight.w600,
-
-                    color: Color(0xFF333333),
-                  ),
-
-                  maxLines: 1,
-
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 2),
-
-                Text(
-                  artists[index],
-
-                  style: const TextStyle(
-                    fontSize: 10,
-
-                    color: Color(0xFF999999),
-                  ),
-
-                  maxLines: 1,
-
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4283,7 +4414,7 @@ class ProfilePreviewSection extends StatelessWidget {
                       const SizedBox(height: 4),
 
                       const Text(
-                        'Child of God â€¢ Worship Leader',
+                        'Child of God • Worship Leader',
 
                         style: TextStyle(
                           fontSize: 13,
@@ -4295,7 +4426,7 @@ class ProfilePreviewSection extends StatelessWidget {
                       const SizedBox(height: 8),
 
                       const Text(
-                        'Sharing my faith journey one post at a time âœï¸',
+                        'Sharing my faith journey one post at a time ✝️',
 
                         textAlign: TextAlign.center,
 
@@ -4414,20 +4545,13 @@ class BottomNavBar extends StatelessWidget {
             children: [
               _buildNavItem(context, Icons.home_rounded, 'Home', 0),
 
-              _buildNavItem(
-                context,
-                Icons.play_circle_outline_rounded,
-                'Reels',
-                1,
-              ),
+              _buildNavItem(context, Icons.auto_stories_rounded, 'Bible', 1),
 
-              _buildNavItem(context, Icons.auto_stories_rounded, 'Bible', 2),
+              _buildNavItem(context, Icons.storefront_rounded, 'Market', 2),
 
-              _buildNavItem(context, Icons.storefront_rounded, 'Market', 3),
+              _buildNavItem(context, Icons.music_note_rounded, 'Music', 3),
 
-              _buildNavItem(context, Icons.music_note_rounded, 'Music', 4),
-
-              _buildNavItem(context, Icons.person_rounded, 'Profile', 5),
+              _buildNavItem(context, Icons.person_rounded, 'Profile', 4),
             ],
           ),
         ),
@@ -4499,7 +4623,7 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
-// ─── User Search Sheet ────────────────────────────────────────────────────────
+// --- User Search Sheet --------------------------------------------------------
 class _UserSearchSheet extends StatefulWidget {
   const _UserSearchSheet();
 
@@ -4525,11 +4649,12 @@ class _UserSearchSheetState extends State<_UserSearchSheet> {
     }
     setState(() => _loading = true);
     final found = await AuthService.instance.searchUsers(query);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _results = found;
         _loading = false;
       });
+    }
   }
 
   @override

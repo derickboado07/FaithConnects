@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
-import '../services/auth_service.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -95,7 +94,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       lastSender.isNotEmpty && lastSender == myUid;
                   final subtitle = isSentByMe ? 'You: $lastMsg' : lastMsg;
 
-                  String _fmtTs(String iso) {
+                  String fmtTs(String iso) {
                     try {
                       final dt = DateTime.parse(iso).toLocal();
                       final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
@@ -108,7 +107,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   }
 
                   final tsText = c.updatedAt.isNotEmpty
-                      ? _fmtTs(c.updatedAt)
+                      ? fmtTs(c.updatedAt)
                       : '';
                   // Determine unread using conversation.lastRead map
                   final lastReadForMe = c.lastRead[myUid];
@@ -179,8 +178,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         60;
                                   } catch (_) {}
                                 }
-                                if (!isOnline && !recent)
+                                if (!isOnline && !recent) {
                                   return const SizedBox.shrink();
+                                }
                                 return Container(
                                   width: 14,
                                   height: 14,
