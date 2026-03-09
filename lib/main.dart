@@ -22,6 +22,7 @@ import 'screens/create_post_screen.dart';
 import 'screens/bible_screen.dart';
 import 'screens/music_screen.dart';
 import 'services/bible_service.dart';
+import 'services/music_player_service.dart';
 import 'screens/chat_list_screen.dart';
 
 void main() async {
@@ -362,10 +363,149 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: pages[_selectedIndex],
 
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _selectedIndex,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListenableBuilder(
+            listenable: MusicPlayerService.instance,
+            builder: (context, _) {
+              if (!MusicPlayerService.instance.isPlaying) {
+                return const SizedBox.shrink();
+              }
+              return _MiniMusicPlayer(
+                onTap: () => setState(() => _selectedIndex = 4),
+              );
+            },
+          ),
+          BottomNavBar(
+            currentIndex: _selectedIndex,
+            onTap: (i) => setState(() => _selectedIndex = i),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-        onTap: (i) => setState(() => _selectedIndex = i),
+// ============================================
+
+// FLOATING MINI MUSIC PLAYER
+
+// ============================================
+
+class _MiniMusicPlayer extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _MiniMusicPlayer({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final service = MusicPlayerService.instance;
+    final song = service.currentSong;
+    if (song == null) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(
+            top: BorderSide(color: Color(0xFFE8E8E8), width: 0.8),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Album art
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFD4AF37), Color(0xFFE8C95A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Icon(Icons.album, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 12),
+            // Song info
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    song.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2C2C2C),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    song.artist,
+                    style: const TextStyle(
+                        fontSize: 11.5, color: Color(0xFF888888)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // Controls
+            IconButton(
+              onPressed: service.playPrevious,
+              icon: const Icon(Icons.skip_previous_rounded,
+                  color: Color(0xFF5C5C5C)),
+              iconSize: 24,
+              padding: EdgeInsets.zero,
+            ),
+            GestureDetector(
+              onTap: () => service.togglePlayPause(),
+              child: Container(
+                width: 38,
+                height: 38,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFD4AF37), Color(0xFFE8C95A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  service.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: service.playNext,
+              icon: const Icon(Icons.skip_next_rounded,
+                  color: Color(0xFF5C5C5C)),
+              iconSize: 24,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }

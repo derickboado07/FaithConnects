@@ -1,4 +1,21 @@
 {
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "**/*.mp3",
+        "headers": [
+          { "key": "Content-Type", "value": "audio/mpeg" },
+          { "key": "Accept-Ranges", "value": "bytes" },
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
+        ]
+      }
+    ],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
