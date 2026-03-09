@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "49403421832",
+    "project_id": "faith-connects-c7a7e",
+    "storage_bucket": "faith-connects-c7a7e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49403421832:android:9877d202fb8f4c57c6ab3d",
+        "android_client_info": {
+          "package_name": "com.example.christian_mediaapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABUTa_mhWaKSnPtbZUGneXukDD7QIe7fk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

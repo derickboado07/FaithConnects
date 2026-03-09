@@ -1,0 +1,31 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "faith-connects-c7a7e",
+          "appId": "1:49403421832:android:9877d202fb8f4c57c6ab3d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "faith-connects-c7a7e",
+          "configurations": {
+            "android": "1:49403421832:android:9877d202fb8f4c57c6ab3d",
+            "ios": "1:49403421832:ios:f444561956e473cbc6ab3d",
+            "macos": "1:49403421832:ios:f444561956e473cbc6ab3d",
+            "web": "1:49403421832:web:4434b0ee521c1379c6ab3d",
+            "windows": "1:49403421832:web:adcdb5eb0c4a9d80c6ab3d"
+          }
+        }
+      }
+    }
+  }
+}

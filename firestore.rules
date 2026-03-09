@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Users ──────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Saved posts per user
+      match /saved/{postId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // ── Upload quotas (per-user daily upload counter) ─────────────────
+    match /upload_quotas/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Posts ───────────────────────────────────────────────────────────
+    match /posts/{postId} {
+      // Any authenticated user can read posts
+      allow read: if request.auth != null;
+
+      // Only authenticated users can create; authorId must match their UID
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid;
+
+      // Author can update/delete their own post;
+      // any authenticated user can update reactions and commentsCount
+      allow update: if request.auth != null;
+
+      allow delete: if request.auth != null
+        && resource.data.authorId == request.auth.uid;
+
+      // ── Comments sub-collection ──────────────────────────────────────
+      match /comments/{commentId} {
+        allow read:   if request.auth != null;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null
+          && resource.data.author == request.auth.token.email;
+      }
+    }
+  }
+}
