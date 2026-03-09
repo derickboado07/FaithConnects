@@ -10,23 +10,34 @@ class Comment {
   final String author;
   final String text;
   final String ts;
+  final Map<String, List<String>> reactions;
 
   Comment({
     required this.id,
     required this.author,
     required this.text,
     required this.ts,
-  });
-
+    Map<String, List<String>>? reactions,
+  }) : reactions = reactions ?? {};
   Map<String, dynamic> toJson() => {
     'id': id,
     'author': author,
     'text': text,
     'ts': ts,
+    'reactions': reactions.map((k, v) => MapEntry(k, v)),
   };
 
-  static Comment fromJson(Map<String, dynamic> j) =>
-      Comment(id: j['id'], author: j['author'], text: j['text'], ts: j['ts']);
+  static Comment fromJson(Map<String, dynamic> j) => Comment(
+    id: j['id'],
+    author: j['author'],
+    text: j['text'],
+    ts: j['ts'],
+    reactions:
+        (j['reactions'] as Map<String, dynamic>?)?.map(
+          (k, v) => MapEntry(k, List<String>.from(v as List)),
+        ) ??
+        {},
+  );
 }
 
 class Post {
@@ -41,6 +52,7 @@ class Post {
   final Map<String, List<String>>
   reactions; // reaction -> list of user ids/emails
   final List<Comment> comments;
+  final int commentCount;
 
   // Shared post fields (populated when this post is a share of another)
   final String? sharedPostId;
@@ -61,6 +73,7 @@ class Post {
     this.mediaType,
     Map<String, List<String>>? reactions,
     List<Comment>? comments,
+    this.commentCount = 0,
     this.sharedPostId,
     this.sharedAuthorEmail,
     this.sharedAuthorAvatarUrl,
@@ -111,6 +124,7 @@ class Post {
     sharedContent: j['sharedContent'],
     sharedMediaUrl: j['sharedMediaUrl'],
     sharedMediaType: j['sharedMediaType'],
+    commentCount: (j['commentsCount'] as int?) ?? 0,
   );
 }
 
@@ -435,6 +449,53 @@ class PostService {
         .orderBy('ts')
         .get();
     return snap.docs.map((d) => Comment.fromJson(d.data())).toList();
+  }
+
+  /// Real-time stream of comments for a post.
+  Stream<List<Comment>> streamComments(String postId) {
+    return _db
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .snapshots()
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => Comment.fromJson(d.data()))
+              .toList();
+          list.sort((a, b) => a.ts.compareTo(b.ts));
+          return list;
+        });
+  }
+
+  /// Toggle a reaction on a comment. Uses a per-comment `reactions` map
+  /// where keys are reaction ids and values are lists of user ids.
+  Future<void> toggleCommentReaction(
+    String postId,
+    String commentId,
+    String reactionKey,
+    String userId,
+  ) async {
+    final docRef = _db
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(docRef);
+      if (!snap.exists) return;
+      final data = snap.data()!;
+      final Map<String, dynamic> existing =
+          (data['reactions'] as Map<String, dynamic>?) ?? {};
+      final List<String> list = List<String>.from(existing[reactionKey] ?? []);
+      if (list.contains(userId)) {
+        list.remove(userId);
+      } else {
+        list.add(userId);
+      }
+      final updated = Map<String, dynamic>.from(existing);
+      updated[reactionKey] = list;
+      tx.update(docRef, {'reactions': updated});
+    });
   }
 
   Future<List<Post>> getPostsForUser(String email, {String? userId}) async {

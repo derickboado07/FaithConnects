@@ -453,21 +453,127 @@ class AuthService {
           .get();
       if (q.docs.isEmpty) return false;
       final targetUid = q.docs.first.id;
-      final docRef = _db
+      return await toggleFollowById(targetUid);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Toggle follow/unfollow by UID. Maintains both `following` and `followers`
+  /// subcollections for real-time count streaming.
+  Future<bool> toggleFollowById(String targetUid) async {
+    try {
+      final cur = _auth.currentUser;
+      if (cur == null) return false;
+      final myFollowingRef = _db
           .collection('users')
           .doc(cur.uid)
           .collection('following')
           .doc(targetUid);
-      final snap = await docRef.get();
+      final theirFollowersRef = _db
+          .collection('users')
+          .doc(targetUid)
+          .collection('followers')
+          .doc(cur.uid);
+      final snap = await myFollowingRef.get();
       if (snap.exists) {
-        await docRef.delete();
-        return false;
+        final batch = _db.batch();
+        batch.delete(myFollowingRef);
+        batch.delete(theirFollowersRef);
+        await batch.commit();
+        return false; // now unfollowed
       } else {
-        await docRef.set({'since': DateTime.now().toIso8601String()});
-        return true;
+        final since = {'since': DateTime.now().toIso8601String()};
+        final batch = _db.batch();
+        batch.set(myFollowingRef, since);
+        batch.set(theirFollowersRef, since);
+        await batch.commit();
+        return true; // now following
       }
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Check if the current user follows [targetUid].
+  Future<bool> isFollowingById(String targetUid) async {
+    try {
+      final cur = _auth.currentUser;
+      if (cur == null) return false;
+      final snap = await _db
+          .collection('users')
+          .doc(cur.uid)
+          .collection('following')
+          .doc(targetUid)
+          .get();
+      return snap.exists;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Real-time stream of how many people follow [uid].
+  Stream<int> streamFollowersCount(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('followers')
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  /// Real-time stream of how many people [uid] is following.
+  Stream<int> streamFollowingCount(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('following')
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  /// Real-time stream of a user document.
+  Stream<AuthUser?> streamUser(String uid) {
+    return _db.collection('users').doc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return AuthUser.fromJson(snap.data()!);
+    });
+  }
+
+  /// Fetch a user document by UID.
+  Future<AuthUser?> getUserById(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return null;
+      return AuthUser.fromJson(doc.data()!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Search users by display name (case-insensitive prefix match).
+  /// Returns up to [limit] results.
+  Future<List<AuthUser>> searchUsers(String query, {int limit = 20}) async {
+    if (query.trim().isEmpty) return [];
+    try {
+      final lower = query.trim().toLowerCase();
+      // Firestore doesn't support full-text search; fetch a reasonable batch
+      // and filter client-side by lowercased name or email.
+      final snap = await _db.collection('users').limit(200).get();
+      final cur = _auth.currentUser;
+      final results = snap.docs
+          .map((d) => AuthUser.fromJson(d.data()))
+          .where(
+            (u) =>
+                u.id != (cur?.uid ?? '') &&
+                (u.name.toLowerCase().contains(lower) ||
+                    u.email.toLowerCase().contains(lower)),
+          )
+          .take(limit)
+          .toList();
+      return results;
+    } catch (_) {
+      return [];
     }
   }
 
@@ -482,13 +588,7 @@ class AuthService {
           .get();
       if (q.docs.isEmpty) return false;
       final targetUid = q.docs.first.id;
-      final docRef = _db
-          .collection('users')
-          .doc(cur.uid)
-          .collection('following')
-          .doc(targetUid);
-      final snap = await docRef.get();
-      return snap.exists;
+      return await isFollowingById(targetUid);
     } catch (_) {
       return false;
     }

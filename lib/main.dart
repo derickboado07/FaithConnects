@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
 
@@ -9,6 +10,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 
 import 'services/post_service.dart';
+import 'screens/public_profile_screen.dart';
 
 import 'screens/login_screen.dart';
 
@@ -24,6 +26,21 @@ import 'screens/music_screen.dart';
 import 'services/bible_service.dart';
 import 'services/music_player_service.dart';
 import 'screens/chat_list_screen.dart';
+
+// Top-app-bar icon helper (top-level so multiple widgets can use it)
+Widget _buildIconButton(BuildContext context, IconData icon) {
+  return InkWell(
+    onTap: () {
+      if (icon == Icons.chat_bubble_outline)
+        Navigator.pushNamed(context, '/messages');
+    },
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.all(6),
+      child: Icon(icon, size: 22, color: const Color(0xFF333333)),
+    ),
+  );
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -596,32 +613,10 @@ class TopAppBarSection extends StatelessWidget {
 
           _buildIconButton(context, Icons.notifications_outlined),
 
-          _buildIconButton(context, Icons.message_outlined),
+          _buildIconButton(context, Icons.chat_bubble_outline),
+
+          _buildIconButton(context, Icons.more_horiz),
         ],
-      ),
-    );
-  }
-
-  Widget _buildIconButton(BuildContext context, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(left: 4),
-
-      child: IconButton(
-        onPressed: icon == Icons.message_outlined
-            ? () => Navigator.pushNamed(context, '/messages')
-            : null,
-
-        icon: Icon(icon, size: 22),
-
-        style: IconButton.styleFrom(
-          backgroundColor: const Color(0xFFF5F5F5),
-
-          padding: const EdgeInsets.all(10),
-
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
       ),
     );
   }
@@ -1382,25 +1377,9 @@ class _PostCardState extends State<PostCard> {
 
   bool _busy = false;
 
-  bool _saved = false;
-
   @override
   void initState() {
     super.initState();
-
-    _loadSavedState();
-  }
-
-  Future<void> _loadSavedState() async {
-    final user = AuthService.instance.currentUser.value;
-
-    if (user == null) return;
-
-    try {
-      final saved = await PostService.instance.isSaved(widget.post.id, user.id);
-
-      if (mounted) setState(() => _saved = saved);
-    } catch (_) {}
   }
 
   String? get _myReaction {
@@ -1475,28 +1454,6 @@ class _PostCardState extends State<PostCard> {
 
       widget.onRefresh();
     } catch (_) {}
-
-    if (mounted) setState(() => _busy = false);
-  }
-
-  Future<void> _toggleSave() async {
-    if (_busy) return;
-
-    final user = AuthService.instance.currentUser.value;
-
-    if (user == null) return;
-
-    setState(() {
-      _busy = true;
-
-      _saved = !_saved;
-    });
-
-    try {
-      await PostService.instance.toggleSave(widget.post.id, user.id);
-    } catch (_) {
-      if (mounted) setState(() => _saved = !_saved);
-    }
 
     if (mounted) setState(() => _busy = false);
   }
@@ -1594,75 +1551,98 @@ class _PostCardState extends State<PostCard> {
 
               child: Row(
                 children: [
-                  Container(
-                    width: 44,
-
-                    height: 44,
-
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFE8D5B7), Color(0xFFD4C4A8)],
-
-                        begin: Alignment.topLeft,
-
-                        end: Alignment.bottomRight,
-                      ),
-
-                      shape: BoxShape.circle,
-
-                      border: Border.all(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
-
-                        width: 1.5,
-                      ),
-                    ),
-
-                    child: ClipOval(
-                      child: widget.post.authorAvatarUrl.isNotEmpty
-                          ? Image.network(
-                              widget.post.authorAvatarUrl,
-
-                              fit: BoxFit.cover,
-
-                              errorBuilder: (_, __, ___) => _authorInitial(),
-                            )
-                          : _authorInitial(),
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-
-                      children: [
-                        Text(
-                          widget.post.authorEmail.contains('@')
-                              ? widget.post.authorEmail.split('@').first
-                              : widget.post.authorEmail,
-
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-
-                            fontSize: 14.5,
-
-                            color: Color(0xFF2C2C2C),
+                    child: GestureDetector(
+                      onTap: () {
+                        final me = AuthService.instance.currentUser.value;
+                        if (me != null && me.id == widget.post.authorId) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProfileScreen(
+                              userId: widget.post.authorId,
+                            ),
                           ),
-                        ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
 
-                        const SizedBox(height: 1),
+                            height: 44,
 
-                        Text(
-                          _formatTimestamp(widget.post.timestamp),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFE8D5B7), Color(0xFFD4C4A8)],
 
-                          style: const TextStyle(
-                            color: Color(0xFF999999),
+                                begin: Alignment.topLeft,
 
-                            fontSize: 11.5,
+                                end: Alignment.bottomRight,
+                              ),
+
+                              shape: BoxShape.circle,
+
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFD4AF37,
+                                ).withValues(alpha: 0.35),
+
+                                width: 1.5,
+                              ),
+                            ),
+
+                            child: ClipOval(
+                              child: widget.post.authorAvatarUrl.isNotEmpty
+                                  ? Image.network(
+                                      widget.post.authorAvatarUrl,
+
+                                      fit: BoxFit.cover,
+
+                                      errorBuilder: (_, __, ___) =>
+                                          _authorInitial(),
+                                    )
+                                  : _authorInitial(),
+                            ),
                           ),
-                        ),
-                      ],
+
+                          const SizedBox(width: 10),
+
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+
+                              children: [
+                                Text(
+                                  widget.post.authorEmail.contains('@')
+                                      ? widget.post.authorEmail.split('@').first
+                                      : widget.post.authorEmail,
+
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+
+                                    fontSize: 14.5,
+
+                                    color: Color(0xFF2C2C2C),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 1),
+
+                                Text(
+                                  _formatTimestamp(widget.post.timestamp),
+
+                                  style: const TextStyle(
+                                    color: Color(0xFF999999),
+
+                                    fontSize: 11.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -1792,7 +1772,7 @@ class _PostCardState extends State<PostCard> {
               ),
 
             // â”€â”€ Reaction Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            if (totalReactions > 0 || widget.post.comments.isNotEmpty)
+            if (totalReactions > 0 || widget.post.commentCount > 0)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
 
@@ -1839,14 +1819,23 @@ class _PostCardState extends State<PostCard> {
 
                     const Spacer(),
 
-                    if (widget.post.comments.isNotEmpty)
-                      Text(
-                        '${widget.post.comments.length} comment${widget.post.comments.length != 1 ? 's' : ''}',
+                    if (widget.post.commentCount > 0)
+                      InkWell(
+                        onTap: _openComments,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: Text(
+                            '${widget.post.commentCount} comment${widget.post.commentCount != 1 ? 's' : ''}',
 
-                        style: const TextStyle(
-                          fontSize: 12,
+                            style: const TextStyle(
+                              fontSize: 12,
 
-                          color: Color(0xFF888888),
+                              color: Color(0xFF888888),
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -1913,18 +1902,6 @@ class _PostCardState extends State<PostCard> {
                         label: 'Share',
 
                         onTap: _share,
-                      ),
-
-                      _ActionButton(
-                        icon: _saved
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
-
-                        label: 'Save',
-
-                        color: _saved ? const Color(0xFFD4AF37) : null,
-
-                        onTap: _toggleSave,
                       ),
                     ],
                   ),
@@ -2298,16 +2275,30 @@ class _CommentsSheetState extends State<CommentsSheet> {
   bool _submitting = false;
 
   List<Comment> _comments = [];
+  StreamSubscription<List<Comment>>? _commentSub;
 
   @override
   void initState() {
     super.initState();
 
     _comments = List.from(widget.post.comments);
+    // Subscribe to real-time comment updates so they persist after posting.
+    _commentSub = PostService.instance
+        .streamComments(widget.post.id)
+        .listen(
+          (list) {
+            if (mounted) setState(() => _comments = list);
+          },
+          onError: (e) {
+            debugPrint('CommentsSheet stream error: $e');
+          },
+          cancelOnError: false,
+        );
   }
 
   @override
   void dispose() {
+    _commentSub?.cancel();
     _ctrl.dispose();
 
     super.dispose();
@@ -2346,13 +2337,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
       );
 
       widget.onCommentAdded();
-
-      final updated = await PostService.instance.getById(widget.post.id);
-
-      if (mounted && updated != null) {
-        setState(() => _comments = updated.comments);
+      // Real-time stream will automatically update _comments.
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to post comment: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
-    } catch (_) {}
+    }
 
     if (mounted) setState(() => _submitting = false);
   }
@@ -2578,6 +2573,96 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                                         height: 1.4,
                                       ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Builder(
+                                          builder: (ctx) {
+                                            final me = AuthService
+                                                .instance
+                                                .currentUser
+                                                .value;
+                                            final reacted =
+                                                me != null &&
+                                                (c.reactions['amen'] ?? [])
+                                                    .contains(me.id);
+                                            final count =
+                                                (c.reactions['amen'] ?? [])
+                                                    .length;
+                                            return InkWell(
+                                              onTap: () async {
+                                                if (me == null) {
+                                                  ScaffoldMessenger.of(
+                                                    ctx,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Please log in to react',
+                                                      ),
+                                                      backgroundColor: Color(
+                                                        0xFFD4AF37,
+                                                      ),
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
+                                                await PostService.instance
+                                                    .toggleCommentReaction(
+                                                      widget.post.id,
+                                                      c.id,
+                                                      'amen',
+                                                      me.id,
+                                                    );
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 4,
+                                                    ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      reacted
+                                                          ? Icons.thumb_up
+                                                          : Icons
+                                                                .thumb_up_outlined,
+                                                      size: 16,
+                                                      color: reacted
+                                                          ? const Color(
+                                                              0xFFD4AF37,
+                                                            )
+                                                          : const Color(
+                                                              0xFF888888,
+                                                            ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      '$count',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: reacted
+                                                            ? const Color(
+                                                                0xFFD4AF37,
+                                                              )
+                                                            : const Color(
+                                                                0xFF888888,
+                                                              ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -4316,6 +4401,172 @@ class BottomNavBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── User Search Sheet ────────────────────────────────────────────────────────
+class _UserSearchSheet extends StatefulWidget {
+  const _UserSearchSheet();
+
+  @override
+  State<_UserSearchSheet> createState() => _UserSearchSheetState();
+}
+
+class _UserSearchSheetState extends State<_UserSearchSheet> {
+  final TextEditingController _ctrl = TextEditingController();
+  List<AuthUser> _results = [];
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _loading = true);
+    final found = await AuthService.instance.searchUsers(query);
+    if (mounted)
+      setState(() {
+        _results = found;
+        _loading = false;
+      });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.80,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 38,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDDDDDD),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Search People',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C2C2C),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _ctrl,
+              autofocus: true,
+              onChanged: _search,
+              decoration: InputDecoration(
+                hintText: 'Search by name or email...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFFD4AF37)),
+                suffixIcon: _ctrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _ctrl.clear();
+                          _search('');
+                        },
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+                  )
+                : _results.isEmpty
+                ? Center(
+                    child: Text(
+                      _ctrl.text.isEmpty
+                          ? 'Type to search...'
+                          : 'No users found',
+                      style: const TextStyle(color: Color(0xFF888888)),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.only(bottom: 16 + bottomInset),
+                    itemCount: _results.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 70),
+                    itemBuilder: (ctx, i) {
+                      final u = _results[i];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: const Color(0xFFE8D5B7),
+                          backgroundImage: u.avatarUrl.isNotEmpty
+                              ? NetworkImage(u.avatarUrl)
+                              : null,
+                          child: u.avatarUrl.isEmpty
+                              ? Text(
+                                  u.name.isNotEmpty
+                                      ? u.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        title: Text(
+                          u.name.isNotEmpty ? u.name : u.email,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                        subtitle: u.bio.isNotEmpty
+                            ? Text(
+                                u.bio,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF888888),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            ctx,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfileScreen(userId: u.id),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

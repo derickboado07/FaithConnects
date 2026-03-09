@@ -414,14 +414,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 14),
 
-                      // Stats row
+                      // Stats row – real-time followers / following counts
                       Row(
                         children: [
-                          _StatPill(number: '2.5K', label: 'Followers'),
+                          StreamBuilder<int>(
+                            stream: AuthService.instance.streamFollowersCount(
+                              user.id,
+                            ),
+                            builder: (_, snap) => _StatPill(
+                              number: _fmtCount(snap.data ?? 0),
+                              label: 'Followers',
+                            ),
+                          ),
                           const SizedBox(width: 12),
-                          _StatPill(number: '890', label: 'Following'),
+                          StreamBuilder<int>(
+                            stream: AuthService.instance.streamFollowingCount(
+                              user.id,
+                            ),
+                            builder: (_, snap) => _StatPill(
+                              number: _fmtCount(snap.data ?? 0),
+                              label: 'Following',
+                            ),
+                          ),
                           const SizedBox(width: 12),
-                          _StatPill(number: '-', label: 'Posts'),
+                          StreamBuilder<List<Post>>(
+                            stream: PostService.instance.streamPostsForUser(
+                              user.id,
+                            ),
+                            builder: (_, snap) => _StatPill(
+                              number: '${snap.data?.length ?? 0}',
+                              label: 'Posts',
+                            ),
+                          ),
                         ],
                       ),
 
@@ -743,6 +767,13 @@ class _DefaultBanner extends StatelessWidget {
   }
 }
 
+// ─── Count formatter ─────────────────────────────────────────────────────────
+String _fmtCount(int n) {
+  if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+  if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+  return '$n';
+}
+
 // ─── Stat Pill ────────────────────────────────────────────────────────────────
 class _StatPill extends StatelessWidget {
   final String number;
@@ -787,22 +818,11 @@ class _ProfilePostCard extends StatefulWidget {
 
 class _ProfilePostCardState extends State<_ProfilePostCard> {
   bool _showPicker = false;
-  bool _saved = false;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSaved();
-  }
-
-  Future<void> _loadSaved() async {
-    final u = AuthService.instance.currentUser.value;
-    if (u == null) return;
-    try {
-      final s = await PostService.instance.isSaved(widget.post.id, u.id);
-      if (mounted) setState(() => _saved = s);
-    } catch (_) {}
   }
 
   String? get _myReaction {
@@ -848,17 +868,6 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
       widget.onRefresh();
     } catch (_) {}
     if (mounted) setState(() => _busy = false);
-  }
-
-  Future<void> _toggleSave() async {
-    final u = AuthService.instance.currentUser.value;
-    if (u == null) return;
-    setState(() => _saved = !_saved);
-    try {
-      await PostService.instance.toggleSave(widget.post.id, u.id);
-    } catch (_) {
-      if (mounted) setState(() => _saved = !_saved);
-    }
   }
 
   @override
@@ -1080,12 +1089,29 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                       ),
                     ],
                     const Spacer(),
-                    if (widget.post.comments.isNotEmpty)
-                      Text(
-                        '${widget.post.comments.length} comment${widget.post.comments.length != 1 ? "s" : ""}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF888888),
+                    if (widget.post.commentCount > 0)
+                      InkWell(
+                        onTap: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => CommentsSheet(
+                            post: widget.post,
+                            onCommentAdded: widget.onRefresh,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 2,
+                            horizontal: 4,
+                          ),
+                          child: Text(
+                            '${widget.post.commentCount} comment${widget.post.commentCount != 1 ? "s" : ""}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -1170,15 +1196,6 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                           backgroundColor: Colors.transparent,
                           builder: (_) => ShareSheet(post: widget.post),
                         ),
-                      ),
-                      // Save
-                      _ProfileActionBtn(
-                        icon: _saved
-                            ? Icons.bookmark_rounded
-                            : Icons.bookmark_border_rounded,
-                        label: 'Save',
-                        color: _saved ? _gold : null,
-                        onTap: _toggleSave,
                       ),
                     ],
                   ),
