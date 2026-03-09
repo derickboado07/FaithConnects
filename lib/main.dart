@@ -21,6 +21,7 @@ import 'screens/edit_profile_screen.dart';
 import 'screens/create_post_screen.dart';
 import 'screens/bible_screen.dart';
 import 'services/bible_service.dart';
+import 'screens/chat_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -250,6 +251,7 @@ class FaithConnectApp extends StatelessWidget {
         '/edit_profile': (_) => const EditProfileScreen(),
 
         '/create_post': (_) => const CreatePostScreen(),
+        '/messages': (_) => const ChatListScreen(),
       },
 
       home: ValueListenableBuilder(
@@ -274,6 +276,24 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    // mark presence when app opens
+    try {
+      AuthService.instance.setPresence(true);
+      AuthService.instance.updateLastActive();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
+
+  final _lifecycleObserver = _AppLifecycleObserver();
 
   Widget _buildFeed() {
     return SingleChildScrollView(
@@ -347,6 +367,20 @@ class _HomePageState extends State<HomePage> {
         onTap: (i) => setState(() => _selectedIndex = i),
       ),
     );
+  }
+}
+
+class _AppLifecycleObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      AuthService.instance.setPresence(true);
+      AuthService.instance.updateLastActive();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      AuthService.instance.setPresence(false);
+    }
   }
 }
 
@@ -433,7 +467,7 @@ class TopAppBarSection extends StatelessWidget {
 
       child: IconButton(
         onPressed: icon == Icons.message_outlined
-            ? () => Navigator.pushNamed(context, '/login')
+            ? () => Navigator.pushNamed(context, '/messages')
             : null,
 
         icon: Icon(icon, size: 22),

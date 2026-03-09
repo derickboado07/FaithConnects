@@ -112,6 +112,13 @@ class AuthService {
       final doc = await _db.collection('users').doc(cur.uid).get();
       if (doc.exists) currentUser.value = AuthUser.fromJson(doc.data()!);
     }
+    // mark active if already signed in
+    if (_auth.currentUser != null) {
+      try {
+        await setPresence(true);
+        await updateLastActive();
+      } catch (_) {}
+    }
   }
 
   // Returns `null` on success, or an error message on failure.
@@ -249,8 +256,38 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    try {
+      await setPresence(false);
+    } catch (_) {}
     await _auth.signOut();
     currentUser.value = null;
+  }
+
+  /// Marks the current user as online/offline in their /users/{uid} document.
+  Future<void> setPresence(bool online) async {
+    final cur = _auth.currentUser;
+    if (cur == null) return;
+    try {
+      await _db.collection('users').doc(cur.uid).set({
+        'isOnline': online,
+        'lastActive': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('setPresence failed: $e');
+    }
+  }
+
+  /// Update the user's lastActive timestamp without changing isOnline flag.
+  Future<void> updateLastActive() async {
+    final cur = _auth.currentUser;
+    if (cur == null) return;
+    try {
+      await _db.collection('users').doc(cur.uid).set({
+        'lastActive': DateTime.now().toIso8601String(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('updateLastActive failed: $e');
+    }
   }
 
   Future<String?> _uploadAvatar(String uid, String localPath) async {

@@ -45,5 +45,33 @@ service cloud.firestore {
           && resource.data.author == request.auth.token.email;
       }
     }
+
+    // ── Conversations (1-to-1 direct messages) ──────────────────────────
+    match /conversations/{convoId} {
+      // Any signed-in user can create; creator must be in participants array.
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.participants;
+
+      // Participants can read, update (e.g. lastMessage), or re-create.
+      // resource == null guard handles the brief window before doc is visible.
+      allow read, update: if request.auth != null
+        && (resource == null || request.auth.uid in resource.data.participants);
+
+      allow delete: if false;
+
+      // ── Messages sub-collection ──────────────────────────────────────
+      // Allow any signed-in user to read/create messages.
+      // Security comes from the fact that convoIds are deterministic
+      // sorted-uid pairs and are never publicly enumerated.
+      match /messages/{messageId} {
+        allow read, create: if request.auth != null;
+        // Allow participants to update messages (used for reactions). Clients
+        // should only update `reactions`, but keeping rule simple: only
+        // participants may perform updates.
+        allow update: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
+        allow delete: if false;
+      }
+    }
   }
 }

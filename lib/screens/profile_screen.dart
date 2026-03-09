@@ -5,6 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
 import '../main.dart' show CommentsSheet, ShareSheet, SharedPostPreview;
+import '../services/message_service.dart';
+import 'chat_screen.dart';
+import 'new_chat_screen.dart';
 
 // ─── Color constants ──────────────────────────────────────────────────────────
 const _gold = Color(0xFFD4AF37);
@@ -443,6 +446,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   vertical: 10,
                                 ),
                                 elevation: 0,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final cur =
+                                    AuthService.instance.currentUser.value;
+                                if (cur == null) return;
+                                // If viewing own profile, open chat list
+                                if (cur.id == user.id) {
+                                  Navigator.pushNamed(context, '/messages');
+                                  return;
+                                }
+                                // Otherwise ensure convo with this user and open chat
+                                final convoId = await MessageService.instance
+                                    .ensureConversationWith(user.id);
+                                if (!mounted) return;
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ChatScreen(
+                                      convoId: convoId,
+                                      peerId: user.id,
+                                      peerName: user.name,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.message_rounded, size: 16),
+                              label: const Text('Message'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: _gold),
+                                foregroundColor: _gold,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 12,
+                                ),
                               ),
                             ),
                           ),
