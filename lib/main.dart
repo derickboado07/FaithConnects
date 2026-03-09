@@ -20,6 +20,7 @@ import 'screens/edit_profile_screen.dart';
 
 import 'screens/create_post_screen.dart';
 import 'screens/bible_screen.dart';
+import 'screens/music_screen.dart';
 import 'services/bible_service.dart';
 import 'screens/chat_list_screen.dart';
 
@@ -353,7 +354,7 @@ class _HomePageState extends State<HomePage> {
 
       const Center(child: Text('Market')),
 
-      const Center(child: Text('Music')),
+      const MusicScreen(),
 
       const ProfileScreen(),
     ];

@@ -42,6 +42,7 @@ dependencies:
   firebase_core: ^4.5.0
   cloud_firestore: ^6.1.3
   firebase_storage: ^13.1.0
+  audioplayers: ^6.6.0
   # share_plus removed to avoid win32 version conflict with file_picker
 
 dev_dependencies:
@@ -70,6 +71,7 @@ flutter:
     - assets/
     - lib/Bible/EN-English/asv.sql
     - lib/Bible/TL-Wikang_Tagalog/tagab.sql
+    - songs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
