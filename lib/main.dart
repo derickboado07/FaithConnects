@@ -26,6 +26,8 @@ import 'screens/music_screen.dart';
 import 'services/bible_service.dart';
 import 'services/music_player_service.dart';
 import 'screens/chat_list_screen.dart';
+import 'screens/marketplace_screen.dart';
+import 'screens/product_list_screen.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
@@ -365,12 +367,13 @@ class _HomePageState extends State<HomePage> {
     final pages = <Widget>[
       _buildFeed(),
 
-      // placeholders for Reels, Bible, Market, Music
+      // placeholders for Reels, Bible, Music
       const Center(child: Text('Reels')),
 
       const BibleScreen(),
 
-      const Center(child: Text('Market')),
+      // MarketplaceScreen: full marketplace module (Buy + Sell flows).
+      const MarketplaceScreen(),
 
       const MusicScreen(),
 
@@ -3639,7 +3642,12 @@ class MarketplacePreviewSection extends StatelessWidget {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {},
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ProductListScreen(),
+                  ),
+                ),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFD4AF37),
                   padding: EdgeInsets.zero,
