@@ -634,14 +634,14 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
                                   controller: _replyCtrl,
                                   focusNode: _replyFocus,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: Colors.black,
                                     fontSize: 14,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'Reply to \${widget.userName}...',
                                     hintStyle: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
+                                      color: Colors.black.withValues(
+                                        alpha: 0.5,
                                       ),
                                       fontSize: 14,
                                     ),
