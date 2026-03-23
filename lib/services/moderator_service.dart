@@ -31,13 +31,20 @@ class ModeratorService {
   // ───────────────────────── DASHBOARD ANALYTICS ────────────────────
 
   Future<Map<String, int>> getDashboardStats() async {
-    final usersSnap = await _db.collection('users').get();
-    final postsSnap = await _db.collection('posts').get();
-    final reportsSnap = await _db.collection('reports').get();
+    // Run all three fetches concurrently for speed
+    final results = await Future.wait([
+      _db.collection('users').get(),
+      _db.collection('posts').get(),
+      _db.collection('reports').get(),
+    ]);
+
+    final usersSnap = results[0];
+    final postsSnap = results[1];
+    final reportsSnap = results[2];
 
     int bannedUsers = 0;
     for (final doc in usersSnap.docs) {
-      if (doc.data()['status'] == 'banned') bannedUsers++;
+      if ((doc.data() as Map<String, dynamic>)['status'] == 'banned') bannedUsers++;
     }
 
     return {
