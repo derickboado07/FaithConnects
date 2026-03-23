@@ -16,12 +16,16 @@ class ModeratorService {
   Future<void> _log(String action, String targetId) async {
     final modId = _moderatorId;
     if (modId == null) return;
-    await _db.collection('logs').add({
-      'moderatorId': modId,
-      'action': action,
-      'targetId': targetId,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _db.collection('logs').add({
+        'moderatorId': modId,
+        'action': action,
+        'targetId': targetId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Log write failure is non-fatal; the primary action already succeeded.
+    }
   }
 
   // ───────────────────────── DASHBOARD ANALYTICS ────────────────────
@@ -119,7 +123,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .set({'status': 'banned'}, SetOptions(merge: true));
+        .update({'status': 'banned'});
     await _log('ban_user', userId);
   }
 
@@ -128,7 +132,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .set({'status': 'active'}, SetOptions(merge: true));
+        .update({'status': 'active'});
     await _log('unban_user', userId);
   }
 
@@ -137,7 +141,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .set({'canPost': false}, SetOptions(merge: true));
+        .update({'canPost': false});
     await _log('disable_posting', userId);
   }
 
@@ -146,7 +150,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .set({'canPost': true}, SetOptions(merge: true));
+        .update({'canPost': true});
     await _log('enable_posting', userId);
   }
 

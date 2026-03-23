@@ -32,6 +32,8 @@ import 'screens/marketplace_screen.dart';
 import 'screens/product_list_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/moderator_dashboard.dart';
+import 'screens/notification_screen.dart';
+import 'services/notification_service.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
@@ -320,6 +322,7 @@ class FaithConnectApp extends StatelessWidget {
       valueListenable: ThemeService.instance.themeMode,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: NotificationService.navigatorKey,
           title: 'FaithConnect',
           debugShowCheckedModeBanner: false,
           theme: _lightTheme(),
@@ -373,6 +376,7 @@ class FaithConnectApp extends StatelessWidget {
         '/messages': (_) => const ChatListScreen(),
         '/search': (_) => const SearchScreen(),
         '/moderator_dashboard': (_) => const ModeratorDashboard(),
+        '/notifications': (_) => const NotificationScreen(),
       },
 
           home: const _AppRoot(),
@@ -413,6 +417,10 @@ class _AppRootState extends State<_AppRoot>
       _fadeCtrl.reverse().then((_) {
         if (mounted) setState(() => _showSplash = false);
       });
+    });
+    // Initialize notification service once we have a context.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.initialize(context);
     });
   }
 
@@ -815,6 +823,59 @@ class TopAppBarSection extends StatelessWidget {
                         : const Color(0xFF333333),
                   ),
                 ),
+              );
+            },
+          ),
+
+          // Notification bell with unread badge
+          Builder(
+            builder: (context) {
+              final userId = AuthService.instance.currentUser.value?.id;
+              if (userId == null) return const SizedBox.shrink();
+              return StreamBuilder<int>(
+                stream: NotificationService.instance.unreadCountForUser(userId),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return InkWell(
+                    onTap: () => Navigator.pushNamed(context, '/notifications'),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            Icons.notifications_outlined,
+                            size: 22,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              right: -6,
+                              top: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFD4AF37),
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                child: Text(
+                                  count > 99 ? '99+' : '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),

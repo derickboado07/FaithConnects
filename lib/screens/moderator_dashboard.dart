@@ -20,6 +20,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
   static const _card = Color(0xFF16213E);
 
   int _selectedIndex = 0;
+  bool _sidebarExpanded = true;
 
   final List<_NavItem> _navItems = const [
     _NavItem(Icons.dashboard_outlined, 'Overview'),
@@ -59,86 +60,123 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Row(
-        children: [
-          // ── Sidebar ────────────────────────────────────────────────
-          Container(
-            width: 220,
-            color: _card,
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                // Moderator identity
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 18,
-                        backgroundColor: _gold,
-                        child: Icon(
-                          Icons.shield,
-                          size: 18,
-                          color: Colors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 700;
+          final sidebarWidth = isNarrow ? 60.0 : (_sidebarExpanded ? 220.0 : 60.0);
+          final showLabels = !isNarrow && _sidebarExpanded;
+          return Row(
+            children: [
+              // ── Sidebar ────────────────────────────────────────────────
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: sidebarWidth,
+                color: _card,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    if (showLabels)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: _gold,
+                              child: Icon(
+                                Icons.shield,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                AuthService.instance.currentUser.value?.name ??
+                                    'Moderator',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: _gold,
+                          child: Icon(Icons.shield, size: 18, color: Colors.white),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
+                    const Divider(color: Color(0xFF2D2D44), height: 24),
+                    // Nav items
+                    for (int i = 0; i < _navItems.length; i++)
+                      showLabels
+                          ? _SidebarTile(
+                              icon: _navItems[i].icon,
+                              label: _navItems[i].label,
+                              selected: _selectedIndex == i,
+                              onTap: () => setState(() => _selectedIndex = i),
+                            )
+                          : Tooltip(
+                              message: _navItems[i].label,
+                              child: _SidebarTile(
+                                icon: _navItems[i].icon,
+                                label: '',
+                                selected: _selectedIndex == i,
+                                onTap: () => setState(() => _selectedIndex = i),
+                              ),
+                            ),
+                    const Spacer(),
+                    if (!isNarrow)
+                      IconButton(
+                        icon: Icon(
+                          _sidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
+                          color: Colors.white38,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _sidebarExpanded = !_sidebarExpanded),
+                      ),
+                    if (showLabels)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
                         child: Text(
-                          AuthService.instance.currentUser.value?.name ??
-                              'Moderator',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                          'FaithConnect Admin',
+                          style: TextStyle(
+                            color: Color(0xFF5A5A7A),
+                            fontSize: 11,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-                const Divider(color: Color(0xFF2D2D44), height: 24),
-                // Nav items
-                for (int i = 0; i < _navItems.length; i++)
-                  _SidebarTile(
-                    icon: _navItems[i].icon,
-                    label: _navItems[i].label,
-                    selected: _selectedIndex == i,
-                    onTap: () => setState(() => _selectedIndex = i),
-                  ),
-                const Spacer(),
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'FaithConnect Admin',
-                    style: TextStyle(
-                      color: Color(0xFF5A5A7A),
-                      fontSize: 11,
-                    ),
-                  ),
+              ),
+              // ── Content area ───────────────────────────────────────────
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: const [
+                    _OverviewTab(),
+                    _PostsTab(),
+                    _CommentsTab(),
+                    _UsersTab(),
+                    _ReportsTab(),
+                    _LogsTab(),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          // ── Content area ───────────────────────────────────────────
-          Expanded(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: const [
-                _OverviewTab(),
-                _PostsTab(),
-                _CommentsTab(),
-                _UsersTab(),
-                _ReportsTab(),
-                _LogsTab(),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -176,25 +214,37 @@ class _SidebarTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: selected ? _gold : Colors.white54,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: selected ? _gold : Colors.white70,
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ],
+            padding: EdgeInsets.symmetric(
+              horizontal: label.isEmpty ? 0 : 14,
+              vertical: 12,
             ),
+            child: label.isEmpty
+                ? Center(
+                    child: Icon(
+                      icon,
+                      size: 20,
+                      color: selected ? _gold : Colors.white54,
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 20,
+                        color: selected ? _gold : Colors.white54,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: selected ? _gold : Colors.white70,
+                          fontSize: 14,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -274,6 +324,7 @@ class _OverviewTab extends StatefulWidget {
 class _OverviewTabState extends State<_OverviewTab> {
   Map<String, int>? _stats;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -282,8 +333,18 @@ class _OverviewTabState extends State<_OverviewTab> {
   }
 
   Future<void> _load() async {
-    final stats = await ModeratorService.instance.getDashboardStats();
-    if (mounted) setState(() { _stats = stats; _loading = false; });
+    setState(() { _loading = true; _error = null; });
+    try {
+      final stats = await ModeratorService.instance.getDashboardStats();
+      if (mounted) setState(() { _stats = stats; _loading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString().replaceAll(RegExp(r'\[.*?\]\s*'), '');
+        });
+      }
+    }
   }
 
   @override
@@ -293,68 +354,177 @@ class _OverviewTabState extends State<_OverviewTab> {
         child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
       );
     }
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Failed to load stats',
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final s = _stats!;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Dashboard Overview',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+    return RefreshIndicator(
+      color: const Color(0xFFD4AF37),
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Dashboard Overview',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh, color: Color(0xFFD4AF37)),
+                  tooltip: 'Refresh',
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              _StatCard(
-                icon: Icons.people,
-                label: 'Total Users',
-                value: '${s['totalUsers']}',
-                color: Colors.blueAccent,
-              ),
-              _StatCard(
-                icon: Icons.article,
-                label: 'Total Posts',
-                value: '${s['totalPosts']}',
-                color: Colors.greenAccent,
-              ),
-              _StatCard(
-                icon: Icons.report,
-                label: 'Total Reports',
-                value: '${s['totalReports']}',
-                color: Colors.orangeAccent,
-              ),
-              _StatCard(
-                icon: Icons.block,
-                label: 'Banned Users',
-                value: '${s['bannedUsers']}',
-                color: Colors.redAccent,
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() => _loading = true);
-              _load();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Refresh Stats'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD4AF37),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+            const SizedBox(height: 24),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = constraints.maxWidth > 600
+                    ? (constraints.maxWidth - 48) / 4
+                    : (constraints.maxWidth - 16) / 2;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    SizedBox(
+                      width: cardWidth.clamp(160.0, 280.0),
+                      child: _StatCard(
+                        icon: Icons.people,
+                        label: 'Total Users',
+                        value: '${s['totalUsers']}',
+                        color: Colors.blueAccent,
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth.clamp(160.0, 280.0),
+                      child: _StatCard(
+                        icon: Icons.article,
+                        label: 'Total Posts',
+                        value: '${s['totalPosts']}',
+                        color: Colors.greenAccent,
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth.clamp(160.0, 280.0),
+                      child: _StatCard(
+                        icon: Icons.report,
+                        label: 'Total Reports',
+                        value: '${s['totalReports']}',
+                        color: Colors.orangeAccent,
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth.clamp(160.0, 280.0),
+                      child: _StatCard(
+                        icon: Icons.block,
+                        label: 'Banned Users',
+                        value: '${s['bannedUsers']}',
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ),
-        ],
+            const SizedBox(height: 32),
+            // Recent activity section
+            const Text(
+              'Recent Activity',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            StreamBuilder<QuerySnapshot>(
+              stream: ModeratorService.instance.streamLogs(),
+              builder: (context, snap) {
+                if (!snap.hasData || snap.data!.docs.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16213E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text('No recent activity', style: TextStyle(color: Colors.white38)),
+                    ),
+                  );
+                }
+                final logs = snap.data!.docs.take(5).toList();
+                return Column(
+                  children: logs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final action = data['action'] as String? ?? '';
+                    final ts = data['timestamp'];
+                    String timeStr = '';
+                    if (ts is Timestamp) {
+                      final dt = ts.toDate();
+                      timeStr = '${dt.year}-${_pad(dt.month)}-${_pad(dt.day)} '
+                          '${_pad(dt.hour)}:${_pad(dt.minute)}';
+                    }
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16213E),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(_logIcon(action), size: 16, color: _logColor(action)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              action.replaceAll('_', ' ').toUpperCase(),
+                              style: TextStyle(color: _logColor(action), fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          Text(timeStr, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1141,6 +1311,19 @@ class _UserCard extends StatelessWidget {
     this.onBanned,
   });
 
+  void _showSuccess(BuildContext context, String message) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rawName = (data['name'] as String? ?? '').trim();
@@ -1241,9 +1424,10 @@ class _UserCard extends StatelessWidget {
                       if (await _confirmAction(
                         context,
                         'Ban User',
-                        'Ban this user? They will not be able to access the app.',
+                        'Ban "$name"? They will not be able to access the app.',
                       )) {
                         await ModeratorService.instance.banUser(userId);
+                        _showSuccess(context, '$name has been banned.');
                         onBanned?.call();
                       }
                     },
@@ -1257,9 +1441,10 @@ class _UserCard extends StatelessWidget {
                       if (await _confirmAction(
                         context,
                         'Unban User',
-                        'Restore this user\'s access?',
+                        'Restore "$name"\'s access?',
                       )) {
                         await ModeratorService.instance.unbanUser(userId);
+                        _showSuccess(context, '$name has been unbanned.');
                       }
                     },
                   ),
@@ -1272,9 +1457,10 @@ class _UserCard extends StatelessWidget {
                       if (await _confirmAction(
                         context,
                         'Disable Posting',
-                        'Disable posting for this user?',
+                        'Disable posting for "$name"?',
                       )) {
                         await ModeratorService.instance.disablePosting(userId);
+                        _showSuccess(context, 'Posting disabled for $name.');
                       }
                     },
                   ),
@@ -1287,9 +1473,10 @@ class _UserCard extends StatelessWidget {
                       if (await _confirmAction(
                         context,
                         'Enable Posting',
-                        'Allow this user to post again?',
+                        'Allow "$name" to post again?',
                       )) {
                         await ModeratorService.instance.enablePosting(userId);
+                        _showSuccess(context, 'Posting enabled for $name.');
                       }
                     },
                   ),
