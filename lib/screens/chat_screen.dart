@@ -40,6 +40,8 @@ class ChatScreen extends StatefulWidget {
   final String? peerName;
   final Conversation? conversation;
   final String? initialText;
+  final String? initialNoteText;
+  final String? initialNoteOwnerName;
 
   const ChatScreen({
     super.key,
@@ -48,6 +50,8 @@ class ChatScreen extends StatefulWidget {
     this.peerName,
     this.conversation,
     this.initialText,
+    this.initialNoteText,
+    this.initialNoteOwnerName,
   });
 
   @override
@@ -57,12 +61,21 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _ctrl = TextEditingController();
 
+  // Pending note reply context
+  String? _pendingNoteText;
+  String? _pendingNoteOwnerName;
+
   @override
   void initState() {
     super.initState();
     if (widget.initialText != null && widget.initialText!.isNotEmpty) {
       _ctrl.text = widget.initialText!;
       _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+    }
+    // If opened from a note reply, set pending note context
+    if (widget.initialNoteText != null && widget.initialNoteText!.isNotEmpty) {
+      _pendingNoteText = widget.initialNoteText;
+      _pendingNoteOwnerName = widget.initialNoteOwnerName;
     }
   }
 
@@ -545,91 +558,100 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
         leading: widget.conversation != null
-            ? Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.grey.shade200,
-                  child: ClipOval(
-                    child:
-                        (widget.conversation!.photoUrl != null &&
-                            widget.conversation!.photoUrl!.isNotEmpty)
-                        ? Image.network(
-                            widget.conversation!.photoUrl!,
-                            width: 36,
-                            height: 36,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (ctx, child, progress) {
-                              if (progress == null) return child;
-                              return const SizedBox(
+            ? StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('conversations')
+                    .doc(widget.convoId)
+                    .snapshots(),
+                builder: (context, convoSnap) {
+                  final convoData =
+                      convoSnap.data?.data() as Map<String, dynamic>?;
+                  final livePhotoUrl =
+                      convoData?['photoUrl'] as String? ??
+                      widget.conversation!.photoUrl;
+                  final liveName =
+                      convoData?['name'] as String? ??
+                      widget.conversation!.name ??
+                      '';
+
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.grey.shade200,
+                      child: ClipOval(
+                        child: (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
+                            ? Image.network(
+                                livePhotoUrl,
                                 width: 36,
                                 height: 36,
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (ctx, child, progress) {
+                                  if (progress == null) return child;
+                                  return const SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (ctx, err, st) {
-                              // ignore: avoid_print
-                              print(
-                                'chat_screen: failed to load group avatar ${widget.conversation!.photoUrl!} -> $err',
-                              );
-                              // Fall back to initials
-                              final n = widget.conversation!.name ?? '';
-                              final initials = (n.isNotEmpty)
-                                  ? n
-                                        .trim()
-                                        .split(RegExp('\\s+'))
-                                        .where((s) => s.isNotEmpty)
-                                        .map((s) => s[0])
-                                        .take(2)
-                                        .join()
-                                        .toUpperCase()
-                                  : 'G';
-                              return SizedBox(
+                                  );
+                                },
+                                errorBuilder: (ctx, err, st) {
+                                  final initials = (liveName.isNotEmpty)
+                                      ? liveName
+                                            .trim()
+                                            .split(RegExp('\\s+'))
+                                            .where((s) => s.isNotEmpty)
+                                            .map((s) => s[0])
+                                            .take(2)
+                                            .join()
+                                            .toUpperCase()
+                                      : 'G';
+                                  return SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: Center(
+                                      child: Text(
+                                        initials,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : SizedBox(
                                 width: 36,
                                 height: 36,
                                 child: Center(
                                   child: Text(
-                                    initials,
+                                    (liveName.isNotEmpty)
+                                        ? liveName
+                                              .trim()
+                                              .split(RegExp('\\s+'))
+                                              .where((s) => s.isNotEmpty)
+                                              .map((s) => s[0])
+                                              .take(2)
+                                              .join()
+                                              .toUpperCase()
+                                        : 'G',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          )
-                        : // No photoUrl — show initials or group icon
-                          SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Center(
-                              child: Text(
-                                ((widget.conversation!.name ?? '').isNotEmpty)
-                                    ? widget.conversation!.name!
-                                          .trim()
-                                          .split(RegExp('\\s+'))
-                                          .where((s) => s.isNotEmpty)
-                                          .map((s) => s[0])
-                                          .take(2)
-                                          .join()
-                                          .toUpperCase()
-                                    : 'G',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
                               ),
-                            ),
-                          ),
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                },
               )
             : null,
         actions: [
@@ -727,9 +749,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
                 return ListView.builder(
+                  reverse: true,
                   padding: const EdgeInsets.all(12),
                   itemCount: msgs.length,
                   itemBuilder: (context, i) {
+                    // Because reverse:true, index 0 is at the bottom.
+                    // Flip so newest messages appear at the bottom.
+                    i = msgs.length - 1 - i;
                     final m = msgs[i];
                     // System messages are rendered as centred notices
                     if (m.isSystemMessage) {
@@ -769,6 +795,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
                     final isMydayReply =
                         m.mydayMediaUrl != null && m.mydayMediaUrl!.isNotEmpty;
+
+                    final isNoteReply =
+                        m.repliedToNote != null && m.repliedToNote!.isNotEmpty;
 
                     return GestureDetector(
                       onTap: () => _showMessageOptions(context, m),
@@ -878,9 +907,80 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                               const SizedBox(height: 2),
                             ],
+                            // ── Note reply bubble ────────────────────────────
+                            if (isNoteReply) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.reply_rounded,
+                                      size: 13,
+                                      color: Color(0xFF888888),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isMe
+                                          ? 'You replied to ${m.repliedToNoteOwnerName ?? 'their'}\'s note'
+                                          : '${m.senderName ?? 'Someone'} replied to your note',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF888888),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 250,
+                                ),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFFF5E6B3,
+                                  ).withValues(alpha: 0.45),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(14),
+                                    topRight: Radius.circular(14),
+                                    bottomLeft: Radius.circular(4),
+                                    bottomRight: Radius.circular(4),
+                                  ),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFFD4AF37,
+                                    ).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.sticky_note_2,
+                                      size: 16,
+                                      color: Color(0xFFD4AF37),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        m.repliedToNote!,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF444444),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                             Container(
-                              constraints: isMydayReply
-                                  ? const BoxConstraints(maxWidth: 180)
+                              constraints: (isMydayReply || isNoteReply)
+                                  ? const BoxConstraints(maxWidth: 250)
                                   : const BoxConstraints(maxWidth: 280),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
@@ -890,7 +990,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 color: isMe
                                     ? const Color(0xFFD4AF37)
                                     : const Color(0xFFF0F0F0),
-                                borderRadius: isMydayReply
+                                borderRadius: (isMydayReply || isNoteReply)
                                     ? const BorderRadius.only(
                                         topLeft: Radius.circular(4),
                                         topRight: Radius.circular(4),
@@ -1064,6 +1164,58 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: LinearProgressIndicator(color: Color(0xFFD4AF37)),
             ),
+          // Note reply banner
+          if (_pendingNoteText != null && _pendingNoteText!.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              color: const Color(0xFFF5E6B3).withValues(alpha: 0.5),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.sticky_note_2,
+                    size: 16,
+                    color: Color(0xFFD4AF37),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Replying to ${_pendingNoteOwnerName ?? 'their'} note',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF888888),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          _pendingNoteText!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF444444),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _pendingNoteText = null;
+                      _pendingNoteOwnerName = null;
+                    }),
+                    child: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Color(0xFF888888),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -1116,8 +1268,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                 await MessageService.instance.sendMessage(
                                   widget.convoId,
                                   txt,
+                                  repliedToNote: _pendingNoteText,
+                                  repliedToNoteOwnerName: _pendingNoteOwnerName,
                                 );
                                 _ctrl.clear();
+                                setState(() {
+                                  _pendingNoteText = null;
+                                  _pendingNoteOwnerName = null;
+                                });
                               } catch (e) {
                                 if (mounted) {
                                   ScaffoldMessenger.of(

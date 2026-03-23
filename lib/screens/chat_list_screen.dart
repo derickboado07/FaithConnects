@@ -1231,7 +1231,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             convoId: convoId,
                             peerId: peerId,
                             peerName: peerName ?? name,
-                            initialText: '📝 "$note"\n',
+                            initialNoteText: note,
+                            initialNoteOwnerName: peerName ?? name,
                           ),
                         ),
                       );

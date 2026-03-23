@@ -74,6 +74,8 @@ class MessageItem {
   final bool isSystemMessage;
   final String? mydayMediaUrl;
   final String? mydayOwnerName;
+  final String? repliedToNote;
+  final String? repliedToNoteOwnerName;
 
   MessageItem({
     required this.id,
@@ -87,6 +89,8 @@ class MessageItem {
     this.isSystemMessage = false,
     this.mydayMediaUrl,
     this.mydayOwnerName,
+    this.repliedToNote,
+    this.repliedToNoteOwnerName,
   }) : reactions = reactions ?? {},
        deletedFor = deletedFor ?? {};
 
@@ -102,6 +106,8 @@ class MessageItem {
       isSystemMessage: d['isSystemMessage'] == true,
       mydayMediaUrl: d['mydayMediaUrl'] as String?,
       mydayOwnerName: d['mydayOwnerName'] as String?,
+      repliedToNote: d['repliedToNote'] as String?,
+      repliedToNoteOwnerName: d['repliedToNoteOwnerName'] as String?,
       reactions: d['reactions'] is Map<String, dynamic>
           ? (d['reactions'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -314,7 +320,12 @@ class MessageService {
     });
   }
 
-  Future<void> sendMessage(String convoId, String text) async {
+  Future<void> sendMessage(
+    String convoId,
+    String text, {
+    String? repliedToNote,
+    String? repliedToNoteOwnerName,
+  }) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
     final messagesRef = _db
@@ -350,12 +361,17 @@ class MessageService {
     // Client-side write when functions not configured
     try {
       final senderName = AuthService.instance.currentUser.value?.name ?? '';
-      await messagesRef.add({
+      final msgData = <String, dynamic>{
         'senderId': uid,
         'senderName': senderName,
         'text': text,
         'ts': now,
-      });
+      };
+      if (repliedToNote != null && repliedToNote.isNotEmpty) {
+        msgData['repliedToNote'] = repliedToNote;
+        msgData['repliedToNoteOwnerName'] = repliedToNoteOwnerName ?? '';
+      }
+      await messagesRef.add(msgData);
     } catch (e) {
       throw Exception('Failed to write message: $e');
     }
