@@ -211,18 +211,29 @@ class _LoginScreenState extends State<LoginScreen>
                       const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            foregroundColor: _gold,
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 36),
-                          ),
-                          child: const Text(
-                            'Forgot Password?',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Opening password recovery...'),
+                                  duration: Duration(milliseconds: 800),
+                                ),
+                              );
+                              Navigator.pushNamed(context, '/forgot_password');
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                              child: Text(
+                                'Forgot Password?',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _gold,
+                                ),
+                              ),
                             ),
                           ),
                         ),

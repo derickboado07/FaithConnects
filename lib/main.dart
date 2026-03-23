@@ -13,6 +13,7 @@ import 'services/post_service.dart';
 import 'screens/public_profile_screen.dart';
 
 import 'screens/login_screen.dart';
+import 'screens/forgot_password_screen.dart';
 
 import 'screens/register_screen.dart';
 
@@ -265,6 +266,7 @@ class FaithConnectApp extends StatelessWidget {
 
       routes: {
         '/login': (_) => const LoginScreen(),
+        '/forgot_password': (_) => const ForgotPasswordScreen(),
 
         '/register': (_) => const RegisterScreen(),
 
@@ -937,7 +939,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                         _shareDailyVerseToFeed,
                       ),
                       const Spacer(),
-                      _actionTextBtn('More', Icons.more_horiz, () {}),
+                      _actionTextBtn('More', Icons.more_horiz, () => _showVerseOptions(context)),
                     ],
                   ),
                 ],
@@ -1008,6 +1010,60 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showVerseOptions(BuildContext context) {
+    if (_verse == null) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.share_rounded, color: Color(0xFFD4AF37)),
+                title: const Text('Share to Feed'),
+                subtitle: const Text('Post the verse to your feed'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareDailyVerseToFeed();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.copy, color: Color(0xFF888888)),
+                title: const Text('Copy Verse'),
+                subtitle: Text('${_verse!.reference} — ${_verse!.displayText}'),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: '${_verse!.reference} — ${_verse!.displayText}'));
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Verse copied to clipboard')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_new, color: Color(0xFF64B5F6)),
+                title: const Text('Open in Bible'),
+                subtitle: Text(_verse?.translationLabel ?? ''),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BibleScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 }
