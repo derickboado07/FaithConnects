@@ -83,21 +83,22 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   InputDecoration _inputDec(String label, IconData icon, {Widget? suffix}) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+      labelStyle: TextStyle(color: theme.hintColor, fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       suffixIcon: suffix,
       filled: true,
-      fillColor: const Color(0xFFFAF9F6),
+      fillColor: theme.colorScheme.surfaceContainerHighest,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -115,20 +116,21 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   InputDecoration _dropdownDec(String label, IconData icon) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+      labelStyle: TextStyle(color: theme.hintColor, fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       filled: true,
-      fillColor: const Color(0xFFFAF9F6),
+      fillColor: theme.colorScheme.surfaceContainerHighest,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -140,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -214,9 +216,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           'Full name',
                           Icons.person_outline,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter name' : null,
@@ -229,9 +231,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           Icons.phone_outlined,
                         ),
                         keyboardType: TextInputType.phone,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter phone' : null,
@@ -241,9 +243,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         controller: _emailCtrl,
                         decoration: _inputDec('Email', Icons.email_outlined),
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter email' : null,
@@ -259,7 +261,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                               _obscurePw
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: const Color(0xFFAAAAAA),
+                              color: Theme.of(context).hintColor,
                               size: 20,
                             ),
                             onPressed: () =>
@@ -267,9 +269,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                         obscureText: _obscurePw,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.length < 6) ? 'Min 6 chars' : null,
@@ -285,7 +287,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                               _obscureConfirm
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: const Color(0xFFAAAAAA),
+                              color: Theme.of(context).hintColor,
                               size: 20,
                             ),
                             onPressed: () => setState(
@@ -294,9 +296,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                         obscureText: _obscureConfirm,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) => (v == null || v != _pwCtrl.text)
                             ? 'Passwords do not match'
@@ -306,7 +308,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       DropdownButtonFormField<String>(
                         initialValue: _gender.isEmpty ? null : _gender,
                         decoration: _dropdownDec('Gender', Icons.wc_outlined),
-                        dropdownColor: Colors.white,
+                        dropdownColor: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(14),
                         items: const [
                           DropdownMenuItem(value: 'Male', child: Text('Male')),
@@ -331,9 +333,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                           'Date of birth',
                           Icons.calendar_today_outlined,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         onTap: () async {
                           final now = DateTime.now();
@@ -408,10 +410,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'Already have an account? ',
                             style: TextStyle(
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).hintColor,
                               fontSize: 14,
                             ),
                           ),

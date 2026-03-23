@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
@@ -30,6 +31,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (mounted) setState(() {});
     });
   }
+
+  final List<String> _tags = [];
 
   bool get _canShare =>
       !_submitting && (_media != null || _captionCtrl.text.trim().isNotEmpty);
@@ -104,6 +107,125 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  void _showTagDialog() {
+    final tagCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx).dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Add a Tag',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(ctx).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: tagCtrl,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addTag(tagCtrl, ctx),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[a-zA-Z0-9_]'),
+                    ),
+                  ],
+                  decoration: InputDecoration(
+                    prefixText: '# ',
+                    prefixStyle: TextStyle(
+                      color: _gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    hintText: 'faith, blessing, prayer...',
+                    hintStyle: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)),
+                    filled: true,
+                    fillColor: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _gold.withValues(alpha: 0.6),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _addTag(tagCtrl, ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _gold,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Add Tag',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _addTag(TextEditingController tagCtrl, BuildContext ctx) {
+    final tag = tagCtrl.text.trim();
+    if (tag.isEmpty) return;
+    final hashTag = '#$tag';
+    final current = _captionCtrl.text;
+    _captionCtrl.text = current.isEmpty ? hashTag : '$current $hashTag';
+    _captionCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: _captionCtrl.text.length),
+    );
+    setState(() => _tags.add(hashTag));
+    Navigator.pop(ctx);
+  }
+
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -161,20 +283,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget build(BuildContext context) {
     final user = AuthService.instance.currentUser.value;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: Color(0xFF444444)),
+          icon: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Create Post',
           style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         centerTitle: true,
@@ -217,9 +339,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ),
           ),
         ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: Theme.of(context).dividerColor),
         ),
       ),
       body: SingleChildScrollView(
@@ -272,10 +394,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         user?.name.isNotEmpty == true
                             ? user!.name
                             : (user?.email ?? 'You'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -320,15 +442,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 controller: _captionCtrl,
                 maxLines: 6,
                 minLines: 3,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                   height: 1.5,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Share your testimony, prayer or blessing...',
                   hintStyle: TextStyle(
-                    color: Color(0xFFBBBBBB),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     fontSize: 15.5,
                   ),
                   border: InputBorder.none,
@@ -407,9 +529,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ],
 
             // ── Divider ───────────────────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Divider(height: 1, color: Theme.of(context).dividerColor),
             ),
 
             // ── Media picker row ──────────────────────────────────────
@@ -449,7 +571,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     icon: Icons.tag_outlined,
                     label: 'Tag',
                     color: _gold,
-                    onTap: () {},
+                    onTap: _showTagDialog,
                   ),
                 ],
               ),

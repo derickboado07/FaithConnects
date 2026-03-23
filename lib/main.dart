@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 
 import 'services/post_service.dart';
+import 'services/theme_service.dart';
 import 'screens/public_profile_screen.dart';
 
 import 'screens/login_screen.dart';
@@ -48,7 +49,7 @@ Widget _buildIconButton(BuildContext context, IconData icon) {
     borderRadius: BorderRadius.circular(12),
     child: Padding(
       padding: const EdgeInsets.all(6),
-      child: Icon(icon, size: 22, color: const Color(0xFF333333)),
+      child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
     ),
   );
 }
@@ -120,77 +121,49 @@ void main() async {
     await PostService.instance.init();
   }
 
+  await ThemeService.instance.init();
+
   runApp(const FaithConnectApp());
 }
 
 class FaithConnectApp extends StatelessWidget {
   const FaithConnectApp({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FaithConnect',
-
-      debugShowCheckedModeBanner: false,
-
-      theme: ThemeData(
+  static ThemeData _lightTheme() => ThemeData(
         useMaterial3: true,
-
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD4AF37),
-
           brightness: Brightness.light,
-
           surface: Colors.white,
-
           primary: const Color(0xFFD4AF37),
-
           onPrimary: Colors.white,
-
           secondary: const Color(0xFFF5E6B3),
         ),
-
         scaffoldBackgroundColor: Colors.white,
-
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
-
           elevation: 0,
-
           scrolledUnderElevation: 0,
-
           iconTheme: IconThemeData(color: Color(0xFF5C5C5C)),
-
           titleTextStyle: TextStyle(
             color: Color(0xFF2C2C2C),
-
             fontSize: 22,
-
             fontWeight: FontWeight.bold,
           ),
         ),
-
         cardTheme: CardThemeData(
           elevation: 2,
-
-          shadowColor: Colors.grey.withValues(alpha: 0.15),
-
+          shadowColor: Colors.black12,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-
           color: Colors.white,
         ),
-
         iconTheme: const IconThemeData(color: Color(0xFF5C5C5C)),
-
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFFFAF9F6),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
@@ -205,71 +178,195 @@ class FaithConnectApp extends StatelessWidget {
           ),
           labelStyle: const TextStyle(color: Color(0xFF888888)),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFD4AF37),
             foregroundColor: Colors.white,
             elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             padding: const EdgeInsets.symmetric(vertical: 14),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ),
-
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFD4AF37),
             side: const BorderSide(color: Color(0xFFD4AF37)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
-
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFD4AF37)),
         ),
-
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           backgroundColor: const Color(0xFFD4AF37),
         ),
-
         dialogTheme: DialogThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 8,
         ),
-
         bottomSheetTheme: const BottomSheetThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
         ),
-
-        dividerTheme: const DividerThemeData(
-          color: Color(0xFFF0F0F0),
-          thickness: 0.8,
+        dividerTheme: const DividerThemeData(color: Color(0xFFF0F0F0), thickness: 0.8),
+        listTileTheme: const ListTileThemeData(
+          textColor: Color(0xFF2C2C2C),
+          iconColor: Color(0xFF5C5C5C),
         ),
-
         popupMenuTheme: PopupMenuThemeData(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 4,
         ),
-      ),
+      );
+
+  static ThemeData _darkTheme() => ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFD4AF37),
+          brightness: Brightness.dark,
+          surface: const Color(0xFF1E1E1E),
+          primary: const Color(0xFFD4AF37),
+          onPrimary: Colors.black,
+          secondary: const Color(0xFF4A3B10),
+          onSurface: Colors.white,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A1A),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          iconTheme: IconThemeData(color: Color(0xFFCCCCCC)),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shadowColor: Colors.black38,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          color: const Color(0xFF1E1E1E),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFFCCCCCC)),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2A2A2A),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFF3A3A3A)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFF3A3A3A)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 1.5),
+          ),
+          labelStyle: const TextStyle(color: Color(0xFF888888)),
+          hintStyle: const TextStyle(color: Color(0xFF666666)),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFD4AF37),
+            foregroundColor: Colors.black,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFD4AF37),
+            side: const BorderSide(color: Color(0xFFD4AF37)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFD4AF37)),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: const Color(0xFF2C2C2C),
+          contentTextStyle: const TextStyle(color: Colors.white),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          elevation: 8,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+        ),
+        dividerTheme: const DividerThemeData(color: Color(0xFF2A2A2A), thickness: 0.8),
+        listTileTheme: const ListTileThemeData(
+          textColor: Colors.white,
+          iconColor: Color(0xFFCCCCCC),
+        ),
+        popupMenuTheme: PopupMenuThemeData(
+          color: const Color(0xFF2A2A2A),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 4,
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService.instance.themeMode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'FaithConnect',
+          debugShowCheckedModeBanner: false,
+          theme: _lightTheme(),
+          darkTheme: _darkTheme(),
+          themeMode: mode,
+          themeAnimationDuration: Duration.zero,
+          themeAnimationCurve: Curves.linear,
+
+          // Facebook-style crossfade overlay during theme switch.
+          builder: (context, child) {
+            return ValueListenableBuilder<bool>(
+              valueListenable: ThemeService.instance.isTransitioning,
+              builder: (context, transitioning, _) {
+                return Stack(
+                  children: [
+                    child!,
+                    // Fade overlay that hides the instant theme swap.
+                    IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: transitioning ? 1.0 : 0.0,
+                        duration: Duration(
+                          milliseconds: transitioning ? 150 : 320,
+                        ),
+                        curve: transitioning
+                            ? Curves.easeIn
+                            : Curves.easeOutCubic,
+                        child: Container(
+                          color: ThemeService.instance.goingDark
+                              ? const Color.fromRGBO(0, 0, 0, 0.45)
+                              : const Color.fromRGBO(255, 255, 255, 0.55),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
 
       routes: {
         '/login': (_) => const LoginScreen(),
@@ -286,7 +383,9 @@ class FaithConnectApp extends StatelessWidget {
         '/search': (_) => const SearchScreen(),
       },
 
-      home: const _AppRoot(),
+          home: const _AppRoot(),
+        );
+      },
     );
   }
 }
@@ -337,7 +436,7 @@ class _AppRootState extends State<_AppRoot>
       return FadeTransition(
         opacity: _fadeAnim,
         child: Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -500,9 +599,12 @@ class _MiniMusicPlayer extends StatelessWidget {
       child: Container(
         height: 64,
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(
-            top: BorderSide(color: Color(0xFFE8E8E8), width: 0.8),
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).dividerColor,
+              width: 0.8,
+            ),
           ),
           boxShadow: [
             BoxShadow(
@@ -536,10 +638,10 @@ class _MiniMusicPlayer extends StatelessWidget {
                 children: [
                   Text(
                     song.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -547,9 +649,9 @@ class _MiniMusicPlayer extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     song.artist,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: Color(0xFF888888),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -680,7 +782,7 @@ class TopAppBarSection extends StatelessWidget {
           const SizedBox(width: 12),
 
           // App Name
-          const Text(
+          Text(
             'FaithConnect',
 
             style: TextStyle(
@@ -688,13 +790,35 @@ class TopAppBarSection extends StatelessWidget {
 
               fontWeight: FontWeight.bold,
 
-              color: Color(0xFF2C2C2C),
+              color: Theme.of(context).colorScheme.onSurface,
 
               letterSpacing: 0.5,
             ),
           ),
 
           const Spacer(),
+
+          // Dark / light mode toggle
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: ThemeService.instance.themeMode,
+            builder: (context, mode, _) {
+              final isDark = mode == ThemeMode.dark;
+              return InkWell(
+                onTap: ThemeService.instance.toggle,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    size: 22,
+                    color: isDark
+                        ? const Color(0xFFD4AF37)
+                        : const Color(0xFF333333),
+                  ),
+                ),
+              );
+            },
+          ),
 
           // Icons
           _buildIconButton(context, Icons.search),
@@ -1023,30 +1147,42 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
 
   void _showVerseOptions(BuildContext context) {
     if (_verse == null) return;
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      backgroundColor: theme.bottomSheetTheme.backgroundColor ?? theme.colorScheme.surface,
+      shape: theme.bottomSheetTheme.shape ?? const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) {
+      builder: (ctx) {
+        final t = Theme.of(ctx);
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: t.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
               ListTile(
                 leading: const Icon(Icons.share_rounded, color: Color(0xFFD4AF37)),
-                title: const Text('Share to Feed'),
-                subtitle: const Text('Post the verse to your feed'),
+                title: Text('Share to Feed', style: TextStyle(color: t.colorScheme.onSurface)),
+                subtitle: Text('Post the verse to your feed', style: TextStyle(color: t.hintColor)),
                 onTap: () {
                   Navigator.pop(context);
                   _shareDailyVerseToFeed();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.copy, color: Color(0xFF888888)),
-                title: const Text('Copy Verse'),
-                subtitle: Text('${_verse!.reference} — ${_verse!.displayText}'),
+                leading: Icon(Icons.copy, color: t.hintColor),
+                title: Text('Copy Verse', style: TextStyle(color: t.colorScheme.onSurface)),
+                subtitle: Text('${_verse!.reference} — ${_verse!.displayText}', style: TextStyle(color: t.hintColor)),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: '${_verse!.reference} — ${_verse!.displayText}'));
                   Navigator.pop(context);
@@ -1057,8 +1193,8 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
               ),
               ListTile(
                 leading: const Icon(Icons.open_in_new, color: Color(0xFF64B5F6)),
-                title: const Text('Open in Bible'),
-                subtitle: Text(_verse?.translationLabel ?? ''),
+                title: Text('Open in Bible', style: TextStyle(color: t.colorScheme.onSurface)),
+                subtitle: Text(_verse?.translationLabel ?? '', style: TextStyle(color: t.hintColor)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -1130,13 +1266,13 @@ class CreatePostSection extends StatelessWidget {
         padding: const EdgeInsets.all(14),
 
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
 
           borderRadius: BorderRadius.circular(16),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
 
               blurRadius: 10,
 
@@ -1208,17 +1344,17 @@ class CreatePostSection extends StatelessWidget {
                 ),
 
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8F8F8),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
 
                   borderRadius: BorderRadius.circular(24),
 
-                  border: Border.all(color: const Color(0xFFEEEEEE)),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
 
-                child: const Text(
+                child: Text(
                   'Share your testimony...',
 
-                  style: TextStyle(color: Color(0xFFAAAAAA), fontSize: 14.5),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14.5),
                 ),
               ),
             ),
@@ -1706,13 +1842,13 @@ class _PostCardState extends State<PostCard> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
 
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
 
           borderRadius: BorderRadius.circular(16),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
 
               blurRadius: 12,
 
@@ -1798,13 +1934,13 @@ class _PostCardState extends State<PostCard> {
                                       ? widget.post.authorEmail.split('@').first
                                       : widget.post.authorEmail,
 
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
 
-                                    fontSize: 14.5,
+                                      fontSize: 14.5,
 
-                                    color: Color(0xFF2C2C2C),
-                                  ),
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
                                 ),
 
                                 const SizedBox(height: 1),
@@ -1812,8 +1948,8 @@ class _PostCardState extends State<PostCard> {
                                 Text(
                                   _formatTimestamp(widget.post.timestamp),
 
-                                  style: const TextStyle(
-                                    color: Color(0xFF999999),
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
 
                                     fontSize: 11.5,
                                   ),
@@ -1834,10 +1970,10 @@ class _PostCardState extends State<PostCard> {
                           user != null && user.id == widget.post.authorId;
 
                       return PopupMenuButton<String>(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.more_horiz,
 
-                          color: Color(0xFFAAAAAA),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
 
                         onSelected: (v) async {
@@ -1913,10 +2049,10 @@ class _PostCardState extends State<PostCard> {
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
                 child: Text(
                   widget.post.content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     height: 1.55,
-                    color: Color(0xFF3A3A3A),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -2010,10 +2146,10 @@ class _PostCardState extends State<PostCard> {
                           child: Text(
                             '${widget.post.commentCount} comment${widget.post.commentCount != 1 ? 's' : ''}',
 
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
 
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -2023,15 +2159,15 @@ class _PostCardState extends State<PostCard> {
               ),
 
             // ── Divider ──────────────────────────────
-            const Padding(
-              padding: EdgeInsets.fromLTRB(14, 10, 14, 0),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
 
               child: Divider(
                 height: 1,
 
                 thickness: 0.8,
 
-                color: Color(0xFFEEEEEE),
+                color: Theme.of(context).dividerColor,
               ),
             ),
 
@@ -2173,7 +2309,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const c = Color(0xFF888888);
+    final c = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
 
     return InkWell(
       onTap: onTap,
@@ -2236,9 +2372,9 @@ class SharedPostPreview extends StatelessWidget {
         : authorEmail;
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFDDDDDD)),
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFFF8F8F8),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2272,10 +2408,10 @@ class SharedPostPreview extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   authorName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13.5,
-                    color: Color(0xFF2C2C2C),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -2287,9 +2423,9 @@ class SharedPostPreview extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text(
                 content,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
-                  color: Color(0xFF444444),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
                   height: 1.45,
                 ),
               ),
@@ -2361,11 +2497,11 @@ class _ReactionPickerBubble extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
 
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
 
           borderRadius: BorderRadius.circular(40),
 
-          border: Border.all(color: const Color(0xFFEEEEEE)),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
 
         child: Row(
@@ -2535,10 +2671,10 @@ class _CommentsSheetState extends State<CommentsSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
 
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
 
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
 
       child: Column(
@@ -2552,7 +2688,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
             height: 4,
 
             decoration: BoxDecoration(
-              color: const Color(0xFFDDDDDD),
+              color: Theme.of(context).dividerColor,
 
               borderRadius: BorderRadius.circular(2),
             ),
@@ -2564,7 +2700,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
             child: Row(
               children: [
-                const Text(
+                Text(
                   'Comments',
 
                   style: TextStyle(
@@ -2572,7 +2708,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                     fontWeight: FontWeight.bold,
 
-                    color: Color(0xFF2C2C2C),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
 
@@ -2608,12 +2744,12 @@ class _CommentsSheetState extends State<CommentsSheet> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const Divider(height: 1),
 
           // Comments list
           Expanded(
             child: _comments.isEmpty
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
 
@@ -2623,10 +2759,10 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                           size: 48,
 
-                          color: Color(0xFFDDDDDD),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         ),
 
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
 
                         Text(
                           'No comments yet',
@@ -2634,19 +2770,19 @@ class _CommentsSheetState extends State<CommentsSheet> {
                           style: TextStyle(
                             fontSize: 15,
 
-                            color: Color(0xFF888888),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
 
                             fontWeight: FontWeight.w500,
                           ),
                         ),
 
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
 
                         Text(
                           'Be the first to comment!',
 
                           style: TextStyle(
-                            color: Color(0xFFAAAAAA),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
 
                             fontSize: 12,
                           ),
@@ -2671,7 +2807,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
           ),
 
           // Input
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          Divider(height: 1, color: Theme.of(context).dividerColor),
 
           Padding(
             padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + bottomInset),
@@ -2710,17 +2846,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                     onSubmitted: (_) => _submit(),
 
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
 
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
 
                     decoration: InputDecoration(
                       hintText: 'Write a comment...',
 
-                      hintStyle: const TextStyle(
-                        color: Color(0xFFAAAAAA),
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
 
                         fontSize: 14,
                       ),
@@ -2739,7 +2875,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
 
                       filled: true,
 
-                      fillColor: const Color(0xFFF4F4F4),
+                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ),
@@ -2895,7 +3031,7 @@ class _CommentCardState extends State<_CommentCard> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F8F8),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
@@ -2903,18 +3039,18 @@ class _CommentCardState extends State<_CommentCard> {
                       children: [
                         Text(
                           authorName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
-                            color: Color(0xFF2C2C2C),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           widget.comment.text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13.5,
-                            color: Color(0xFF444444),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
                             height: 1.4,
                           ),
                         ),
@@ -2934,9 +3070,9 @@ class _CommentCardState extends State<_CommentCard> {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(30),
-                            border: Border.all(color: const Color(0xFFEEEEEE)),
+                            border: Border.all(color: Theme.of(context).dividerColor),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -3191,10 +3327,10 @@ class ShareSheetState extends State<ShareSheet> {
     return Container(
       padding: EdgeInsets.only(bottom: bottomInset),
 
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
 
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       ),
 
       child: Column(
@@ -3210,15 +3346,15 @@ class ShareSheetState extends State<ShareSheet> {
             height: 4,
 
             decoration: BoxDecoration(
-              color: const Color(0xFFDDDDDD),
+              color: Theme.of(context).dividerColor,
 
               borderRadius: BorderRadius.circular(2),
             ),
           ),
 
           // Title
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
 
             child: Row(
               children: [
@@ -3230,14 +3366,14 @@ class ShareSheetState extends State<ShareSheet> {
 
                     fontWeight: FontWeight.bold,
 
-                    color: Color(0xFF2C2C2C),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          Divider(height: 1, color: Theme.of(context).dividerColor),
 
           // Share-to-feed section (like FB "Share now" with thought)
           Padding(
@@ -3318,12 +3454,12 @@ class ShareSheetState extends State<ShareSheet> {
                                         ?.email ??
                                     ''),
 
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
 
                             fontSize: 14,
 
-                            color: Color(0xFF2C2C2C),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
 
@@ -3393,17 +3529,17 @@ class ShareSheetState extends State<ShareSheet> {
 
                   minLines: 1,
 
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
 
-                    color: Color(0xFF2C2C2C),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
 
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Say something about this...',
 
                     hintStyle: TextStyle(
-                      color: Color(0xFFBBBBBB),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
 
                       fontSize: 15,
                     ),
@@ -3421,11 +3557,11 @@ class ShareSheetState extends State<ShareSheet> {
                   padding: const EdgeInsets.all(12),
 
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                    border: Border.all(color: Theme.of(context).dividerColor),
 
                     borderRadius: BorderRadius.circular(10),
 
-                    color: const Color(0xFFFAFAFA),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
 
                   child: Column(
@@ -3459,12 +3595,12 @@ class ShareSheetState extends State<ShareSheet> {
                           Text(
                             authorName,
 
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
 
                               fontSize: 13,
 
-                              color: Color(0xFF2C2C2C),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -3477,10 +3613,10 @@ class ShareSheetState extends State<ShareSheet> {
                             ? '${widget.post.content.substring(0, 100)}…'
                             : widget.post.content,
 
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
 
-                          color: Color(0xFF555555),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
 
                           height: 1.4,
                         ),
@@ -3562,7 +3698,7 @@ class ShareSheetState extends State<ShareSheet> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                const Divider(height: 1),
 
           // Other share options
           _ShareOption(
@@ -3659,12 +3795,12 @@ class _ShareOption extends StatelessWidget {
                   Text(
                     label,
 
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
 
                       fontWeight: FontWeight.w600,
 
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
 
@@ -3673,17 +3809,17 @@ class _ShareOption extends StatelessWidget {
                   Text(
                     subtitle,
 
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
 
-                      color: Color(0xFF888888),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
               ),
             ),
 
-            const Icon(Icons.chevron_right, color: Color(0xFFCCCCCC), size: 20),
+            const Icon(Icons.chevron_right, color: Color(0xFFAAAAAA), size: 20),
           ],
         ),
       ),
@@ -3710,8 +3846,8 @@ class ReelsPreviewSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
 
           child: Row(
-            children: [
-              const Text(
+                children: [
+              Text(
                 'Reels',
 
                 style: TextStyle(
@@ -3719,7 +3855,7 @@ class ReelsPreviewSection extends StatelessWidget {
 
                   fontWeight: FontWeight.bold,
 
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const Spacer(),
@@ -3896,7 +4032,7 @@ class MarketplacePreviewSection extends StatelessWidget {
 
           child: Row(
             children: [
-              const Text(
+              Text(
                 'Marketplace',
 
                 style: TextStyle(
@@ -3904,7 +4040,7 @@ class MarketplacePreviewSection extends StatelessWidget {
 
                   fontWeight: FontWeight.bold,
 
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const Spacer(),
@@ -3947,6 +4083,7 @@ class MarketplacePreviewSection extends StatelessWidget {
 
             children: [
               _buildProductCard(
+                context,
                 'Christian T-Shirt',
 
                 '₱150.00',
@@ -3955,6 +4092,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               ),
 
               _buildProductCard(
+                context,
                 'Bible Cover',
 
                 '₱200.00',
@@ -3963,6 +4101,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               ),
 
               _buildProductCard(
+                context,
                 'Worship Journal',
 
                 '₱179.00',
@@ -3971,6 +4110,7 @@ class MarketplacePreviewSection extends StatelessWidget {
               ),
 
               _buildProductCard(
+                context,
                 'Prayer Beads',
 
                 '₱100.00',
@@ -3984,16 +4124,16 @@ class MarketplacePreviewSection extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(String title, String price, String imagePath) {
+  Widget _buildProductCard(BuildContext context, String title, String price, String imagePath) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
 
         borderRadius: BorderRadius.circular(16),
 
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
 
             blurRadius: 10,
 
@@ -4034,12 +4174,12 @@ class MarketplacePreviewSection extends StatelessWidget {
                 Text(
                   title,
 
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
 
                     fontWeight: FontWeight.w600,
 
-                    color: Color(0xFF333333),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
 
                   maxLines: 2,
@@ -4066,28 +4206,36 @@ class MarketplacePreviewSection extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
 
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      final state = context.findAncestorStateOfType<_HomePageState>();
+                      if (state != null) {
+                        state.setState(() => state._selectedIndex = 2);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
 
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
 
-                      borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8),
 
-                      border: Border.all(color: const Color(0xFFD4AF37)),
-                    ),
+                        border: Border.all(color: const Color(0xFFD4AF37)),
+                      ),
 
-                    child: const Text(
-                      'View',
+                      child: const Text(
+                        'View',
 
-                      textAlign: TextAlign.center,
+                        textAlign: TextAlign.center,
 
-                      style: TextStyle(
-                        fontSize: 12,
+                        style: TextStyle(
+                          fontSize: 12,
 
-                        fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w600,
 
-                        color: Color(0xFFD4AF37),
+                          color: Color(0xFFD4AF37),
+                        ),
                       ),
                     ),
                   ),
@@ -4121,7 +4269,7 @@ class MusicSection extends StatelessWidget {
 
           child: Row(
             children: [
-              const Text(
+              Text(
                 'Worship Music',
 
                 style: TextStyle(
@@ -4129,7 +4277,7 @@ class MusicSection extends StatelessWidget {
 
                   fontWeight: FontWeight.bold,
 
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const Spacer(),
@@ -4227,13 +4375,13 @@ class MusicSection extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
 
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
 
           borderRadius: BorderRadius.circular(16),
 
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.15),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
 
               blurRadius: 10,
 
@@ -4310,12 +4458,12 @@ class MusicSection extends StatelessWidget {
                   Text(
                     titles[index],
 
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
 
                       fontWeight: FontWeight.w600,
 
-                      color: Color(0xFF333333),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
 
                     maxLines: 1,
@@ -4328,10 +4476,10 @@ class MusicSection extends StatelessWidget {
                   Text(
                     artists[index],
 
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10,
 
-                      color: Color(0xFF999999),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
 
                     maxLines: 1,
@@ -4363,13 +4511,13 @@ class ProfilePreviewSection extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
 
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
 
         borderRadius: BorderRadius.circular(20),
 
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.15),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
 
             blurRadius: 15,
 
@@ -4415,7 +4563,7 @@ class ProfilePreviewSection extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
 
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
 
                       shape: BoxShape.circle,
 
@@ -4518,7 +4666,7 @@ class ProfilePreviewSection extends StatelessWidget {
 
                             margin: const EdgeInsets.symmetric(horizontal: 20),
 
-                            color: const Color(0xFFE0E0E0),
+                            color: Theme.of(context).dividerColor,
                           ),
 
                           _StatColumn(number: '890', label: 'Following'),
@@ -4550,19 +4698,19 @@ class _StatColumn extends StatelessWidget {
         Text(
           number,
 
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
 
             fontWeight: FontWeight.bold,
 
-            color: Color(0xFF333333),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
 
         Text(
           label,
 
-          style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
+          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
         ),
       ],
     );
@@ -4586,12 +4734,10 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.12),
-
+          color: Theme.of(context).colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.12),
             blurRadius: 16,
 
             offset: const Offset(0, -4),
@@ -4726,9 +4872,9 @@ class _UserSearchSheetState extends State<_UserSearchSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       height: MediaQuery.of(context).size.height * 0.80,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -4737,12 +4883,12 @@ class _UserSearchSheetState extends State<_UserSearchSheet> {
             width: 38,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFDDDDDD),
+              color: Theme.of(context).dividerColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -4750,7 +4896,7 @@ class _UserSearchSheetState extends State<_UserSearchSheet> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),

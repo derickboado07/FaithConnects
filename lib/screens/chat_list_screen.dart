@@ -213,9 +213,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         if (tsText.isNotEmpty)
                           Text(
                             tsText,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                         const SizedBox(height: 6),

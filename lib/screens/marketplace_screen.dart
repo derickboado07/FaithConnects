@@ -33,14 +33,14 @@ class MarketplaceScreen extends StatelessWidget {
     final user = AuthService.instance.currentUser.value;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Custom App Bar ──────────────────────────────────────────────
             Container(
-              color: Colors.white,
+              color: Theme.of(context).appBarTheme.backgroundColor,
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Row(
                 children: [
@@ -70,12 +70,12 @@ class MarketplaceScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Marketplace',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -165,12 +165,12 @@ class MarketplaceScreen extends StatelessWidget {
 
                     const SizedBox(height: 28),
 
-                    const Text(
+                    Text(
                       'What would you like to do?',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C2C2C),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
 
@@ -238,12 +238,12 @@ class MarketplaceScreen extends StatelessWidget {
                     const SizedBox(height: 30),
 
                     // ── Marketplace Feed (Posts + Products) ─────────
-                    const Text(
+                    Text(
                       'Community Listings & Posts',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C2C2C),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
 
@@ -254,12 +254,12 @@ class MarketplaceScreen extends StatelessWidget {
                       child: const MarketplaceFeed(),
                     ),
 
-                    const Text(
+                    Text(
                       'Browse by Category',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C2C2C),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
 
@@ -310,11 +310,11 @@ class _ActionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.10),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.10),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -340,18 +340,18 @@ class _ActionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF888888),
+                      color: Theme.of(context).hintColor,
                       height: 1.4,
                     ),
                   ),
@@ -359,10 +359,10 @@ class _ActionCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios_rounded,
               size: 15,
-              color: Color(0xFFCCCCCC),
+              color: Theme.of(context).disabledColor,
             ),
           ],
         ),
@@ -424,10 +424,10 @@ class _CategoriesRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isFirst
                     ? _gold.withValues(alpha: 0.10)
-                    : Colors.white,
+                    : Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: isFirst ? _gold : const Color(0xFFE8E8E8),
+                  color: isFirst ? _gold : Theme.of(context).dividerColor,
                 ),
               ),
               child: Row(
@@ -436,7 +436,7 @@ class _CategoriesRow extends StatelessWidget {
                   Icon(
                     cat.icon,
                     size: 15,
-                    color: isFirst ? _gold : const Color(0xFF888888),
+                    color: isFirst ? _gold : Theme.of(context).hintColor,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -445,7 +445,7 @@ class _CategoriesRow extends StatelessWidget {
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color:
-                          isFirst ? _gold : const Color(0xFF555555),
+                          isFirst ? _gold : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],

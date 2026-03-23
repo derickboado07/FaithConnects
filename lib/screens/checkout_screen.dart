@@ -147,21 +147,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final product = widget.product;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF444444), size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: Theme.of(context).iconTheme.color, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Checkout',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -180,11 +180,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.08),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -215,18 +215,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             product.productName,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C2C2C),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             product.category,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -266,18 +266,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         color: _gold, size: 20),
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFFAF9F6),
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide:
-                        const BorderSide(color: Color(0xFFE8E8E8)),
+                        BorderSide(color: Theme.of(context).dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide:
-                        const BorderSide(color: Color(0xFFE8E8E8)),
+                        BorderSide(color: Theme.of(context).dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -313,11 +313,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.08),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -359,7 +359,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? _gold.withValues(alpha: 0.12)
-                                          : const Color(0xFFF5F5F5),
+                                          : Theme.of(context).colorScheme.surfaceContainerHighest,
                                       borderRadius:
                                           BorderRadius.circular(10),
                                     ),
@@ -368,7 +368,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                       size: 18,
                                       color: isSelected
                                           ? _gold
-                                          : const Color(0xFF888888),
+                                          : Theme.of(context).hintColor,
                                     ),
                                   ),
                                   const SizedBox(width: 14),
@@ -381,8 +381,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                             ? FontWeight.bold
                                             : FontWeight.normal,
                                         color: isSelected
-                                            ? const Color(0xFF2C2C2C)
-                                            : const Color(0xFF555555),
+                                            ? Theme.of(context).colorScheme.onSurface
+                                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                       ),
                                     ),
                                   ),
@@ -417,10 +417,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                           ),
                           if (!isLast)
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 thickness: 0.6,
-                                color: Color(0xFFF0F0F0),
+                                color: Theme.of(context).dividerColor,
                                 indent: 16,
                                 endIndent: 16),
                         ],
@@ -436,11 +436,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.08),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -452,8 +452,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 6),
                     _PriceRow('Shipping', '₱0.00'),
                     const SizedBox(height: 8),
-                    const Divider(
-                        color: Color(0xFFF0F0F0), thickness: 0.8),
+                    Divider(
+                        color: Theme.of(context).dividerColor, thickness: 0.8),
                     const SizedBox(height: 8),
                     _PriceRow(
                       'Total',
@@ -471,7 +471,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // ── Sticky Confirm Button ────────────────────────────────────────────
       bottomNavigationBar: Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: SizedBox(
           height: 52,
@@ -532,10 +532,10 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2C2C2C),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -565,8 +565,8 @@ class _PriceRow extends StatelessWidget {
             fontSize: isBold ? 15 : 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             color: isBold
-                ? const Color(0xFF2C2C2C)
-                : const Color(0xFF888888),
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).hintColor,
           ),
         ),
         Text(
@@ -576,8 +576,8 @@ class _PriceRow extends StatelessWidget {
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
             color: valueColor ??
                 (isBold
-                    ? const Color(0xFF2C2C2C)
-                    : const Color(0xFF444444)),
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
         ),
       ],

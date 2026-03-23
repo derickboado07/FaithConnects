@@ -64,7 +64,7 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
@@ -180,7 +180,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               decoration: BoxDecoration(
                                 color: isMe
                                     ? const Color(0xFFD4AF37)
-                                    : const Color(0xFFF0F0F0),
+                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: m.text.isNotEmpty
@@ -215,10 +215,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.surface,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: const Color(0xFFEEEEEE),
+                                      color: Theme.of(context).dividerColor,
                                     ),
                                     boxShadow: [
                                       BoxShadow(

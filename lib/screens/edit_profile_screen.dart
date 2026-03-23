@@ -163,10 +163,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F4F4),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF333333),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: const Text(
           'Edit Profile',
@@ -207,7 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   Container(
                     height: 150,
                     width: double.infinity,
-                    color: const Color(0xFFEEEEEE),
+                    color: Theme.of(context).dividerColor,
                     child: _bannerPath.isNotEmpty
                         ? _bannerPath.startsWith('http')
                               ? Image.network(
@@ -465,17 +465,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   InputDecoration _dec(String label) => InputDecoration(
     labelText: label,
-    labelStyle: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+    labelStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
     filled: true,
-    fillColor: const Color(0xFFFAF9F6),
+    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+      borderSide: BorderSide(color: Theme.of(context).dividerColor),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+      borderSide: BorderSide(color: Theme.of(context).dividerColor),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),

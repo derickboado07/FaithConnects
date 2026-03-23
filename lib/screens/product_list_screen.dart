@@ -91,25 +91,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF444444),
+            color: Theme.of(context).iconTheme.color,
             size: 20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Browse Products',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -117,14 +117,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
         children: [
           // ── Search Bar ─────────────────────────────────────────────────
           Container(
-            color: Colors.white,
+            color: Theme.of(context).appBarTheme.backgroundColor,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'Search products…',
-                hintStyle: const TextStyle(
-                  color: Color(0xFFAAAAAA),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).hintColor,
                   fontSize: 14,
                 ),
                 prefixIcon: const Icon(
@@ -134,27 +134,27 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: Color(0xFF888888),
+                          color: Theme.of(context).hintColor,
                         ),
                         onPressed: () => _searchCtrl.clear(),
                       )
                     : null,
                 filled: true,
-                fillColor: const Color(0xFFFAF9F6),
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -168,7 +168,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Selecting a chip updates _selectedCategory, which changes the
           // Firestore stream passed to the StreamBuilder below.
           Container(
-            color: Colors.white,
+            color: Theme.of(context).appBarTheme.backgroundColor,
             padding: const EdgeInsets.only(bottom: 12),
             child: SizedBox(
               height: 38,
@@ -189,7 +189,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: isActive ? _gold : Colors.white,
+                        color: isActive ? _gold : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isActive ? _gold : const Color(0xFFE0E0E0),
@@ -362,11 +362,11 @@ class _ProductCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.10),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.10),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -436,10 +436,10 @@ class _ProductCard extends StatelessWidget {
                     product.productName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.3,
                     ),
                   ),

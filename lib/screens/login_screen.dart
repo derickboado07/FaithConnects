@@ -68,21 +68,22 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   InputDecoration _inputDec(String label, IconData icon, {Widget? suffix}) {
+    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF888888), fontSize: 14),
+      labelStyle: TextStyle(color: theme.hintColor, fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       suffixIcon: suffix,
       filled: true,
-      fillColor: const Color(0xFFFAF9F6),
+      fillColor: theme.colorScheme.surfaceContainerHighest,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: theme.dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -102,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -175,9 +176,9 @@ class _LoginScreenState extends State<LoginScreen>
                         controller: _emailCtrl,
                         decoration: _inputDec('Email', Icons.email_outlined),
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter email' : null,
@@ -193,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen>
                               _obscure
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: const Color(0xFFAAAAAA),
+                              color: Theme.of(context).hintColor,
                               size: 20,
                             ),
                             onPressed: () =>
@@ -201,9 +202,9 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                         obscureText: _obscure,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: Color(0xFF2C2C2C),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter password' : null,
@@ -274,21 +275,21 @@ class _LoginScreenState extends State<LoginScreen>
                       const SizedBox(height: 28),
                       Row(
                         children: [
-                          const Expanded(
-                            child: Divider(color: Color(0xFFE8E8E8)),
+                          Expanded(
+                            child: Divider(color: Theme.of(context).dividerColor),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               'or',
                               style: TextStyle(
-                                color: Colors.grey.shade500,
+                                color: Theme.of(context).hintColor,
                                 fontSize: 13,
                               ),
                             ),
                           ),
-                          const Expanded(
-                            child: Divider(color: Color(0xFFE8E8E8)),
+                          Expanded(
+                            child: Divider(color: Theme.of(context).dividerColor),
                           ),
                         ],
                       ),

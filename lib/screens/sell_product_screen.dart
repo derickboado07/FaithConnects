@@ -310,21 +310,21 @@ class _SellProductScreenState extends State<SellProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded,
-              color: Color(0xFF444444), size: 22),
+          icon: Icon(Icons.close_rounded,
+              color: Theme.of(context).iconTheme.color, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Sell a Product',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         centerTitle: true,
@@ -377,7 +377,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
               // Mode toggle
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0EDE4),
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -415,17 +415,17 @@ class _SellProductScreenState extends State<SellProductScreen> {
                     width: double.infinity,
                     height: 200,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _imageFile != null
                             ? _gold
-                            : const Color(0xFFE0E0E0),
+                            : Theme.of(context).dividerColor,
                         width: _imageFile != null ? 1.5 : 1,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.07),
+                          color: Theme.of(context).shadowColor.withValues(alpha: 0.06),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -486,20 +486,20 @@ class _SellProductScreenState extends State<SellProductScreen> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
+                              Text(
                                 'Tap to upload product image',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF555555),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 'JPG, PNG — max 10 MB',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF999999),
+                                  color: Theme.of(context).hintColor,
                                 ),
                               ),
                             ],
@@ -626,12 +626,12 @@ class _SellProductScreenState extends State<SellProductScreen> {
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFAF9F6),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _selectedCategory != null
                         ? _gold
-                        : const Color(0xFFE8E8E8),
+                        : Theme.of(context).dividerColor,
                     width: _selectedCategory != null ? 1.5 : 1,
                   ),
                 ),
@@ -659,9 +659,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                                     size: 16, color: _gold),
                                 const SizedBox(width: 10),
                                 Text(cat,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 14,
-                                        color: Color(0xFF2C2C2C))),
+                                        color: Theme.of(context).colorScheme.onSurface)),
                               ],
                             ),
                           ),
@@ -720,19 +720,19 @@ class _SellProductScreenState extends State<SellProductScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle:
-          const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14),
+          TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       filled: true,
-      fillColor: const Color(0xFFFAF9F6),
+      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -747,7 +747,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
         borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
       ),
       counterStyle:
-          const TextStyle(color: Color(0xFFAAAAAA), fontSize: 11),
+          TextStyle(color: Theme.of(context).hintColor, fontSize: 11),
     );
   }
 }
@@ -778,22 +778,28 @@ class _ImageModeTab extends StatelessWidget {
           margin: const EdgeInsets.all(4),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFD4AF37) : Colors.transparent,
+            color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 16,
-                  color: selected ? Colors.white : const Color(0xFF888888)),
+              Icon(
+                icon,
+                size: 16,
+                color: selected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+              ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : const Color(0xFF888888),
+                  color: selected
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
                 ),
               ),
             ],
@@ -815,10 +821,10 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF2C2C2C),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
+import '../services/theme_service.dart';
 import '../main.dart' show CommentsSheet, ShareSheet, SharedPostPreview;
 import '../services/message_service.dart';
 import 'chat_screen.dart';
@@ -224,10 +225,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SliverAppBar(
                 expandedHeight: 220,
                 pinned: true,
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF333333),
+                backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+                foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
                 elevation: 0,
                 actions: [
+                  // Dark / light mode toggle
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: ThemeService.instance.themeMode,
+                    builder: (context, mode, _) {
+                      final isDark = mode == ThemeMode.dark;
+                      return IconButton(
+                        icon: Icon(
+                          isDark
+                              ? Icons.light_mode_rounded
+                              : Icons.dark_mode_rounded,
+                        ),
+                        tooltip: isDark ? 'Light mode' : 'Dark mode',
+                        onPressed: ThemeService.instance.toggle,
+                      );
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.logout_rounded),
                     tooltip: 'Logout',
@@ -313,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // ── Profile info ──────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,18 +397,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   user.name.isNotEmpty
                                       ? user.name
                                       : 'Your Name',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2C2C2C),
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   user.email,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: Color(0xFF888888),
+                                    color: Theme.of(context).hintColor,
                                   ),
                                 ),
                               ],
@@ -404,9 +421,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 10),
                         Text(
                           user.bio,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF555555),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             height: 1.4,
                           ),
                         ),
@@ -546,7 +563,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Container(
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     child: Row(
                       children: [
                         Container(
@@ -586,16 +603,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               vertical: 11,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF4F4F4),
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                color: const Color(0xFFEEEEEE),
+                                color: Theme.of(context).dividerColor,
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Share your testimony...',
                               style: TextStyle(
-                                color: Color(0xFFAAAAAA),
+                                color: Theme.of(context).hintColor,
                                 fontSize: 14,
                               ),
                             ),
@@ -624,12 +641,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                  child: const Text(
+                  child: Text(
                     'Posts',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -688,19 +705,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              const Text(
+                              Text(
                                 'No posts yet',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF444444),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 'Share your first testimony!',
                                 style: TextStyle(
-                                  color: Color(0xFF888888),
+                                  color: Theme.of(context).hintColor,
                                   fontSize: 13,
                                 ),
                               ),
@@ -786,15 +803,15 @@ class _StatPill extends StatelessWidget {
       children: [
         Text(
           number,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
         ),
       ],
     );
@@ -885,7 +902,7 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
       behavior: HitTestBehavior.translucent,
       child: Container(
         margin: const EdgeInsets.only(top: 6),
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -932,17 +949,17 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                           widget.user.name.isNotEmpty
                               ? widget.user.name
                               : widget.user.email,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14.5,
-                            color: Color(0xFF2C2C2C),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           _fmt(widget.post.timestamp),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
-                            color: Color(0xFF999999),
+                            color: Theme.of(context).hintColor,
                           ),
                         ),
                       ],
@@ -954,9 +971,9 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                       final isOwner =
                           current != null && current.id == widget.post.authorId;
                       return PopupMenuButton<String>(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.more_horiz,
-                          color: Color(0xFFAAAAAA),
+                          color: Theme.of(context).hintColor,
                         ),
                         onSelected: (v) async {
                           if (v == 'delete') {
@@ -1019,10 +1036,10 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
                 child: Text(
                   widget.post.content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     height: 1.55,
-                    color: Color(0xFF3A3A3A),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),

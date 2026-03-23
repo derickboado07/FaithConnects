@@ -45,7 +45,7 @@ class OrderConfirmationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // No AppBar — this screen has its own back navigation via action buttons.
       body: SafeArea(
         child: SingleChildScrollView(
@@ -75,23 +75,23 @@ class OrderConfirmationScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              const Text(
+              Text(
                 'Order Placed!',
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C2C2C),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              const Text(
+              Text(
                 'Your order has been placed successfully.\nThe seller will contact you shortly.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF888888),
+                  color: Theme.of(context).hintColor,
                   height: 1.6,
                 ),
               ),
@@ -150,11 +150,11 @@ class OrderConfirmationScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.08),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -185,18 +185,18 @@ class OrderConfirmationScreen extends StatelessWidget {
                             product.productName,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C2C2C),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             product.category,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -222,11 +222,11 @@ class OrderConfirmationScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.08),
+                      color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),
@@ -240,8 +240,8 @@ class OrderConfirmationScreen extends StatelessWidget {
                       label: 'Delivery Address',
                       value: address,
                     ),
-                    const Divider(
-                        color: Color(0xFFF0F0F0),
+                    Divider(
+                        color: Theme.of(context).dividerColor,
                         thickness: 0.8,
                         height: 20),
                     // Payment method row
@@ -250,8 +250,8 @@ class OrderConfirmationScreen extends StatelessWidget {
                       label: 'Payment Method',
                       value: paymentMethod,
                     ),
-                    const Divider(
-                        color: Color(0xFFF0F0F0),
+                    Divider(
+                        color: Theme.of(context).dividerColor,
                         thickness: 0.8,
                         height: 20),
                     // Order status row
@@ -373,10 +373,10 @@ class _ConfirmRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF888888),
+                  color: Theme.of(context).hintColor,
                 ),
               ),
               const SizedBox(height: 2),
@@ -385,7 +385,7 @@ class _ConfirmRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: valueColor ?? const Color(0xFF2C2C2C),
+                  color: valueColor ?? Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

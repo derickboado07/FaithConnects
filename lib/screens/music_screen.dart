@@ -51,20 +51,20 @@ class _MusicScreenState extends State<MusicScreen> {
     final isPlaying = _service.isPlaying;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Worship Music',
           style: TextStyle(
-            color: Color(0xFF2C2C2C),
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF5C5C5C)),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -77,20 +77,20 @@ class _MusicScreenState extends State<MusicScreen> {
           Widget searchBar = Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFFAF9F6),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE8E8E8)),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search songs...',
-                hintStyle: TextStyle(color: Color(0xFF888888)),
-                prefixIcon: Icon(Icons.search, color: Color(0xFF888888)),
+                hintStyle: TextStyle(color: Theme.of(context).hintColor),
+                prefixIcon: Icon(Icons.search, color: Theme.of(context).hintColor),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
           );
@@ -142,10 +142,10 @@ class _MusicScreenState extends State<MusicScreen> {
                   padding: EdgeInsets.fromLTRB(
                       16 * scale, 12 * scale, 16 * scale, 12 * scale),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.15),
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.15),
                         blurRadius: 16,
                         offset: const Offset(0, -4),
                       )
@@ -158,7 +158,7 @@ class _MusicScreenState extends State<MusicScreen> {
                         margin: EdgeInsets.only(bottom: 12 * scale),
                         child: LinearProgressIndicator(
                           value: isPlaying ? 0.4 : 0,
-                          backgroundColor: const Color(0xFFE8E8E8),
+                          backgroundColor: Theme.of(context).dividerColor,
                           valueColor: const AlwaysStoppedAnimation<Color>(
                               Color(0xFFD4AF37)),
                         ),
@@ -188,7 +188,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                 style: TextStyle(
                                   fontSize: 14 * scale,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF2C2C2C),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -198,7 +198,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                 currentSong.artist,
                                 style: TextStyle(
                                     fontSize: 12 * scale,
-                                    color: const Color(0xFF888888)),
+                                    color: Theme.of(context).hintColor),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -210,7 +210,7 @@ class _MusicScreenState extends State<MusicScreen> {
                             onPressed: _service.playPrevious,
                             icon: const Icon(Icons.skip_previous_rounded),
                             iconSize: 28 * scale,
-                            color: const Color(0xFF5C5C5C),
+                            color: Theme.of(context).iconTheme.color,
                           ),
                           GestureDetector(
                             onTap: () async =>
@@ -242,7 +242,7 @@ class _MusicScreenState extends State<MusicScreen> {
                             onPressed: _service.playNext,
                             icon: const Icon(Icons.skip_next_rounded),
                             iconSize: 28 * scale,
-                            color: const Color(0xFF5C5C5C),
+                            color: Theme.of(context).iconTheme.color,
                           ),
                         ]),
                       ]),
@@ -256,7 +256,7 @@ class _MusicScreenState extends State<MusicScreen> {
               Container(
                 width: constraints.maxWidth * 0.38,
                 padding: const EdgeInsets.all(16),
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 child: Column(children: [
                   if (currentSong != null) ...[
                     Container(
@@ -332,16 +332,16 @@ class _SongTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
-              : Colors.white,
+              : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
-                : const Color(0xFFEEEEEE),
+                : Theme.of(context).dividerColor,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.08),
+              color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             )
@@ -388,7 +388,7 @@ class _SongTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     color: isSelected
                         ? const Color(0xFFD4AF37)
-                        : const Color(0xFF2C2C2C),
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -396,8 +396,8 @@ class _SongTile extends StatelessWidget {
                 SizedBox(height: 4 * scale),
                 Text(
                   song.artist,
-                  style: const TextStyle(
-                      fontSize: 12.5, color: Color(0xFF888888)),
+                  style: TextStyle(
+                      fontSize: 12.5, color: Theme.of(context).hintColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -410,12 +410,12 @@ class _SongTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? const Color(0xFFD4AF37)
-                  : const Color(0xFFF5F5F5),
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: BoxShape.circle,
             ),
             child: Icon(
               isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: isSelected ? Colors.white : const Color(0xFF888888),
+              color: isSelected ? Colors.white : Theme.of(context).hintColor,
               size: 20 * scale,
             ),
           ),

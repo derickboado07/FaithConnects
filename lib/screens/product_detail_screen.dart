@@ -103,12 +103,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = widget.product;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
-          // ── Sliver App Bar with product image ─────────────────────────
+          // ── Sliver App Bar with product image ─────────────────────
           SliverAppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
             elevation: 0,
             expandedHeight: 300,
             pinned: true,
@@ -118,7 +118,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -127,9 +127,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    color: Color(0xFF444444),
+                    color: Theme.of(context).iconTheme.color,
                     size: 18,
                   ),
                 ),
@@ -187,10 +187,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   // Product name
                   Text(
                     product.productName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.3,
                     ),
                   ),
@@ -209,18 +209,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   const SizedBox(height: 20),
 
-                  const Divider(
-                      color: Color(0xFFF0F0F0), thickness: 0.8),
+                  Divider(
+                      color: Theme.of(context).dividerColor, thickness: 0.8),
 
                   const SizedBox(height: 16),
 
                   // Description
-                  const Text(
+                  Text(
                     'Description',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C2C2C),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -228,9 +228,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     product.description.isNotEmpty
                         ? product.description
                         : 'No description provided.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF555555),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       height: 1.6,
                     ),
                   ),
@@ -241,10 +241,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9F9F9),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(14),
                       border:
-                          Border.all(color: const Color(0xFFEEEEEE)),
+                          Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: Row(
                       children: [
@@ -283,19 +283,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     : product.sellerEmail.isNotEmpty
                                         ? product.sellerEmail
                                         : 'FaithConnect Member',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2C2C2C),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               if (product.sellerEmail.isNotEmpty &&
                                   product.sellerName.isNotEmpty)
                                 Text(
                                   product.sellerEmail,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF888888),
+                                    color: Theme.of(context).hintColor,
                                   ),
                                 ),
                             ],
@@ -319,7 +319,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       // ── Sticky Buy Now Button ──────────────────────────────────────────
       // Fixed at the bottom of the screen so it's always visible.
       bottomNavigationBar: Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: SizedBox(
           height: 52,
