@@ -43,6 +43,7 @@ dependencies:
   cloud_firestore: ^6.1.3
   firebase_storage: ^13.1.0
   audioplayers: ^6.6.0
+  flutter_local_notifications: ^21.0.0
   # share_plus removed to avoid win32 version conflict with file_picker
 
 dev_dependencies:

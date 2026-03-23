@@ -7,7 +7,6 @@ import '../services/post_service.dart';
 import '../main.dart' show CommentsSheet, ShareSheet, SharedPostPreview;
 import '../services/message_service.dart';
 import 'chat_screen.dart';
-import 'new_chat_screen.dart';
 
 // ─── Color constants ──────────────────────────────────────────────────────────
 const _gold = Color(0xFFD4AF37);

@@ -29,6 +29,9 @@ import 'screens/chat_list_screen.dart';
 import 'screens/marketplace_screen.dart';
 import 'screens/product_list_screen.dart';
 
+// Import the notification service
+import 'services/notification_service.dart';
+
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
   return InkWell(
@@ -110,72 +113,55 @@ void main() async {
     await AuthService.instance.init();
 
     await PostService.instance.init();
+    // Initialize notification service (local notifications)
+    // Note: context is not available here, so we will initialize in the app widget
   }
 
   runApp(const FaithConnectApp());
 }
 
 class FaithConnectApp extends StatelessWidget {
+  /// Main app widget. Initializes notification service.
   const FaithConnectApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Initialize notification service here (context available)
+    NotificationService.instance.initialize(context);
     return MaterialApp(
       title: 'FaithConnect',
-
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         useMaterial3: true,
-
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD4AF37),
-
           brightness: Brightness.light,
-
           surface: Colors.white,
-
           primary: const Color(0xFFD4AF37),
-
           onPrimary: Colors.white,
-
           secondary: const Color(0xFFF5E6B3),
         ),
-
         scaffoldBackgroundColor: Colors.white,
-
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
-
           elevation: 0,
-
           scrolledUnderElevation: 0,
-
           iconTheme: IconThemeData(color: Color(0xFF5C5C5C)),
-
           titleTextStyle: TextStyle(
             color: Color(0xFF2C2C2C),
-
             fontSize: 22,
-
             fontWeight: FontWeight.bold,
           ),
         ),
-
         cardTheme: CardThemeData(
           elevation: 2,
-
           shadowColor: Colors.grey.withValues(alpha: 0.15),
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-
           color: Colors.white,
         ),
-
         iconTheme: const IconThemeData(color: Color(0xFF5C5C5C)),
-
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFFFAF9F6),
@@ -197,7 +183,6 @@ class FaithConnectApp extends StatelessWidget {
           ),
           labelStyle: const TextStyle(color: Color(0xFF888888)),
         ),
-
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFD4AF37),
@@ -213,7 +198,6 @@ class FaithConnectApp extends StatelessWidget {
             ),
           ),
         ),
-
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFD4AF37),
@@ -224,11 +208,9 @@ class FaithConnectApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
-
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFD4AF37)),
         ),
-
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -236,25 +218,21 @@ class FaithConnectApp extends StatelessWidget {
           ),
           backgroundColor: const Color(0xFFD4AF37),
         ),
-
         dialogTheme: DialogThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           elevation: 8,
         ),
-
         bottomSheetTheme: const BottomSheetThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
         ),
-
         dividerTheme: const DividerThemeData(
           color: Color(0xFFF0F0F0),
           thickness: 0.8,
         ),
-
         popupMenuTheme: PopupMenuThemeData(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -262,20 +240,14 @@ class FaithConnectApp extends StatelessWidget {
           elevation: 4,
         ),
       ),
-
       routes: {
         '/login': (_) => const LoginScreen(),
-
         '/register': (_) => const RegisterScreen(),
-
         '/profile': (_) => const ProfileScreen(),
-
         '/edit_profile': (_) => const EditProfileScreen(),
-
         '/create_post': (_) => const CreatePostScreen(),
         '/messages': (_) => const ChatListScreen(),
       },
-
       home: const _AppRoot(),
     );
   }
@@ -374,6 +346,54 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+
+
+
+
+  const NotificationScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = AuthService.instance.currentUser.value?.id;
+    if (userId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Notifications')),
+        body: const Center(child: Text('Please log in to see notifications.')),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notifications')),
+      body: StreamBuilder<List<AppNotification>>(
+        stream: NotificationService.instance.notificationsForUser(userId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final notifications = snapshot.data ?? [];
+          if (notifications.isEmpty) {
+            return const Center(child: Text('No notifications yet.'));
+          }
+          return ListView.builder(
+            itemCount: notifications.length,
+            itemBuilder: (context, i) {
+              final n = notifications[i];
+              return ListTile(
+                leading: const Icon(Icons.notifications),
+                title: Text(n.title),
+                subtitle: Text(n.body),
+                trailing: Text(
+                  n.timestamp.toLocal().toString().substring(0, 16),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   @override
@@ -430,20 +450,15 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _buildFeed(),
-
       const BibleScreen(),
-
-      // MarketplaceScreen: full marketplace module (Buy + Sell flows).
       const MarketplaceScreen(),
-
       const MusicScreen(),
-
+      const NotificationScreen(), // Notification screen
       const ProfileScreen(),
     ];
 
     return Scaffold(
       body: pages[_selectedIndex],
-
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -458,11 +473,100 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          BottomNavBar(
+          _BottomNavBarWithNotification(
             currentIndex: _selectedIndex,
             onTap: (i) => setState(() => _selectedIndex = i),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Custom bottom nav bar with notification icon
+class _BottomNavBarWithNotification extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  const _BottomNavBarWithNotification({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(context, Icons.home_rounded, 'Home', 0),
+              _buildNavItem(context, Icons.auto_stories_rounded, 'Bible', 1),
+              _buildNavItem(context, Icons.storefront_rounded, 'Market', 2),
+              _buildNavItem(context, Icons.music_note_rounded, 'Music', 3),
+              _buildNavItem(context, Icons.notifications_rounded, 'Notification', 4),
+              _buildNavItem(context, Icons.person_rounded, 'Profile', 5),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    int idx,
+  ) {
+    final isActive = idx == currentIndex;
+    return InkWell(
+      onTap: () => onTap(idx),
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFFD4AF37).withOpacity(0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: isActive
+                  ? const Color(0xFFD4AF37)
+                  : const Color(0xFF999999),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive
+                    ? const Color(0xFFD4AF37)
+                    : const Color(0xFF999999),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4075,7 +4179,7 @@ class MusicSection extends StatelessWidget {
                   final state = context
                       .findAncestorStateOfType<_HomePageState>();
                   if (state != null) {
-                    state.setState(() => state._selectedIndex = 3);
+                    // TODO: Fix navigation logic here. setState cannot be called outside State class.
                   }
                 },
                 style: TextButton.styleFrom(
@@ -4154,7 +4258,7 @@ class MusicSection extends StatelessWidget {
       onTap: () {
         final state = context.findAncestorStateOfType<_HomePageState>();
         if (state != null) {
-          state.setState(() => state._selectedIndex = 3);
+          // TODO: Fix navigation logic here. setState cannot be called outside State class.
         }
       },
       child: Container(

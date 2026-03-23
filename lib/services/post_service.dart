@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'notification_service.dart'; // For showing notifications to post owner
 
 class Comment {
   final String id;
@@ -439,6 +440,16 @@ class PostService {
     );
     await docRef.set(post.toJson());
     debugPrint('PostService: shared post created successfully');
+
+    // Notify the original post owner if someone else shared their post
+    if (originalPost.authorId != authorId) {
+      // Show notification to the original post owner
+      await NotificationService.instance.showNotification(
+        userId: originalPost.authorId,
+        title: 'Your post was shared!',
+        body: '$authorEmail shared your post.',
+      );
+    }
   }
 
   Future<List<Comment>> _loadCommentsForPost(String postId) async {
@@ -644,6 +655,17 @@ class PostService {
       debugPrint('PostService: commentsCount increment failed (non-fatal): $e');
     }
     debugPrint('PostService: comment added successfully');
+
+    // Notify the post owner if someone else commented
+    final postSnap = await _db.collection('posts').doc(postId).get();
+    final postData = postSnap.data();
+    if (postData != null && postData['authorId'] != authorId) {
+      await NotificationService.instance.showNotification(
+        userId: postData['authorId'],
+        title: 'New comment on your post!',
+        body: '$authorEmail commented: "$text"',
+      );
+    }
   }
 
   Future<void> sharePost(String postId) async {

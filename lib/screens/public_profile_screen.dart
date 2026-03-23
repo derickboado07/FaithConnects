@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
+import '../services/notification_service.dart';
 import '../main.dart' show CommentsSheet, ShareSheet, SharedPostPreview;
 import '../services/message_service.dart';
 import 'chat_screen.dart';
@@ -459,6 +460,7 @@ class _PublicPostCardState extends State<_PublicPostCard> {
     }
   }
 
+  /// Handles reacting (liking) a post. Triggers notification to post owner.
   Future<void> _react(String key) async {
     if (_busy) return;
     final u = AuthService.instance.currentUser.value;
@@ -469,6 +471,16 @@ class _PublicPostCardState extends State<_PublicPostCard> {
     });
     try {
       await PostService.instance.toggleReaction(widget.post.id, key, u.id);
+
+      // If the liker is not the post owner, send a notification
+      if (widget.post.authorId != u.id) {
+        // Show a local notification to the post owner (for demo; replace with push for real app)
+        await NotificationService.instance.showNotification(
+          userId: post.authorId,
+          title: 'Your post received a like!',
+          body: '${u.name.isNotEmpty ? u.name : u.email} liked your post.',
+        );
+      }
     } catch (_) {}
     if (mounted) setState(() => _busy = false);
   }
