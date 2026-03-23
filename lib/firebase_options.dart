@@ -83,5 +83,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'faith-connects-c7a7e.firebasestorage.app',
     iosBundleId: 'com.example.christianMediaapp',
   );
-
 }

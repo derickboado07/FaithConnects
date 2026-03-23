@@ -72,10 +72,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => CheckoutScreen(
-            product: widget.product,
-            userId: user.id,
-          ),
+          builder: (_) =>
+              CheckoutScreen(product: widget.product, userId: user.id),
         ),
       );
     } catch (e) {
@@ -92,8 +90,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         content: Text(msg),
         backgroundColor: isError ? Colors.red.shade600 : _gold,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -147,7 +144,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           color: _goldLight.withValues(alpha: 0.3),
                           child: const Center(
                             child: CircularProgressIndicator(
-                                color: _gold, strokeWidth: 2),
+                              color: _gold,
+                              strokeWidth: 2,
+                            ),
                           ),
                         );
                       },
@@ -167,7 +166,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   // Category badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _goldLight.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
@@ -209,8 +210,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   const SizedBox(height: 20),
 
-                  const Divider(
-                      color: Color(0xFFF0F0F0), thickness: 0.8),
+                  const Divider(color: Color(0xFFF0F0F0), thickness: 0.8),
 
                   const SizedBox(height: 16),
 
@@ -243,8 +243,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF9F9F9),
                       borderRadius: BorderRadius.circular(14),
-                      border:
-                          Border.all(color: const Color(0xFFEEEEEE)),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
                     ),
                     child: Row(
                       children: [
@@ -265,8 +264,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 'Seller',
@@ -281,8 +279,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 product.sellerName.isNotEmpty
                                     ? product.sellerName
                                     : product.sellerEmail.isNotEmpty
-                                        ? product.sellerEmail
-                                        : 'FaithConnect Member',
+                                    ? product.sellerEmail
+                                    : 'FaithConnect Member',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -339,14 +337,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: Colors.white),
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : const Text(
                     'Buy Now',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
@@ -358,8 +355,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Container(
       color: _goldLight.withValues(alpha: 0.3),
       child: const Center(
-        child: Icon(Icons.image_outlined,
-            size: 60, color: Color(0xFFCCB060)),
+        child: Icon(Icons.image_outlined, size: 60, color: Color(0xFFCCB060)),
       ),
     );
   }

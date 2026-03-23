@@ -67,6 +67,7 @@ This project progress checklist reflects the current repository contents and wha
 - [x] Music screens and assets present
 - [x] Firestore rules and indexes present
 - [ ] Backend Cloud Functions (if needed) — not present / check `functions/` if required
+- [x] Backend Cloud Functions (basic suggestion function added in `functions/`)
 - [ ] Automated tests coverage — minimal tests present (`test/widget_test.dart`) and should be expanded
 
 Notes: The checked items are present in the repository as of this documentation creation. Missing items are left as explicitly unchecked.

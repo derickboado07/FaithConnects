@@ -45,8 +45,9 @@ class MarketplaceService {
   /// The stream automatically emits updates whenever a product is added,
   /// updated, or removed in Firestore.
   Stream<List<Product>> getProductsStream({String? category}) {
-    Query<Map<String, dynamic>> query =
-        _db.collection('products').orderBy('createdAt', descending: true);
+    Query<Map<String, dynamic>> query = _db
+        .collection('products')
+        .orderBy('createdAt', descending: true);
 
     // Apply category filter if a specific category was selected.
     if (category != null && category.isNotEmpty && category != 'All') {
@@ -54,8 +55,10 @@ class MarketplaceService {
     }
 
     // Map each QuerySnapshot to a List<Product> using fromFirestore().
-    return query.snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList());
+    return query.snapshots().map(
+      (snapshot) =>
+          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList(),
+    );
   }
 
   /// Fetches a single product document by ID. Returns null if not found.
@@ -75,8 +78,8 @@ class MarketplaceService {
   /// Returns the public download URL of the uploaded image, which is then
   /// stored in the Firestore product document as [imageUrl].
   Future<String> uploadProductImage({
-    String? imagePath,       // Mobile/desktop: local file path
-    Uint8List? imageBytes,   // Web: raw image bytes
+    String? imagePath, // Mobile/desktop: local file path
+    Uint8List? imageBytes, // Web: raw image bytes
     required String filename,
     required String userId,
   }) async {
@@ -174,9 +177,7 @@ class MarketplaceService {
     if (existing.exists) {
       // Item already in cart — increment quantity using FieldValue.increment
       // to avoid race conditions with concurrent writes.
-      await cartItemRef.update({
-        'quantity': FieldValue.increment(quantity),
-      });
+      await cartItemRef.update({'quantity': FieldValue.increment(quantity)});
     } else {
       // First time adding — create a new cart item document.
       await cartItemRef.set({
@@ -221,7 +222,7 @@ class MarketplaceService {
       address: address,
       paymentMethod: paymentMethod,
       price: product.price,
-      status: 'pending',      // Initial order status
+      status: 'pending', // Initial order status
       createdAt: DateTime.now(),
     );
 

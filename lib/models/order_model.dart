@@ -13,16 +13,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ProductOrder {
-  final String orderId;        // Auto-generated Firestore document ID
-  final String userId;         // Firebase Auth UID of the buyer
-  final String productId;      // ID of the purchased product
-  final String productName;    // Snapshot of product name at time of purchase
-  final String imageUrl;       // Snapshot of product image URL
-  final String address;        // Shipping address entered at checkout
-  final String paymentMethod;  // Payment method selected at checkout
-  final double price;          // Price at time of purchase
-  final String status;         // 'pending' | 'confirmed' | 'shipped' | 'delivered'
-  final DateTime createdAt;    // Timestamp when the order was placed
+  final String orderId; // Auto-generated Firestore document ID
+  final String userId; // Firebase Auth UID of the buyer
+  final String productId; // ID of the purchased product
+  final String productName; // Snapshot of product name at time of purchase
+  final String imageUrl; // Snapshot of product image URL
+  final String address; // Shipping address entered at checkout
+  final String paymentMethod; // Payment method selected at checkout
+  final double price; // Price at time of purchase
+  final String status; // 'pending' | 'confirmed' | 'shipped' | 'delivered'
+  final DateTime createdAt; // Timestamp when the order was placed
 
   const ProductOrder({
     required this.orderId,
@@ -51,8 +51,7 @@ class ProductOrder {
       paymentMethod: data['paymentMethod'] as String? ?? '',
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
       status: data['status'] as String? ?? 'pending',
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

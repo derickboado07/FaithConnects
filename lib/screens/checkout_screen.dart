@@ -136,8 +136,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         content: Text(msg),
         backgroundColor: isError ? Colors.red.shade600 : _gold,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -152,8 +151,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF444444), size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF444444),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -201,8 +203,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               width: 70,
                               height: 70,
                               fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, st) =>
-                                  _thumbFallback(),
+                              errorBuilder: (ctx, err, st) => _thumbFallback(),
                             )
                           : _thumbFallback(),
                     ),
@@ -256,43 +257,47 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 minLines: 3,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText:
-                      'Enter your full shipping address…',
+                  hintText: 'Enter your full shipping address…',
                   hintStyle: const TextStyle(
-                      color: Color(0xFFAAAAAA), fontSize: 14),
+                    color: Color(0xFFAAAAAA),
+                    fontSize: 14,
+                  ),
                   prefixIcon: const Padding(
                     padding: EdgeInsets.only(bottom: 44),
-                    child: Icon(Icons.location_on_outlined,
-                        color: _gold, size: 20),
+                    child: Icon(
+                      Icons.location_on_outlined,
+                      color: _gold,
+                      size: 20,
+                    ),
                   ),
                   filled: true,
                   fillColor: const Color(0xFFFAF9F6),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFE8E8E8)),
+                    borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: Color(0xFFE8E8E8)),
+                    borderSide: const BorderSide(color: Color(0xFFE8E8E8)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: _gold, width: 1.5),
+                    borderSide: const BorderSide(color: _gold, width: 1.5),
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                        color: Colors.red.shade300),
+                    borderSide: BorderSide(color: Colors.red.shade300),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                        color: Colors.red.shade300, width: 1.5),
+                      color: Colors.red.shade300,
+                      width: 1.5,
+                    ),
                   ),
                 ),
                 // Validation: address must not be blank.
@@ -324,109 +329,106 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
                 child: Column(
-                  children: List.generate(
-                    _paymentOptions.length,
-                    (index) {
-                      final paymentOption = _paymentOptions[index];
+                  children: List.generate(_paymentOptions.length, (index) {
+                    final paymentOption = _paymentOptions[index];
                     final label = paymentOption.$1;
                     final icon = paymentOption.$2;
-                      final isSelected = _paymentMethod == label;
-                      final isLast =
-                          index == _paymentOptions.length - 1;
+                    final isSelected = _paymentMethod == label;
+                    final isLast = index == _paymentOptions.length - 1;
 
-                      return Column(
-                        children: [
-                          InkWell(
-                            onTap: () =>
-                                setState(() => _paymentMethod = label),
-                            borderRadius: BorderRadius.vertical(
-                              top: index == 0
-                                  ? const Radius.circular(16)
-                                  : Radius.zero,
-                              bottom: isLast
-                                  ? const Radius.circular(16)
-                                  : Radius.zero,
+                    return Column(
+                      children: [
+                        InkWell(
+                          onTap: () => setState(() => _paymentMethod = label),
+                          borderRadius: BorderRadius.vertical(
+                            top: index == 0
+                                ? const Radius.circular(16)
+                                : Radius.zero,
+                            bottom: isLast
+                                ? const Radius.circular(16)
+                                : Radius.zero,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              child: Row(
-                                children: [
-                                  // Payment method icon
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
+                            child: Row(
+                              children: [
+                                // Payment method icon
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? _gold.withValues(alpha: 0.12)
+                                        : const Color(0xFFF5F5F5),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    icon,
+                                    size: 18,
+                                    color: isSelected
+                                        ? _gold
+                                        : const Color(0xFF888888),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                       color: isSelected
-                                          ? _gold.withValues(alpha: 0.12)
-                                          : const Color(0xFFF5F5F5),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
+                                          ? const Color(0xFF2C2C2C)
+                                          : const Color(0xFF555555),
                                     ),
-                                    child: Icon(
-                                      icon,
-                                      size: 18,
+                                  ),
+                                ),
+                                // Radio indicator
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
                                       color: isSelected
                                           ? _gold
-                                          : const Color(0xFF888888),
+                                          : const Color(0xFFCCCCCC),
+                                      width: isSelected ? 2 : 1.5,
                                     ),
                                   ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      label,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                        color: isSelected
-                                            ? const Color(0xFF2C2C2C)
-                                            : const Color(0xFF555555),
-                                      ),
-                                    ),
-                                  ),
-                                  // Radio indicator
-                                  Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? _gold
-                                            : const Color(0xFFCCCCCC),
-                                        width: isSelected ? 2 : 1.5,
-                                      ),
-                                    ),
-                                    child: isSelected
-                                        ? Center(
-                                            child: Container(
-                                              width: 10,
-                                              height: 10,
-                                              decoration: const BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: _gold,
-                                              ),
+                                  child: isSelected
+                                      ? Center(
+                                          child: Container(
+                                            width: 10,
+                                            height: 10,
+                                            decoration: const BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: _gold,
                                             ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
-                              ),
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ],
                             ),
                           ),
-                          if (!isLast)
-                            const Divider(
-                                height: 1,
-                                thickness: 0.6,
-                                color: Color(0xFFF0F0F0),
-                                indent: 16,
-                                endIndent: 16),
-                        ],
-                      );
-                    },
-                  ),
+                        ),
+                        if (!isLast)
+                          const Divider(
+                            height: 1,
+                            thickness: 0.6,
+                            color: Color(0xFFF0F0F0),
+                            indent: 16,
+                            endIndent: 16,
+                          ),
+                      ],
+                    );
+                  }),
                 ),
               ),
 
@@ -452,8 +454,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 6),
                     _PriceRow('Shipping', '₱0.00'),
                     const SizedBox(height: 8),
-                    const Divider(
-                        color: Color(0xFFF0F0F0), thickness: 0.8),
+                    const Divider(color: Color(0xFFF0F0F0), thickness: 0.8),
                     const SizedBox(height: 8),
                     _PriceRow(
                       'Total',
@@ -491,14 +492,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.5, color: Colors.white),
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : const Text(
                     'Confirm Order',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
           ),
         ),
@@ -514,8 +514,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         color: _goldLight.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(Icons.image_outlined,
-          size: 32, color: Color(0xFFCCB060)),
+      child: const Icon(
+        Icons.image_outlined,
+        size: 32,
+        color: Color(0xFFCCB060),
+      ),
     );
   }
 }
@@ -564,9 +567,7 @@ class _PriceRow extends StatelessWidget {
           style: TextStyle(
             fontSize: isBold ? 15 : 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: isBold
-                ? const Color(0xFF2C2C2C)
-                : const Color(0xFF888888),
+            color: isBold ? const Color(0xFF2C2C2C) : const Color(0xFF888888),
           ),
         ),
         Text(
@@ -574,10 +575,9 @@ class _PriceRow extends StatelessWidget {
           style: TextStyle(
             fontSize: isBold ? 16 : 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: valueColor ??
-                (isBold
-                    ? const Color(0xFF2C2C2C)
-                    : const Color(0xFF444444)),
+            color:
+                valueColor ??
+                (isBold ? const Color(0xFF2C2C2C) : const Color(0xFF444444)),
           ),
         ),
       ],

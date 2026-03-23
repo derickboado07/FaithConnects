@@ -60,9 +60,7 @@ void main() async {
     } on UnsupportedError catch (e) {
       // Default options not configured for this platform.
 
-      // ignore: avoid_print
-
-      print('DefaultFirebaseOptions not configured: $e');
+      debugPrint('DefaultFirebaseOptions not configured: $e');
 
       options = null;
     }
@@ -70,17 +68,13 @@ void main() async {
     if (options != null) {
       // Log minimal option info for debugging
 
-      // ignore: avoid_print
-
-      print(
+      debugPrint(
         'Firebase options found for platform. projectId=${options.projectId} appId=${options.appId}',
       );
 
       await Firebase.initializeApp(options: options);
 
-      // ignore: avoid_print
-
-      print('Firebase.initializeApp succeeded');
+      debugPrint('Firebase.initializeApp succeeded');
 
       firebaseOk = true;
     } else {
@@ -88,9 +82,7 @@ void main() async {
 
       // because that yields configuration-not-found on some platforms.
 
-      // ignore: avoid_print
-
-      print(
+      debugPrint(
         'Skipping Firebase.initializeApp: no DefaultFirebaseOptions for this platform.',
       );
 
@@ -99,9 +91,7 @@ void main() async {
   } catch (e) {
     // Initialization failed. Continue without Firebase so UI can load.
 
-    // ignore: avoid_print
-
-    print('Firebase initialization failed: $e');
+    debugPrint('Firebase initialization failed: $e');
 
     firebaseOk = false;
   }

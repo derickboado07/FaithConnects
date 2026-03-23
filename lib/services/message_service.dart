@@ -46,6 +46,7 @@ class MessageItem {
   final String ts;
   final String? imageUrl;
   final Map<String, List<String>> reactions;
+  final Map<String, bool> deletedFor;
 
   MessageItem({
     required this.id,
@@ -54,7 +55,11 @@ class MessageItem {
     required this.ts,
     this.imageUrl,
     Map<String, List<String>>? reactions,
-  }) : reactions = reactions ?? {};
+    Map<String, bool>? deletedFor,
+  }) : reactions = reactions ?? {},
+       deletedFor = deletedFor ?? {};
+  // initialize deletedFor
+  // ignore: prefer_initializing_formals
 
   factory MessageItem.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -72,6 +77,11 @@ class MessageItem {
                     ? List<String>.from(v.map((e) => e.toString()))
                     : <String>[],
               ),
+            )
+          : {},
+      deletedFor: d['deletedFor'] is Map<String, dynamic>
+          ? (d['deletedFor'] as Map<String, dynamic>).map(
+              (k, v) => MapEntry(k, v == true),
             )
           : {},
     );
@@ -170,6 +180,58 @@ class MessageService {
     } catch (e) {
       throw Exception('Failed to update conversation metadata: $e');
     }
+  }
+
+  /// Send a forwarded message into an existing conversation.
+  Future<void> sendForwardedMessage(String convoId, MessageItem m) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final messagesRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages');
+    final now = DateTime.now().toIso8601String();
+    final payload = {
+      'senderId': uid,
+      'text': m.text,
+      'ts': now,
+      'forwarded': true,
+      'originalSenderId': m.senderId,
+      'originalTs': m.ts,
+    };
+    await messagesRef.add(payload);
+    await _db.collection('conversations').doc(convoId).set({
+      'lastMessage': '[forwarded] ${m.text}',
+      'lastSenderId': uid,
+      'updatedAt': now,
+    }, SetOptions(merge: true));
+  }
+
+  /// Mark a message as deleted for the current user (hidden locally).
+  Future<void> deleteMessageForMe(String convoId, String messageId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final msgRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages')
+        .doc(messageId);
+    await msgRef.set({
+      'deletedFor': {uid: true},
+    }, SetOptions(merge: true));
+  }
+
+  /// Delete a message document for everyone (requires appropriate security rules).
+  Future<void> deleteMessageForEveryone(
+    String convoId,
+    String messageId,
+  ) async {
+    final msgRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages')
+        .doc(messageId);
+    await msgRef.delete();
   }
 
   /// Uploads image bytes and sends an image message.

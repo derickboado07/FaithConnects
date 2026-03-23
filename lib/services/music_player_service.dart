@@ -36,19 +36,76 @@ class MusicPlayerService extends ChangeNotifier {
   int get currentIndex => _currentIndex;
 
   static const allSongs = <Song>[
-    Song(title: 'Amazing God', artist: 'CCF Exalt Worship', assetPath: 'songs/Amazing God  Lyrics and Chords  CCF Exalt Worship.mp3'),
-    Song(title: 'By Your Love', artist: 'Exalt Worship', assetPath: 'songs/By Your Love  Lyric Video  Exalt Worship.mp3'),
-    Song(title: 'Goodness of God', artist: 'CeCe Winans', assetPath: 'songs/CeCe Winans - Goodness of God  [Lyrics Gospel Songs] - Matt Redman, Gerald, Casting Crowns.mp3'),
-    Song(title: 'Goodness of God', artist: 'Hillsong Worship', assetPath: 'songs/Goodness Of God - Hillsong Worship Songs, New Christian Worship Music 2025.mp3'),
-    Song(title: 'Into The Deep', artist: 'Citipointe Worship', assetPath: 'songs/Into The Deep - Citipointe Worship  Chardon Lewis - Official Lyric Video.mp3'),
-    Song(title: 'Lord I Offer My Life', artist: 'Jessell Dawn Mahinay', assetPath: 'songs/Lord I Offer My LifeJessell Dawn Mahinay (Lyrics).mp3'),
-    Song(title: 'No Other Like Jesus', artist: 'CCF Exalt Worship', assetPath: 'songs/No Other Like Jesus  Lyrics and Chords  CCF Exalt Worship.mp3'),
-    Song(title: 'One Way Jesus', artist: 'Hillsong', assetPath: 'songs/One Way Jesus (Lyrics)  Hillsong.mp3'),
-    Song(title: 'Pupurihin Ka Sa Awit', artist: 'Musikatha', assetPath: 'songs/Pupurihin Ka Sa Awit - Musikatha (Lyrics).mp3'),
-    Song(title: 'Trust In God', artist: 'Elevation Worship', assetPath: 'songs/Trust In God (feat. Chris Brown)  Official Lyric Video  Elevation Worship.mp3'),
-    Song(title: 'Wala Kang Katulad', artist: 'Musikatha', assetPath: 'songs/WALA KANG KATULAD - Musikatha ( Lyric Video).mp3'),
-    Song(title: 'Worthy', artist: 'Elevation Worship', assetPath: 'songs/Worthy - Elevation Worship ( lyric video).mp3'),
-    Song(title: 'Worthy Is The Lamb', artist: 'Hillsong Chapel', assetPath: 'songs/Worthy Is The Lamb  Hillsong Chapel.mp3'),
+    Song(
+      title: 'Amazing God',
+      artist: 'CCF Exalt Worship',
+      assetPath: 'songs/Amazing God  Lyrics and Chords  CCF Exalt Worship.mp3',
+    ),
+    Song(
+      title: 'By Your Love',
+      artist: 'Exalt Worship',
+      assetPath: 'songs/By Your Love  Lyric Video  Exalt Worship.mp3',
+    ),
+    Song(
+      title: 'Goodness of God',
+      artist: 'CeCe Winans',
+      assetPath:
+          'songs/CeCe Winans - Goodness of God  [Lyrics Gospel Songs] - Matt Redman, Gerald, Casting Crowns.mp3',
+    ),
+    Song(
+      title: 'Goodness of God',
+      artist: 'Hillsong Worship',
+      assetPath:
+          'songs/Goodness Of God - Hillsong Worship Songs, New Christian Worship Music 2025.mp3',
+    ),
+    Song(
+      title: 'Into The Deep',
+      artist: 'Citipointe Worship',
+      assetPath:
+          'songs/Into The Deep - Citipointe Worship  Chardon Lewis - Official Lyric Video.mp3',
+    ),
+    Song(
+      title: 'Lord I Offer My Life',
+      artist: 'Jessell Dawn Mahinay',
+      assetPath: 'songs/Lord I Offer My LifeJessell Dawn Mahinay (Lyrics).mp3',
+    ),
+    Song(
+      title: 'No Other Like Jesus',
+      artist: 'CCF Exalt Worship',
+      assetPath:
+          'songs/No Other Like Jesus  Lyrics and Chords  CCF Exalt Worship.mp3',
+    ),
+    Song(
+      title: 'One Way Jesus',
+      artist: 'Hillsong',
+      assetPath: 'songs/One Way Jesus (Lyrics)  Hillsong.mp3',
+    ),
+    Song(
+      title: 'Pupurihin Ka Sa Awit',
+      artist: 'Musikatha',
+      assetPath: 'songs/Pupurihin Ka Sa Awit - Musikatha (Lyrics).mp3',
+    ),
+    Song(
+      title: 'Trust In God',
+      artist: 'Elevation Worship',
+      assetPath:
+          'songs/Trust In God (feat. Chris Brown)  Official Lyric Video  Elevation Worship.mp3',
+    ),
+    Song(
+      title: 'Wala Kang Katulad',
+      artist: 'Musikatha',
+      assetPath: 'songs/WALA KANG KATULAD - Musikatha ( Lyric Video).mp3',
+    ),
+    Song(
+      title: 'Worthy',
+      artist: 'Elevation Worship',
+      assetPath: 'songs/Worthy - Elevation Worship ( lyric video).mp3',
+    ),
+    Song(
+      title: 'Worthy Is The Lamb',
+      artist: 'Hillsong Chapel',
+      assetPath: 'songs/Worthy Is The Lamb  Hillsong Chapel.mp3',
+    ),
   ];
 
   Future<void> playSong(Song song, int index, List<Song> playlist) async {

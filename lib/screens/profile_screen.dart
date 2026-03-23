@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -258,7 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.45),
+                              Colors.black.withValues(alpha: 0.45),
                             ],
                             stops: const [0.55, 1.0],
                           ),
@@ -276,10 +276,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
+                              color: Colors.black.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.4),
+                                color: Colors.white.withValues(alpha: 0.4),
                               ),
                             ),
                             child: const Row(
@@ -555,7 +555,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             color: const Color(0xFFE8D5B7),
                             border: Border.all(
-                              color: _gold.withOpacity(0.35),
+                              color: _gold.withValues(alpha: 0.35),
                               width: 1.5,
                             ),
                           ),
@@ -604,7 +604,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Container(
                           padding: const EdgeInsets.all(9),
                           decoration: BoxDecoration(
-                            color: _goldLight.withOpacity(0.5),
+                            color: _goldLight.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
@@ -677,7 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 70,
                                 height: 70,
                                 decoration: BoxDecoration(
-                                  color: _goldLight.withOpacity(0.4),
+                                  color: _goldLight.withValues(alpha: 0.4),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -900,7 +900,7 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                       shape: BoxShape.circle,
                       color: const Color(0xFFE8D5B7),
                       border: Border.all(
-                        color: _gold.withOpacity(0.35),
+                        color: _gold.withValues(alpha: 0.35),
                         width: 1.5,
                       ),
                     ),
@@ -1072,7 +1072,7 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                               margin: const EdgeInsets.only(right: 1),
                               padding: const EdgeInsets.all(3),
                               decoration: BoxDecoration(
-                                color: def.$4.withOpacity(0.15),
+                                color: def.$4.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(def.$3, size: 12, color: def.$4),
@@ -1229,7 +1229,7 @@ class _ProfileReactionPicker extends StatelessWidget {
     return Material(
       elevation: 6,
       borderRadius: BorderRadius.circular(40),
-      shadowColor: Colors.black.withOpacity(0.15),
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
@@ -1248,10 +1248,12 @@ class _ProfileReactionPicker extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isActive ? d.$4.withOpacity(0.15) : Colors.transparent,
+                  color: isActive
+                      ? d.$4.withValues(alpha: 0.15)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(24),
                   border: isActive
-                      ? Border.all(color: d.$4.withOpacity(0.4))
+                      ? Border.all(color: d.$4.withValues(alpha: 0.4))
                       : null,
                 ),
                 child: Column(

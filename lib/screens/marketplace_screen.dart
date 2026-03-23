@@ -396,17 +396,13 @@ class _CategoriesRow extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    ProductListScreen(initialCategory: cat.label),
+                builder: (_) => ProductListScreen(initialCategory: cat.label),
               ),
             ),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isFirst
-                    ? _gold.withValues(alpha: 0.10)
-                    : Colors.white,
+                color: isFirst ? _gold.withValues(alpha: 0.10) : Colors.white,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: isFirst ? _gold : const Color(0xFFE8E8E8),
@@ -426,8 +422,7 @@ class _CategoriesRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color:
-                          isFirst ? _gold : const Color(0xFF555555),
+                      color: isFirst ? _gold : const Color(0xFF555555),
                     ),
                   ),
                 ],
