@@ -20,6 +20,7 @@ class _BibleScreenState extends State<BibleScreen> {
   bool _loading = true;
   String? _error;
   String _bookListFilter = 'all';
+  bool _doubleCounts = false;
 
   // Search state
   bool _searchActive = false;
@@ -353,7 +354,11 @@ class _BibleScreenState extends State<BibleScreen> {
     return _BookListView(
       language: _language,
       selectedTestament: _bookListFilter,
-      onChanged: (value) => setState(() => _bookListFilter = value),
+      doubleCounts: _doubleCounts,
+      onChanged: (value) => setState(() {
+        _bookListFilter = value;
+        _doubleCounts = value == 'all';
+      }),
     );
   }
 }
@@ -445,11 +450,13 @@ class _SearchVerseTile extends StatelessWidget {
 class _BookListView extends StatelessWidget {
   final String language;
   final String selectedTestament;
+  final bool doubleCounts;
   final ValueChanged<String> onChanged;
 
   const _BookListView({
     required this.language,
     required this.selectedTestament,
+    this.doubleCounts = false,
     required this.onChanged,
   });
 
@@ -491,16 +498,23 @@ class _BookListView extends StatelessWidget {
             ),
           ),
         ),
-        if (selectedTestament != 'nt') ...[
+
+        // When 'All Books' is selected show a single TOTAL header and the full list
+        if (selectedTestament == 'all') ...[
+          _sectionHeader(
+            'TOTAL BOOKS',
+            names.length,
+          ),
+          for (int i = 0; i < names.length; i++)
+            _BookTile(bookNum: i + 1, bookName: names[i], language: language),
+        ] else if (selectedTestament == 'ot') ...[
           _sectionHeader(
             language == 'tl' ? 'LUMANG TIPAN' : 'OLD TESTAMENT',
             _otCount,
           ),
           for (int i = 0; i < _otCount; i++)
             _BookTile(bookNum: i + 1, bookName: names[i], language: language),
-        ],
-        if (selectedTestament == 'all') const SizedBox(height: 8),
-        if (selectedTestament != 'ot') ...[
+        ] else if (selectedTestament == 'nt') ...[
           _sectionHeader(
             language == 'tl' ? 'BAGONG TIPAN' : 'NEW TESTAMENT',
             names.length - _otCount,
