@@ -72,6 +72,8 @@ class MessageItem {
   final Map<String, List<String>> reactions;
   final Map<String, bool> deletedFor;
   final bool isSystemMessage;
+  final String? mydayMediaUrl;
+  final String? mydayOwnerName;
 
   MessageItem({
     required this.id,
@@ -83,6 +85,8 @@ class MessageItem {
     Map<String, List<String>>? reactions,
     Map<String, bool>? deletedFor,
     this.isSystemMessage = false,
+    this.mydayMediaUrl,
+    this.mydayOwnerName,
   }) : reactions = reactions ?? {},
        deletedFor = deletedFor ?? {};
 
@@ -96,6 +100,8 @@ class MessageItem {
       ts: d['ts'] ?? '',
       imageUrl: d['imageUrl'],
       isSystemMessage: d['isSystemMessage'] == true,
+      mydayMediaUrl: d['mydayMediaUrl'] as String?,
+      mydayOwnerName: d['mydayOwnerName'] as String?,
       reactions: d['reactions'] is Map<String, dynamic>
           ? (d['reactions'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -363,6 +369,37 @@ class MessageService {
     } catch (e) {
       throw Exception('Failed to update conversation metadata: $e');
     }
+  }
+
+  /// Sends a MyDay story reply message that carries the story thumbnail and
+  /// owner name so the chat screen can render it as a story-reply bubble.
+  Future<void> sendMydayReplyMessage(
+    String convoId,
+    String text,
+    String mydayMediaUrl,
+    String mydayOwnerName,
+  ) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
+    final messagesRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages');
+    await messagesRef.add({
+      'senderId': uid,
+      'senderName': senderName,
+      'text': text,
+      'ts': now,
+      'mydayMediaUrl': mydayMediaUrl,
+      'mydayOwnerName': mydayOwnerName,
+    });
+    await _db.collection('conversations').doc(convoId).set({
+      'lastMessage': text,
+      'lastSenderId': uid,
+      'updatedAt': now,
+    }, SetOptions(merge: true));
   }
 
   /// Update group name (admin-only; uses Cloud Function when URL is set).

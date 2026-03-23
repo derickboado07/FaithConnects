@@ -767,6 +767,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       (acc, l) => acc + l.length,
                     );
 
+                    final isMydayReply =
+                        m.mydayMediaUrl != null && m.mydayMediaUrl!.isNotEmpty;
+
                     return GestureDetector(
                       onTap: () => _showMessageOptions(context, m),
                       onLongPress: () => _showReactionPicker(context, m),
@@ -809,7 +812,76 @@ class _ChatScreenState extends State<ChatScreen> {
                                   );
                                 },
                               ),
+                            // ── MyDay story-reply bubble ──────────────────────
+                            if (isMydayReply) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.reply_rounded,
+                                      size: 13,
+                                      color: Color(0xFF888888),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isMe
+                                          ? 'You replied to ${m.mydayOwnerName}\'s story'
+                                          : '${m.senderName ?? 'Someone'} replied to your story',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF888888),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(14),
+                                  topRight: Radius.circular(14),
+                                  bottomLeft: Radius.circular(4),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                                child: Image.network(
+                                  m.mydayMediaUrl!,
+                                  width: 180,
+                                  height: 220,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (ctx, child, progress) {
+                                    if (progress == null) return child;
+                                    return const SizedBox(
+                                      width: 180,
+                                      height: 220,
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFFD4AF37),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (ctx, err, st) =>
+                                      const SizedBox(
+                                        width: 180,
+                                        height: 100,
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.grey,
+                                            size: 36,
+                                          ),
+                                        ),
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                             Container(
+                              constraints: isMydayReply
+                                  ? const BoxConstraints(maxWidth: 180)
+                                  : const BoxConstraints(maxWidth: 280),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 10,
@@ -818,7 +890,14 @@ class _ChatScreenState extends State<ChatScreen> {
                                 color: isMe
                                     ? const Color(0xFFD4AF37)
                                     : const Color(0xFFF0F0F0),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: isMydayReply
+                                    ? const BorderRadius.only(
+                                        topLeft: Radius.circular(4),
+                                        topRight: Radius.circular(4),
+                                        bottomLeft: Radius.circular(12),
+                                        bottomRight: Radius.circular(12),
+                                      )
+                                    : BorderRadius.circular(12),
                               ),
                               child: m.text.isNotEmpty
                                   ? _searchQuery.isNotEmpty

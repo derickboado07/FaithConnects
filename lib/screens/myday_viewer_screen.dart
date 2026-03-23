@@ -165,11 +165,17 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     if (text.isEmpty || _isSending) return;
     setState(() => _isSending = true);
     _replyFocus.unfocus();
+    final item = widget.items[_current];
     try {
       final convoId = await MessageService.instance.ensureConversationWith(
         widget.uid,
       );
-      await MessageService.instance.sendMessage(convoId, text);
+      await MessageService.instance.sendMydayReplyMessage(
+        convoId,
+        text,
+        item.mediaUrl,
+        widget.userName,
+      );
       _replyCtrl.clear();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
