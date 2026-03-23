@@ -813,11 +813,12 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
       _chapter,
       language: _language,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _verses = v;
         _loading = false;
       });
+    }
     // Scroll to top whenever chapter changes.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) _scroll.jumpTo(0);
@@ -1023,11 +1024,12 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
 
   Future<void> _checkSaved() async {
     final s = await BibleService.instance.isVerseSaved(widget.verse);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _saved = s;
         _loadingSave = false;
       });
+    }
   }
 
   Future<void> _toggleSave() async {
@@ -1150,11 +1152,12 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
 
   Future<void> _checkSaved() async {
     final s = await BibleService.instance.isVerseSaved(widget.verse);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _saved = s;
         _loadingSave = false;
       });
+    }
   }
 
   String _buildVerseText() =>
@@ -1384,11 +1387,12 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
     final v = await BibleService.instance.getDailyVerse(
       language: widget.language,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _verse = v;
         _loading = false;
       });
+    }
   }
 
   Future<void> _shareToFeed() async {
@@ -1639,11 +1643,12 @@ class _SavedVersesScreenState extends State<SavedVersesScreen> {
     final verses = await BibleService.instance.getSavedVerses(
       language: widget.language,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _verses = verses;
         _loading = false;
       });
+    }
   }
 
   @override

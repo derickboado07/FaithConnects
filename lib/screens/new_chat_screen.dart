@@ -17,8 +17,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
   @override
   Widget build(BuildContext context) {
     final cur = AuthService.instance.currentUser.value;
-    if (cur == null)
+    if (cur == null) {
       return const Scaffold(body: Center(child: Text('Sign in first')));
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('New Chat')),
       body: Column(
@@ -51,8 +52,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   final q = _query.toLowerCase();
                   return name.contains(q) || email.contains(q);
                 }).toList();
-                if (filtered.isEmpty)
+                if (filtered.isEmpty) {
                   return const Center(child: Text('No users found'));
+                }
                 return ListView.builder(
                   itemCount: filtered.length,
                   itemBuilder: (context, i) {

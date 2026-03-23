@@ -52,11 +52,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final nowFollowing = await AuthService.instance.toggleFollowById(
       widget.userId,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isFollowing = nowFollowing;
         _followLoading = false;
       });
+    }
   }
 
   @override

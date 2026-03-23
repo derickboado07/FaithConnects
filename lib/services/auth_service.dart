@@ -195,7 +195,7 @@ class AuthService {
       } else {
         friendly = e.message ?? 'Registration failed.';
       }
-      final msg = '[${code}] $friendly';
+      final msg = '[$code] $friendly';
       debugPrint('AuthService.register FirebaseAuthException: $msg');
       debugPrintStack(label: 'AuthService.register stack', stackTrace: st);
       return msg;
@@ -383,7 +383,7 @@ class AuthService {
       if (avatarBytes != null && avatarFilename != null) {
         // Web: upload raw bytes directly to Firebase Storage
         final uploaded = await _uploadImageBytes(
-          'avatars/$uid/${avatarFilename}',
+          'avatars/$uid/$avatarFilename',
           avatarBytes,
           avatarFilename,
         );
@@ -404,7 +404,7 @@ class AuthService {
       String? bannerUrl = doc.data()['banner'];
       if (bannerBytes != null && bannerFilename != null) {
         final uploaded = await _uploadImageBytes(
-          'banners/$uid/${bannerFilename}',
+          'banners/$uid/$bannerFilename',
           bannerBytes,
           bannerFilename,
         );
