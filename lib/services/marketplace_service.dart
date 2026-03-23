@@ -45,20 +45,9 @@ class MarketplaceService {
   /// The stream automatically emits updates whenever a product is added,
   /// updated, or removed in Firestore.
   Stream<List<Product>> getProductsStream({String? category}) {
-    // To avoid requiring composite indexes (where + orderBy), we always
-    // order by createdAt on the server and apply the category filter client-side
-    // when a specific category is requested. This makes the stream resilient
-    // to missing indexes and prevents a transient empty/error snapshot that
-    // would hide items briefly in the UI.
-    final query = _db.collection('products').orderBy('createdAt', descending: true);
-    return query.snapshots().map((snapshot) {
-      final all = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
-      if (category != null && category.isNotEmpty && category != 'All') {
-        return all.where((p) => p.category == category).toList();
-      }
-      return all;
-    });
-  }
+    Query<Map<String, dynamic>> query = _db
+        .collection('products')
+        .orderBy('createdAt', descending: true);
 
   /// Paged fetch for products (newest first). [startAfter] is the DateTime of
   /// the last product from the previous page to continue pagination.
@@ -68,12 +57,12 @@ class MarketplaceService {
     if (startAfter != null) {
       query = query.startAfter([Timestamp.fromDate(startAfter)]);
     }
-    final snap = await query.limit(limit).get();
-    final all = snap.docs.map((d) => Product.fromFirestore(d)).toList();
-    if (category != null && category.isNotEmpty && category != 'All') {
-      return all.where((p) => p.category == category).toList();
-    }
-    return all;
+
+    // Map each QuerySnapshot to a List<Product> using fromFirestore().
+    return query.snapshots().map(
+      (snapshot) =>
+          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList(),
+    );
   }
 
   /// Fetches a single product document by ID. Returns null if not found.
@@ -121,8 +110,8 @@ class MarketplaceService {
   /// Returns the public download URL of the uploaded image, which is then
   /// stored in the Firestore product document as [imageUrl].
   Future<String> uploadProductImage({
-    String? imagePath,       // Mobile/desktop: local file path
-    Uint8List? imageBytes,   // Web: raw image bytes
+    String? imagePath, // Mobile/desktop: local file path
+    Uint8List? imageBytes, // Web: raw image bytes
     required String filename,
     required String userId,
   }) async {
@@ -220,9 +209,7 @@ class MarketplaceService {
     if (existing.exists) {
       // Item already in cart — increment quantity using FieldValue.increment
       // to avoid race conditions with concurrent writes.
-      await cartItemRef.update({
-        'quantity': FieldValue.increment(quantity),
-      });
+      await cartItemRef.update({'quantity': FieldValue.increment(quantity)});
     } else {
       // First time adding — create a new cart item document.
       await cartItemRef.set({
@@ -260,14 +247,14 @@ class MarketplaceService {
 
     final order = ProductOrder(
       orderId: docRef.id,
-      userId: userId,
+      buyerId: userId,
       productId: product.productId,
       productName: product.productName,
       imageUrl: product.imageUrl,
       address: address,
       paymentMethod: paymentMethod,
       price: product.price,
-      status: 'pending',      // Initial order status
+      status: 'pending', // Initial order status
       createdAt: DateTime.now(),
     );
 

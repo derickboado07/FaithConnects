@@ -101,19 +101,22 @@ class OrderConfirmationScreen extends StatelessWidget {
               // ── Order ID Badge ──────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 18, vertical: 10),
+                  horizontal: 18,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: _goldLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _gold.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: _gold.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.receipt_long_rounded,
-                        color: _gold, size: 16),
+                    const Icon(
+                      Icons.receipt_long_rounded,
+                      color: _gold,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,8 +174,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                               width: 72,
                               height: 72,
                               fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, st) =>
-                                  _thumbFallback(),
+                              errorBuilder: (ctx, err, st) => _thumbFallback(),
                             )
                           : _thumbFallback(),
                     ),
@@ -240,20 +242,22 @@ class OrderConfirmationScreen extends StatelessWidget {
                       label: 'Delivery Address',
                       value: address,
                     ),
-                    Divider(
-                        color: Theme.of(context).dividerColor,
-                        thickness: 0.8,
-                        height: 20),
+                    const Divider(
+                      color: Color(0xFFF0F0F0),
+                      thickness: 0.8,
+                      height: 20,
+                    ),
                     // Payment method row
                     _ConfirmRow(
                       icon: Icons.payment_rounded,
                       label: 'Payment Method',
                       value: paymentMethod,
                     ),
-                    Divider(
-                        color: Theme.of(context).dividerColor,
-                        thickness: 0.8,
-                        height: 20),
+                    const Divider(
+                      color: Color(0xFFF0F0F0),
+                      thickness: 0.8,
+                      height: 20,
+                    ),
                     // Order status row
                     _ConfirmRow(
                       icon: Icons.local_shipping_outlined,
@@ -289,8 +293,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'Continue Shopping',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -318,8 +321,7 @@ class OrderConfirmationScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'Back to Marketplace',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -338,8 +340,11 @@ class OrderConfirmationScreen extends StatelessWidget {
         color: _goldLight.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(Icons.image_outlined,
-          size: 34, color: Color(0xFFCCB060)),
+      child: const Icon(
+        Icons.image_outlined,
+        size: 34,
+        color: Color(0xFFCCB060),
+      ),
     );
   }
 }

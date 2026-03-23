@@ -1,11 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'auth_service.dart';
+// cloud_functions client not used here; server-side callable function is available
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class Conversation {
   final String id;
-  final List<String> participants;
+  final String type; // 'direct' or 'group'
+  final String? name; // group name
+  final String? photoUrl; // group avatar
+  final String? createdBy;
+  final String createdAt;
+  final List<String> participants; // members for group or two uids for direct
+  final List<String> admins; // group admins
   final String? lastMessage;
   final String? lastSenderId;
   final String updatedAt;
@@ -13,12 +23,19 @@ class Conversation {
 
   Conversation({
     required this.id,
+    required this.type,
+    this.name,
+    this.photoUrl,
+    this.createdBy,
+    required this.createdAt,
     required this.participants,
+    List<String>? admins,
     this.lastMessage,
     this.lastSenderId,
     required this.updatedAt,
     Map<String, String>? lastRead,
-  }) : lastRead = lastRead ?? {};
+  }) : admins = admins ?? [],
+       lastRead = lastRead ?? {};
 
   factory Conversation.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -30,7 +47,13 @@ class Conversation {
     }
     return Conversation(
       id: doc.id,
+      type: (d['type'] ?? 'direct') as String,
+      name: d['name'] as String?,
+      photoUrl: d['photoUrl'] as String?,
+      createdBy: d['createdBy'] as String?,
+      createdAt: d['createdAt'] ?? '',
       participants: List<String>.from(d['participants'] ?? []),
+      admins: d['admins'] is List ? List<String>.from(d['admins']) : [],
       lastMessage: d['lastMessage'],
       lastSenderId: d['lastSenderId'],
       updatedAt: d['updatedAt'] ?? '',
@@ -42,28 +65,49 @@ class Conversation {
 class MessageItem {
   final String id;
   final String senderId;
+  final String? senderName;
   final String text;
   final String ts;
   final String? imageUrl;
   final Map<String, List<String>> reactions;
+  final Map<String, bool> deletedFor;
+  final bool isSystemMessage;
+  final String? mydayMediaUrl;
+  final String? mydayOwnerName;
+  final String? repliedToNote;
+  final String? repliedToNoteOwnerName;
 
   MessageItem({
     required this.id,
     required this.senderId,
+    this.senderName,
     required this.text,
     required this.ts,
     this.imageUrl,
     Map<String, List<String>>? reactions,
-  }) : reactions = reactions ?? {};
+    Map<String, bool>? deletedFor,
+    this.isSystemMessage = false,
+    this.mydayMediaUrl,
+    this.mydayOwnerName,
+    this.repliedToNote,
+    this.repliedToNoteOwnerName,
+  }) : reactions = reactions ?? {},
+       deletedFor = deletedFor ?? {};
 
   factory MessageItem.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return MessageItem(
       id: doc.id,
       senderId: d['senderId'] ?? '',
+      senderName: d['senderName'],
       text: d['text'] ?? '',
       ts: d['ts'] ?? '',
       imageUrl: d['imageUrl'],
+      isSystemMessage: d['isSystemMessage'] == true,
+      mydayMediaUrl: d['mydayMediaUrl'] as String?,
+      mydayOwnerName: d['mydayOwnerName'] as String?,
+      repliedToNote: d['repliedToNote'] as String?,
+      repliedToNoteOwnerName: d['repliedToNoteOwnerName'] as String?,
       reactions: d['reactions'] is Map<String, dynamic>
           ? (d['reactions'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -72,6 +116,11 @@ class MessageItem {
                     ? List<String>.from(v.map((e) => e.toString()))
                     : <String>[],
               ),
+            )
+          : {},
+      deletedFor: d['deletedFor'] is Map<String, dynamic>
+          ? (d['deletedFor'] as Map<String, dynamic>).map(
+              (k, v) => MapEntry(k, v == true),
             )
           : {},
     );
@@ -87,6 +136,11 @@ class MessageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   String get _myUid => _auth.currentUser?.uid ?? '';
+
+  // Set this to your deployed functions base URL, for example:
+  // https://us-central1-<your-project-id>.cloudfunctions.net
+  // Leave empty to attempt direct client delete (may fail if security rules block it).
+  static const String _functionsBaseUrl = '';
 
   String _convoId(String a, String b) {
     final parts = [a, b]..sort();
@@ -130,24 +184,148 @@ class MessageService {
     if (uid.isEmpty) throw Exception('Not signed in');
     final id = _convoId(uid, otherUid);
     final docRef = _db.collection('conversations').doc(id);
-    await docRef.set({
-      'participants': [uid, otherUid],
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+    bool exists = false;
+    try {
+      final snap = await docRef.get();
+      exists = snap.exists;
+    } catch (_) {
+      // Permission denied means the doc exists but user isn't in it — shouldn't
+      // happen with a deterministic id, but fall through to the create attempt.
+      exists = false;
+    }
+    if (!exists) {
+      await docRef.set({
+        'participants': [uid, otherUid],
+        'type': 'direct',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
     return id;
   }
 
-  Future<void> markConversationRead(String convoId) async {
+  /// Create a group conversation. Returns the new conversation id.
+  Future<String> createGroup({
+    required String name,
+    required List<String> memberUids,
+    Uint8List? avatarBytes,
+    String? avatarFilename,
+  }) async {
     final uid = _myUid;
-    if (uid.isEmpty) return;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final docRef = _db.collection('conversations').doc();
     final now = DateTime.now().toIso8601String();
-    await _db.collection('conversations').doc(convoId).set({
-      'lastRead': {uid: now},
-    }, SetOptions(merge: true));
+    final convoId = docRef.id;
+    String? photoUrl;
+    if (avatarBytes != null && avatarFilename != null) {
+      try {
+        // Log uid for debugging authorization issues
+        try {
+          final currentUid = _auth.currentUser?.uid;
+          // ignore: avoid_print
+          print(
+            'createGroup: uploading avatar. currentUid=$currentUid convoId=$convoId',
+          );
+        } catch (_) {}
+        final storagePath = 'group_avatars/$convoId/$avatarFilename';
+        final upload = await _storage
+            .ref()
+            .child(storagePath)
+            .putData(avatarBytes);
+        photoUrl = await upload.ref.getDownloadURL();
+      } catch (e, st) {
+        // Ignore upload failure but log it so group creation can continue without avatar.
+        // ignore: avoid_print
+        print('createGroup: avatar upload failed: $e\n$st');
+        photoUrl = null;
+      }
+    }
+    final members = <String>{...memberUids};
+    members.add(uid);
+    final data = {
+      'type': 'group',
+      'name': name,
+      'photoUrl': photoUrl,
+      'createdBy': uid,
+      'createdAt': now,
+      'participants': members.toList(),
+      'admins': [uid],
+      'updatedAt': now,
+    };
+    await docRef.set(data);
+    // Debug: log the saved photoUrl for troubleshooting
+    try {
+      // ignore: avoid_print
+      print('createGroup: saved conversation $convoId photoUrl=$photoUrl');
+    } catch (_) {}
+    return convoId;
   }
 
-  Future<void> sendMessage(String convoId, String text) async {
+  Future<void> addMember(String convoId, String uidToAdd) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/addGroupMemberHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'uidToAdd': uidToAdd}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to add member: ${resp.body}');
+      }
+      return;
+    }
+
+    await _db.collection('conversations').doc(convoId).update({
+      'participants': FieldValue.arrayUnion([uidToAdd]),
+    });
+  }
+
+  Future<void> removeMember(String convoId, String uidToRemove) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/removeGroupMemberHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'uidToRemove': uidToRemove}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to remove member: ${resp.body}');
+      }
+      return;
+    }
+
+    await _db.collection('conversations').doc(convoId).update({
+      'participants': FieldValue.arrayRemove([uidToRemove]),
+      'admins': FieldValue.arrayRemove([uidToRemove]),
+    });
+  }
+
+  Future<void> sendMessage(
+    String convoId,
+    String text, {
+    String? repliedToNote,
+    String? repliedToNoteOwnerName,
+  }) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
     final messagesRef = _db
@@ -155,8 +333,45 @@ class MessageService {
         .doc(convoId)
         .collection('messages');
     final now = DateTime.now().toIso8601String();
+
+    // If functions base URL is configured, use server to validate membership and write
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/sendMessageHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'text': text}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to send message: ${resp.body}');
+      }
+      return;
+    }
+
+    // Client-side write when functions not configured
     try {
-      await messagesRef.add({'senderId': uid, 'text': text, 'ts': now});
+      final senderName = AuthService.instance.currentUser.value?.name ?? '';
+      final msgData = <String, dynamic>{
+        'senderId': uid,
+        'senderName': senderName,
+        'text': text,
+        'ts': now,
+      };
+      if (repliedToNote != null && repliedToNote.isNotEmpty) {
+        msgData['repliedToNote'] = repliedToNote;
+        msgData['repliedToNoteOwnerName'] = repliedToNoteOwnerName ?? '';
+      }
+      await messagesRef.add(msgData);
     } catch (e) {
       throw Exception('Failed to write message: $e');
     }
@@ -170,6 +385,280 @@ class MessageService {
     } catch (e) {
       throw Exception('Failed to update conversation metadata: $e');
     }
+  }
+
+  /// Sends a MyDay story reply message that carries the story thumbnail and
+  /// owner name so the chat screen can render it as a story-reply bubble.
+  Future<void> sendMydayReplyMessage(
+    String convoId,
+    String text,
+    String mydayMediaUrl,
+    String mydayOwnerName,
+  ) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
+    final messagesRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages');
+    await messagesRef.add({
+      'senderId': uid,
+      'senderName': senderName,
+      'text': text,
+      'ts': now,
+      'mydayMediaUrl': mydayMediaUrl,
+      'mydayOwnerName': mydayOwnerName,
+    });
+    await _db.collection('conversations').doc(convoId).set({
+      'lastMessage': text,
+      'lastSenderId': uid,
+      'updatedAt': now,
+    }, SetOptions(merge: true));
+  }
+
+  /// Update group name (admin-only; uses Cloud Function when URL is set).
+  Future<void> updateGroupName(String convoId, String newName) async {
+    if (newName.isEmpty) throw Exception('Name cannot be empty');
+    if (newName.length > 60)
+      throw Exception('Name too long (max 60 characters)');
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/renameGroupHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'newName': newName}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to rename group: ${resp.body}');
+      }
+      return;
+    }
+    await _db.collection('conversations').doc(convoId).update({
+      'name': newName,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Upload avatar bytes and save the download URL to Firestore.
+  Future<void> updateGroupAvatar(
+    String convoId,
+    Uint8List bytes,
+    String filename,
+  ) async {
+    if (_myUid.isEmpty) throw Exception('Not signed in');
+    final storagePath =
+        'group_avatars/$convoId/${DateTime.now().millisecondsSinceEpoch}_$filename';
+    try {
+      // Determine content type from filename extension so Storage rules accept the upload
+      String contentType = 'image/jpeg';
+      final ext = filename.split('.').last.toLowerCase();
+      if (ext == 'png') {
+        contentType = 'image/png';
+      } else if (ext == 'gif') {
+        contentType = 'image/gif';
+      } else if (ext == 'webp') {
+        contentType = 'image/webp';
+      }
+      final upload = await _storage
+          .ref()
+          .child(storagePath)
+          .putData(bytes, SettableMetadata(contentType: contentType));
+      final photoUrl = await upload.ref.getDownloadURL();
+      await _db.collection('conversations').doc(convoId).update({
+        'photoUrl': photoUrl,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update avatar: $e');
+    }
+  }
+
+  /// Post a system message (e.g., "User X was added to the group").
+  Future<void> sendSystemMessage(String convoId, String text) async {
+    final now = DateTime.now().toIso8601String();
+    try {
+      await _db
+          .collection('conversations')
+          .doc(convoId)
+          .collection('messages')
+          .add({
+            'senderId': 'system',
+            'senderName': '',
+            'text': text,
+            'ts': now,
+            'isSystemMessage': true,
+          });
+    } catch (_) {
+      // System message failure is non-fatal
+    }
+  }
+
+  /// Promote a member to admin.
+  Future<void> promoteToAdmin(String convoId, String uid) async {
+    if (_myUid.isEmpty) throw Exception('Not signed in');
+    await _db.collection('conversations').doc(convoId).update({
+      'admins': FieldValue.arrayUnion([uid]),
+    });
+  }
+
+  /// Leave a group. If the caller is the sole admin, automatically promotes
+  /// the next available member before leaving.
+  Future<void> leaveGroup(String convoId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final convoRef = _db.collection('conversations').doc(convoId);
+    final snap = await convoRef.get();
+    if (!snap.exists) throw Exception('Group not found');
+    final data = snap.data() as Map<String, dynamic>;
+    final members = List<String>.from(data['participants'] ?? []);
+    final admins = List<String>.from(data['admins'] ?? []);
+    // Auto-promote another member if this user is the sole admin and others remain
+    if (admins.contains(uid) && admins.length == 1 && members.length > 1) {
+      final newAdmin = members.firstWhere((m) => m != uid, orElse: () => '');
+      if (newAdmin.isNotEmpty) {
+        await convoRef.update({
+          'admins': FieldValue.arrayUnion([newAdmin]),
+        });
+      }
+    }
+    await convoRef.update({
+      'participants': FieldValue.arrayRemove([uid]),
+      'admins': FieldValue.arrayRemove([uid]),
+    });
+  }
+
+  /// Delete a group and all its messages.
+  /// Uses the deleteGroupHttp Cloud Function when _functionsBaseUrl is set;
+  /// falls back to client-side batched deletion.
+  Future<void> deleteGroup(String convoId) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/deleteGroupHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to delete group: ${resp.body}');
+      }
+      return;
+    }
+    // Client-side fallback — delete messages then the conversation doc
+    final convoRef = _db.collection('conversations').doc(convoId);
+    final msgs = await convoRef.collection('messages').get();
+    for (final d in msgs.docs) {
+      await d.reference.delete();
+    }
+    await convoRef.delete();
+  }
+
+  Future<void> markConversationRead(String convoId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) return;
+    final now = DateTime.now().toIso8601String();
+    await _db.collection('conversations').doc(convoId).set({
+      'lastRead': {uid: now},
+    }, SetOptions(merge: true));
+  }
+
+  /// Send a forwarded message into an existing conversation.
+  Future<void> sendForwardedMessage(String convoId, MessageItem m) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final messagesRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages');
+    final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
+    final payload = {
+      'senderId': uid,
+      'senderName': senderName,
+      'text': m.text,
+      'ts': now,
+      'forwarded': true,
+      'originalSenderId': m.senderId,
+      'originalTs': m.ts,
+    };
+    await messagesRef.add(payload);
+    await _db.collection('conversations').doc(convoId).set({
+      'lastMessage': '[forwarded] ${m.text}',
+      'lastSenderId': uid,
+      'updatedAt': now,
+    }, SetOptions(merge: true));
+  }
+
+  /// Mark a message as deleted for the current user (hidden locally).
+  Future<void> deleteMessageForMe(String convoId, String messageId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final msgRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages')
+        .doc(messageId);
+    await msgRef.set({
+      'deletedFor': {uid: true},
+    }, SetOptions(merge: true));
+  }
+
+  /// Delete a message document for everyone (requires appropriate security rules).
+  Future<void> deleteMessageForEveryone(
+    String convoId,
+    String messageId,
+  ) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/deleteMessageHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'messageId': messageId}),
+      );
+      if (resp.statusCode != 200) {
+        final body = resp.body;
+        throw Exception('Function error (${resp.statusCode}): $body');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to delete message: ${resp.body}');
+      }
+      return;
+    }
+
+    final msgRef = _db
+        .collection('conversations')
+        .doc(convoId)
+        .collection('messages')
+        .doc(messageId);
+    await msgRef.delete();
   }
 
   /// Uploads image bytes and sends an image message.
@@ -190,12 +679,43 @@ class MessageService {
     try {
       final upload = await _storage.ref().child(storagePath).putData(bytes);
       final url = await upload.ref.getDownloadURL();
+      final senderName = AuthService.instance.currentUser.value?.name ?? '';
       await docRef.set({
         'senderId': uid,
+        'senderName': senderName,
         'text': '',
         'ts': now,
         'imageUrl': url,
       });
+      await _db.collection('conversations').doc(convoId).set({
+        'lastMessage': '[image]',
+        'lastSenderId': uid,
+        'updatedAt': now,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to send image message: $e');
+    }
+  }
+
+  /// Sends an image message using a pre-uploaded download URL.
+  /// Use this when the image has already been uploaded to Firebase Storage.
+  Future<void> sendImageMessageWithUrl(String convoId, String imageUrl) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
+    try {
+      await _db
+          .collection('conversations')
+          .doc(convoId)
+          .collection('messages')
+          .add({
+            'senderId': uid,
+            'senderName': senderName,
+            'text': '',
+            'ts': now,
+            'imageUrl': imageUrl,
+          });
       await _db.collection('conversations').doc(convoId).set({
         'lastMessage': '[image]',
         'lastSenderId': uid,

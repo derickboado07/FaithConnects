@@ -52,11 +52,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final nowFollowing = await AuthService.instance.toggleFollowById(
       widget.userId,
     );
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isFollowing = nowFollowing;
         _followLoading = false;
       });
+    }
   }
 
   @override
@@ -505,7 +506,7 @@ class _PublicPostCardState extends State<_PublicPostCard> {
                       shape: BoxShape.circle,
                       color: const Color(0xFFE8D5B7),
                       border: Border.all(
-                        color: _gold.withOpacity(0.35),
+                        color: _gold.withValues(alpha: 0.35),
                         width: 1.5,
                       ),
                     ),
@@ -612,7 +613,7 @@ class _PublicPostCardState extends State<_PublicPostCard> {
                               margin: const EdgeInsets.only(right: 1),
                               padding: const EdgeInsets.all(3),
                               decoration: BoxDecoration(
-                                color: def.$4.withOpacity(0.15),
+                                color: def.$4.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(def.$3, size: 12, color: def.$4),
@@ -802,7 +803,7 @@ class _ReactionPicker extends StatelessWidget {
     return Material(
       elevation: 6,
       borderRadius: BorderRadius.circular(40),
-      shadowColor: Colors.black.withOpacity(0.15),
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
@@ -821,10 +822,12 @@ class _ReactionPicker extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isActive ? d.$4.withOpacity(0.15) : Colors.transparent,
+                  color: isActive
+                      ? d.$4.withValues(alpha: 0.15)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(24),
                   border: isActive
-                      ? Border.all(color: d.$4.withOpacity(0.4))
+                      ? Border.all(color: d.$4.withValues(alpha: 0.4))
                       : null,
                 ),
                 child: Column(

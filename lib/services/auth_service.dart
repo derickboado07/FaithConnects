@@ -17,9 +17,7 @@ class AuthUser {
   final String? dob; // ISO date string (YYYY-MM-DD)
   final String avatarUrl;
   final String bannerUrl;
-  final String role; // 'user' | 'moderator'
-  final String status; // 'active' | 'banned'
-  final bool canPost;
+  final String note; // Short status message (Messenger-like note)
 
   AuthUser({
     required this.id,
@@ -31,9 +29,7 @@ class AuthUser {
     this.dob,
     this.avatarUrl = '',
     this.bannerUrl = '',
-    this.role = 'user',
-    this.status = 'active',
-    this.canPost = true,
+    this.note = '',
   });
 
   bool get isModerator => role == 'moderator';
@@ -47,9 +43,7 @@ class AuthUser {
     String? dob,
     String? avatarUrl,
     String? bannerUrl,
-    String? role,
-    String? status,
-    bool? canPost,
+    String? note,
   }) {
     return AuthUser(
       id: id,
@@ -61,9 +55,7 @@ class AuthUser {
       dob: dob ?? this.dob,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
-      role: role ?? this.role,
-      status: status ?? this.status,
-      canPost: canPost ?? this.canPost,
+      note: note ?? this.note,
     );
   }
 
@@ -77,9 +69,7 @@ class AuthUser {
     'dob': dob,
     'avatar': avatarUrl,
     'banner': bannerUrl,
-    // role is NOT written here — moderator role is set manually in Firestore
-    'status': status,
-    'canPost': canPost,
+    'note': note,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -92,9 +82,7 @@ class AuthUser {
     dob: j['dob'],
     avatarUrl: j['avatar'] ?? '',
     bannerUrl: j['banner'] ?? '',
-    role: j['role'] as String? ?? 'user',
-    status: j['status'] as String? ?? 'active',
-    canPost: j['canPost'] as bool? ?? true,
+    note: j['note'] ?? '',
   );
 }
 
@@ -265,7 +253,7 @@ class AuthService {
       } else {
         friendly = e.message ?? 'Registration failed.';
       }
-      final msg = '[${code}] $friendly';
+      final msg = '[$code] $friendly';
       debugPrint('AuthService.register FirebaseAuthException: $msg');
       debugPrintStack(label: 'AuthService.register stack', stackTrace: st);
       return msg;
@@ -341,6 +329,27 @@ class AuthService {
     _userDocSub = null;
     await _auth.signOut();
     currentUser.value = null;
+  }
+
+  /// Sends a password-reset email. Returns null on success or an error message.
+  Future<String?> sendPasswordReset(String email) async {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty) return 'Please enter your email address.';
+    try {
+      await _auth.sendPasswordResetEmail(email: trimmed);
+      return null;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return 'No account found for that email.';
+        case 'invalid-email':
+          return 'The email address is invalid.';
+        default:
+          return e.message ?? 'Failed to send reset email.';
+      }
+    } catch (e) {
+      return e.toString();
+    }
   }
 
   /// Marks the current user as online/offline in their /users/{uid} document.
@@ -463,7 +472,7 @@ class AuthService {
       if (avatarBytes != null && avatarFilename != null) {
         // Web: upload raw bytes directly to Firebase Storage
         final uploaded = await _uploadImageBytes(
-          'avatars/$uid/${avatarFilename}',
+          'avatars/$uid/$avatarFilename',
           avatarBytes,
           avatarFilename,
         );
@@ -484,7 +493,7 @@ class AuthService {
       String? bannerUrl = doc.data()['banner'];
       if (bannerBytes != null && bannerFilename != null) {
         final uploaded = await _uploadImageBytes(
-          'banners/$uid/${bannerFilename}',
+          'banners/$uid/$bannerFilename',
           bannerBytes,
           bannerFilename,
         );

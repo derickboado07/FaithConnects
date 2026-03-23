@@ -43,5 +43,37 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*')
         && request.resource.size < 10 * 1024 * 1024;
     }
+
+    // My Day media — owner writes, public reads
+    // Images up to 10 MB, videos up to 50 MB.
+    match /my_day/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && (
+          (request.resource.contentType.matches('image/.*')
+            && request.resource.size < 10 * 1024 * 1024)
+          ||
+          (request.resource.contentType.matches('video/.*')
+            && request.resource.size < 50 * 1024 * 1024)
+        );
+    }
+
+    // Group avatars — allow authenticated users to upload group avatars; public read
+    match /group_avatars/{convoId}/{allPaths=**} {
+      allow read: if true;
+      // Allow any authenticated user to upload a group avatar (2 MB limit, image only).
+      allow write: if request.auth != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 2 * 1024 * 1024;
+    }
+
+    // Chat images — any authenticated user can upload; public read
+    // Images capped at 10 MB, image/* MIME types only.
+    match /chat_images/{convoId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024;
+    }
   }
 }

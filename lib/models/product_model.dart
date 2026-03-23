@@ -14,11 +14,11 @@ class Product {
   final String productName;
   final String description;
   final double price;
-  final String imageUrl;    // Firebase Storage download URL
-  final String sellerId;    // UID of the seller (Firebase Auth UID)
-  final String sellerName;  // Display name of the seller
+  final String imageUrl; // Firebase Storage download URL
+  final String sellerId; // UID of the seller (Firebase Auth UID)
+  final String sellerName; // Display name of the seller
   final String sellerEmail; // Email of the seller
-  final String category;    // e.g. Bibles, Apparel, Journals, etc.
+  final String category; // e.g. Bibles, Apparel, Journals, etc.
   final DateTime createdAt; // Timestamp when the product was listed
 
   const Product({
@@ -49,8 +49,7 @@ class Product {
       sellerName: data['sellerName'] as String? ?? '',
       sellerEmail: data['sellerEmail'] as String? ?? '',
       category: data['category'] as String? ?? '',
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -67,8 +66,7 @@ class Product {
       sellerName: data['sellerName'] as String? ?? '',
       sellerEmail: data['sellerEmail'] as String? ?? '',
       category: data['category'] as String? ?? '',
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

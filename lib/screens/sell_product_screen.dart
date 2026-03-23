@@ -57,8 +57,8 @@ class _SellProductScreenState extends State<SellProductScreen> {
   String? _selectedCategory;
 
   // Image picker state
-  XFile? _imageFile;         // Picked image file (mobile / desktop)
-  Uint8List? _imageBytes;    // Picked image raw bytes (web & preview)
+  XFile? _imageFile; // Picked image file (mobile / desktop)
+  Uint8List? _imageBytes; // Picked image raw bytes (web & preview)
   bool _submitting = false;
 
   // Image source mode: upload from device vs. paste a URL
@@ -148,8 +148,13 @@ class _SellProductScreenState extends State<SellProductScreen> {
         return;
       }
       final uri = Uri.tryParse(url);
-      if (uri == null || !uri.hasAbsolutePath || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-        _showSnack('Please enter a valid image URL (http/https).', isError: true);
+      if (uri == null ||
+          !uri.hasAbsolutePath ||
+          (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        _showSnack(
+          'Please enter a valid image URL (http/https).',
+          isError: true,
+        );
         return;
       }
     } else {
@@ -162,7 +167,10 @@ class _SellProductScreenState extends State<SellProductScreen> {
     // Step 4: Parse and validate the price value.
     final price = double.tryParse(_priceCtrl.text.trim());
     if (price == null || price <= 0) {
-      _showSnack('Please enter a valid price greater than zero.', isError: true);
+      _showSnack(
+        'Please enter a valid price greater than zero.',
+        isError: true,
+      );
       return;
     }
 
@@ -206,7 +214,8 @@ class _SellProductScreenState extends State<SellProductScreen> {
       _showSuccessDialog();
     } catch (e) {
       if (!mounted) return;
-      String msg = e.toString()
+      String msg = e
+          .toString()
           .replaceAll(RegExp(r'^.*Exception:\s*'), '')
           .trim();
       _showSnack(
@@ -226,8 +235,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -271,7 +279,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
               height: 46,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(ctx);   // Close dialog
+                  Navigator.pop(ctx); // Close dialog
                   Navigator.pop(context); // Return to MarketplaceScreen
                 },
                 style: ElevatedButton.styleFrom(
@@ -284,8 +292,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
                 ),
                 child: const Text(
                   'Back to Marketplace',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -301,8 +308,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
         content: Text(msg),
         backgroundColor: isError ? Colors.red.shade600 : _gold,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -315,8 +321,11 @@ class _SellProductScreenState extends State<SellProductScreen> {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.close_rounded,
-              color: Theme.of(context).iconTheme.color, size: 22),
+          icon: const Icon(
+            Icons.close_rounded,
+            color: Color(0xFF444444),
+            size: 22,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -339,7 +348,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: _gold),
+                        strokeWidth: 2,
+                        color: _gold,
+                      ),
                     ),
                   )
                 : TextButton(
@@ -348,7 +359,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                       backgroundColor: _gold,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -356,7 +369,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                     child: const Text(
                       'List',
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.bold),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
           ),
@@ -443,7 +458,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                                   right: 10,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.black54,
                                       borderRadius: BorderRadius.circular(20),
@@ -451,8 +468,11 @@ class _SellProductScreenState extends State<SellProductScreen> {
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.edit_rounded,
-                                            color: Colors.white, size: 14),
+                                        Icon(
+                                          Icons.edit_rounded,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
                                         SizedBox(width: 4),
                                         Text(
                                           'Change',
@@ -540,8 +560,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                               child: Text(
                                 'Could not load preview — URL may be invalid.',
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF856404)),
+                                  fontSize: 12,
+                                  color: Color(0xFF856404),
+                                ),
                               ),
                             ),
                           ),
@@ -601,11 +622,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
               TextFormField(
                 controller: _priceCtrl,
                 keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true),
-                decoration: _inputDec(
-                  'e.g. 150.00',
-                  Icons.sell_outlined,
+                  decimal: true,
                 ),
+                decoration: _inputDec('e.g. 150.00', Icons.sell_outlined),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return 'Price is required.';
@@ -644,7 +663,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                       child: Text(
                         'Select a category',
                         style: TextStyle(
-                            color: Color(0xFFAAAAAA), fontSize: 14),
+                          color: Color(0xFFAAAAAA),
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -655,20 +676,25 @@ class _SellProductScreenState extends State<SellProductScreen> {
                             value: cat,
                             child: Row(
                               children: [
-                                const Icon(Icons.category_outlined,
-                                    size: 16, color: _gold),
+                                const Icon(
+                                  Icons.category_outlined,
+                                  size: 16,
+                                  color: _gold,
+                                ),
                                 const SizedBox(width: 10),
-                                Text(cat,
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        color: Theme.of(context).colorScheme.onSurface)),
+                                Text(
+                                  cat,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF2C2C2C),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         )
                         .toList(),
-                    onChanged: (val) =>
-                        setState(() => _selectedCategory = val),
+                    onChanged: (val) => setState(() => _selectedCategory = val),
                   ),
                 ),
               ),
@@ -695,7 +721,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2.5, color: Colors.white),
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text(
                           'List Product',
@@ -719,13 +747,11 @@ class _SellProductScreenState extends State<SellProductScreen> {
   InputDecoration _inputDec(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+      hintStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: const Color(0xFFFAF9F6),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: Theme.of(context).dividerColor),
@@ -746,8 +772,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
       ),
-      counterStyle:
-          TextStyle(color: Theme.of(context).hintColor, fontSize: 11),
+      counterStyle: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 11),
     );
   }
 }
@@ -787,9 +812,7 @@ class _ImageModeTab extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+                color: selected ? Colors.white : const Color(0xFF888888),
               ),
               const SizedBox(width: 6),
               Text(
