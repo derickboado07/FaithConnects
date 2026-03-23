@@ -281,7 +281,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     : product.sellerEmail.isNotEmpty
                                     ? product.sellerEmail
                                     : 'FaithConnect Member',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: Theme.of(context).colorScheme.onSurface,

@@ -18,6 +18,8 @@ class AuthUser {
   final String avatarUrl;
   final String bannerUrl;
   final String note; // Short status message (Messenger-like note)
+  final String role;
+  final String status;
 
   AuthUser({
     required this.id,
@@ -30,6 +32,8 @@ class AuthUser {
     this.avatarUrl = '',
     this.bannerUrl = '',
     this.note = '',
+    this.role = 'user',
+    this.status = 'active',
   });
 
   bool get isModerator => role == 'moderator';
@@ -44,6 +48,8 @@ class AuthUser {
     String? avatarUrl,
     String? bannerUrl,
     String? note,
+    String? role,
+    String? status,
   }) {
     return AuthUser(
       id: id,
@@ -56,6 +62,8 @@ class AuthUser {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
       note: note ?? this.note,
+      role: role ?? this.role,
+      status: status ?? this.status,
     );
   }
 
@@ -70,6 +78,8 @@ class AuthUser {
     'avatar': avatarUrl,
     'banner': bannerUrl,
     'note': note,
+    'role': role,
+    'status': status,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -83,6 +93,8 @@ class AuthUser {
     avatarUrl: j['avatar'] ?? '',
     bannerUrl: j['banner'] ?? '',
     note: j['note'] ?? '',
+    role: j['role'] ?? 'user',
+    status: j['status'] ?? 'active',
   );
 }
 

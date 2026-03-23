@@ -21,7 +21,7 @@ class NotificationService {
     final InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
     await _flutterLocalNotificationsPlugin.initialize(
-      settings: initializationSettings,
+      initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         // Handle notification tap
         // You can navigate to a specific screen if needed
@@ -53,10 +53,10 @@ class NotificationService {
         android: androidPlatformChannelSpecifics,
       );
       await _flutterLocalNotificationsPlugin.show(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: title,
-        body: body,
-        notificationDetails: platformChannelSpecifics,
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title,
+        body,
+        platformChannelSpecifics,
         payload: type,
       );
     } catch (_) {

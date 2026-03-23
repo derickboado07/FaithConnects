@@ -56,7 +56,7 @@ class MusicPlayerService extends ChangeNotifier {
           ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
           : 0.0;
 
-  static const allSongs = <Song>[
+  static final _songs = <Song>[
     Song(
       title: 'Amazing God',
       artist: 'CCF Exalt Worship',

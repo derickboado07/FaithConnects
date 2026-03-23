@@ -49,20 +49,30 @@ class MarketplaceService {
         .collection('products')
         .orderBy('createdAt', descending: true);
 
-  /// Paged fetch for products (newest first). [startAfter] is the DateTime of
-  /// the last product from the previous page to continue pagination.
-  Future<List<Product>> getProductsPage({int limit = 20, DateTime? startAfter, String? category}) async {
-    // Query server for newest products and apply category filter client-side
-    Query<Map<String, dynamic>> query = _db.collection('products').orderBy('createdAt', descending: true);
-    if (startAfter != null) {
-      query = query.startAfter([Timestamp.fromDate(startAfter)]);
+    if (category != null && category != 'All') {
+      query = query.where('category', isEqualTo: category);
     }
 
-    // Map each QuerySnapshot to a List<Product> using fromFirestore().
     return query.snapshots().map(
       (snapshot) =>
           snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList(),
     );
+  }
+
+  /// Paged fetch for products (newest first). [startAfter] is the DateTime of
+  /// the last product from the previous page to continue pagination.
+  Future<List<Product>> getProductsPage({int limit = 20, DateTime? startAfter, String? category}) async {
+    Query<Map<String, dynamic>> query = _db.collection('products').orderBy('createdAt', descending: true);
+    if (startAfter != null) {
+      query = query.startAfter([Timestamp.fromDate(startAfter)]);
+    }
+    if (category != null && category != 'All') {
+      query = query.where('category', isEqualTo: category);
+    }
+    query = query.limit(limit);
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
   }
 
   /// Fetches a single product document by ID. Returns null if not found.
