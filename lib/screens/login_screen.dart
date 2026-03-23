@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController _pwCtrl = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
+  bool _isModeratorLogin = false; // Toggle between User and Moderator login
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -48,11 +50,10 @@ class _LoginScreenState extends State<LoginScreen>
       email: _emailCtrl.text.trim(),
       password: _pwCtrl.text,
     );
-    setState(() => _loading = false);
     if (!mounted) return;
-    if (error == null) {
-      Navigator.pushReplacementNamed(context, '/');
-    } else {
+
+    if (error != null) {
+      setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),
@@ -64,6 +65,68 @@ class _LoginScreenState extends State<LoginScreen>
           duration: const Duration(seconds: 4),
         ),
       );
+      return;
+    }
+
+    // Moderator login: verify role in Firestore
+    if (_isModeratorLogin) {
+      final uid = AuthService.instance.currentUser.value?.id;
+      if (uid == null) {
+        setState(() => _loading = false);
+        return;
+      }
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+        final role = doc.data()?['role'] as String? ?? 'user';
+        if (role != 'moderator') {
+          // Not a moderator — sign out and show error
+          await AuthService.instance.logout();
+          if (!mounted) return;
+          setState(() => _loading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Access denied. Not a moderator.'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+        // Valid moderator — navigate to dashboard
+        setState(() => _loading = false);
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/moderator_dashboard');
+        }
+      } catch (e) {
+        await AuthService.instance.logout();
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error verifying role: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Normal user login
+    setState(() => _loading = false);
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/');
     }
   }
 
@@ -162,11 +225,83 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
 
+            // ── User / Moderator toggle ─────────────────────────────
+            FadeTransition(
+              opacity: _fadeAnim,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isModeratorLogin = false),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeInOut,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: !_isModeratorLogin ? _gold : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'User Login',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: !_isModeratorLogin
+                                      ? Colors.white
+                                      : Theme.of(context).hintColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isModeratorLogin = true),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeInOut,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _isModeratorLogin ? _gold : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Moderator Login',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: _isModeratorLogin
+                                      ? Colors.white
+                                      : Theme.of(context).hintColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // ── Form ──────────────────────────────────────────────────
             FadeTransition(
               opacity: _fadeAnim,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 36, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -262,9 +397,9 @@ class _LoginScreenState extends State<LoginScreen>
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text(
-                                  'Sign In',
-                                  style: TextStyle(
+                              : Text(
+                                  _isModeratorLogin ? 'Moderator Sign In' : 'Sign In',
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.3,

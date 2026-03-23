@@ -31,6 +31,7 @@ import 'screens/chat_list_screen.dart';
 import 'screens/marketplace_screen.dart';
 import 'screens/product_list_screen.dart';
 import 'screens/search_screen.dart';
+import 'screens/moderator_dashboard.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
@@ -381,6 +382,7 @@ class FaithConnectApp extends StatelessWidget {
         '/create_post': (_) => const CreatePostScreen(),
         '/messages': (_) => const ChatListScreen(),
         '/search': (_) => const SearchScreen(),
+        '/moderator_dashboard': (_) => const ModeratorDashboard(),
       },
 
           home: const _AppRoot(),
