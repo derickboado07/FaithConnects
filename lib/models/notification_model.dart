@@ -7,6 +7,9 @@ class AppNotification {
   final DateTime timestamp;
   final bool read;
 
+  /// Type of notification: 'reaction', 'comment', 'share', 'comment_reaction'
+  final String type;
+
   AppNotification({
     required this.id,
     required this.userId,
@@ -14,6 +17,7 @@ class AppNotification {
     required this.body,
     required this.timestamp,
     this.read = false,
+    this.type = 'general',
   });
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +27,7 @@ class AppNotification {
     'body': body,
     'timestamp': timestamp.toIso8601String(),
     'read': read,
+    'type': type,
   };
 
   static AppNotification fromJson(Map<String, dynamic> j) => AppNotification(
@@ -32,5 +37,6 @@ class AppNotification {
     body: j['body'],
     timestamp: DateTime.parse(j['timestamp']),
     read: j['read'] ?? false,
+    type: j['type'] ?? 'general',
   );
 }

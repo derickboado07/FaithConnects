@@ -8,6 +8,7 @@ import 'notification_service.dart'; // For showing notifications to post owner
 
 class Comment {
   final String id;
+  final String authorId;
   final String author;
   final String text;
   final String ts;
@@ -15,6 +16,7 @@ class Comment {
 
   Comment({
     required this.id,
+    required this.authorId,
     required this.author,
     required this.text,
     required this.ts,
@@ -22,6 +24,7 @@ class Comment {
   }) : reactions = reactions ?? {};
   Map<String, dynamic> toJson() => {
     'id': id,
+    'authorId': authorId,
     'author': author,
     'text': text,
     'ts': ts,
@@ -30,6 +33,7 @@ class Comment {
 
   static Comment fromJson(Map<String, dynamic> j) => Comment(
     id: j['id'],
+    authorId: j['authorId'] ?? '',
     author: j['author'],
     text: j['text'],
     ts: j['ts'],
@@ -448,6 +452,7 @@ class PostService {
         userId: originalPost.authorId,
         title: 'Your post was shared!',
         body: '$authorEmail shared your post.',
+        type: 'share',
       );
     }
   }
@@ -491,10 +496,14 @@ class PostService {
         .doc(postId)
         .collection('comments')
         .doc(commentId);
+    bool reactionAdded = false;
+    String? commentAuthorId;
+
     await _db.runTransaction((tx) async {
       final snap = await tx.get(docRef);
       if (!snap.exists) return;
       final data = snap.data()!;
+      commentAuthorId = data['authorId'] as String?;
       final Map<String, dynamic> existing =
           (data['reactions'] as Map<String, dynamic>?) ?? {};
       final List<String> list = List<String>.from(existing[reactionKey] ?? []);
@@ -502,11 +511,33 @@ class PostService {
         list.remove(userId);
       } else {
         list.add(userId);
+        reactionAdded = true;
       }
       final updated = Map<String, dynamic>.from(existing);
       updated[reactionKey] = list;
       tx.update(docRef, {'reactions': updated});
     });
+
+    // Notify comment author when someone adds a reaction to their comment
+    if (reactionAdded && commentAuthorId != null && commentAuthorId != userId) {
+      try {
+        final userDoc = await _db.collection('users').doc(userId).get();
+        final userName =
+            (userDoc.data()?['name'] as String?)?.isNotEmpty == true
+            ? userDoc.data()!['name'] as String
+            : (userDoc.data()?['email'] as String?) ?? 'Someone';
+        await NotificationService.instance.showNotification(
+          userId: commentAuthorId!,
+          title: 'Someone reacted to your comment!',
+          body: '$userName reacted "$reactionKey" to your comment.',
+          type: 'comment_reaction',
+        );
+      } catch (e) {
+        debugPrint(
+          'PostService: comment reaction notification failed (non-fatal): $e',
+        );
+      }
+    }
   }
 
   Future<List<Post>> getPostsForUser(String email, {String? userId}) async {
@@ -595,6 +626,9 @@ class PostService {
       'PostService: toggling reaction $reaction on post $postId by $userId',
     );
     final docRef = _db.collection('posts').doc(postId);
+    bool reactionAdded = false;
+    String? postOwnerId;
+
     await _db.runTransaction((tx) async {
       final snap = await tx.get(docRef);
       if (!snap.exists) {
@@ -602,29 +636,50 @@ class PostService {
         return;
       }
       final data = Map<String, dynamic>.from(snap.data() ?? {});
+      postOwnerId = data['authorId'] as String?;
       final reactions =
           (data['reactions'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, List<String>.from(v as List)),
           ) ??
           {};
+      // Check whether user already has this exact reaction (toggle-off scenario)
+      final existingList = reactions[reaction];
+      final wasReacted =
+          existingList != null && (existingList as List).contains(userId);
       // Remove user from ALL other reactions first (one reaction per post)
       for (final key in reactions.keys.toList()) {
         reactions[key]?.remove(userId);
       }
-      final list = reactions[reaction] ?? <String>[];
-      if (data['reactions'] != null) {
-        final existing = (data['reactions'] as Map<String, dynamic>)[reaction];
-        final wasReacted =
-            existing != null && (existing as List).contains(userId);
-        if (!wasReacted) list.add(userId);
-        // if was already reacted, we already removed it above (toggle off)
-      } else {
+      if (!wasReacted) {
+        final list = reactions[reaction] ?? <String>[];
         list.add(userId);
+        reactions[reaction] = list;
+        reactionAdded = true;
       }
-      reactions[reaction] = list;
       tx.update(docRef, {'reactions': reactions});
     });
-    debugPrint('PostService: reaction toggled successfully');
+    debugPrint(
+      'PostService: reaction toggled successfully (added=$reactionAdded)',
+    );
+
+    // Notify post owner when someone ADDS a reaction (not on toggle-off)
+    if (reactionAdded && postOwnerId != null && postOwnerId != userId) {
+      try {
+        final userDoc = await _db.collection('users').doc(userId).get();
+        final userName =
+            (userDoc.data()?['name'] as String?)?.isNotEmpty == true
+            ? userDoc.data()!['name'] as String
+            : (userDoc.data()?['email'] as String?) ?? 'Someone';
+        await NotificationService.instance.showNotification(
+          userId: postOwnerId!,
+          title: 'Someone reacted to your post!',
+          body: '$userName reacted "$reaction" to your post.',
+          type: 'reaction',
+        );
+      } catch (e) {
+        debugPrint('PostService: reaction notification failed (non-fatal): $e');
+      }
+    }
   }
 
   Future<void> addComment(
@@ -641,6 +696,7 @@ class PostService {
     final doc = commentsRef.doc();
     final comment = Comment(
       id: doc.id,
+      authorId: authorId,
       author: authorEmail,
       text: text,
       ts: DateTime.now().toIso8601String(),
@@ -664,6 +720,7 @@ class PostService {
         userId: postData['authorId'],
         title: 'New comment on your post!',
         body: '$authorEmail commented: "$text"',
+        type: 'comment',
       );
     }
   }

@@ -29,32 +29,39 @@ class NotificationService {
     );
   }
 
-  /// Show a notification to the user and save it to Firestore
+  /// Show a notification to the user and save it to Firestore.
+  /// [type] can be 'reaction', 'comment', 'share', 'comment_reaction', or 'general'.
   Future<void> showNotification({
     required String userId,
     required String title,
     required String body,
+    String type = 'general',
   }) async {
-    // Local notification
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-          'like_channel',
-          'Likes',
-          channelDescription: 'Notifications for post likes',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-        );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-    );
-    await _flutterLocalNotificationsPlugin.show(
-      id: 0,
-      title: title,
-      body: body,
-      notificationDetails: platformChannelSpecifics,
-      payload: null,
-    );
+    // Local notification (best-effort — may not work on all platforms)
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+            'faithconnect_channel',
+            'FaithConnect Notifications',
+            channelDescription:
+                'Notifications for reactions, comments, and shares',
+            importance: Importance.max,
+            priority: Priority.high,
+            showWhen: true,
+          );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+      );
+      await _flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: title,
+        body: body,
+        notificationDetails: platformChannelSpecifics,
+        payload: type,
+      );
+    } catch (_) {
+      // Local notification failure is non-fatal; Firestore record still saved.
+    }
 
     // Save to Firestore for notification list
     final docRef = _db
@@ -68,8 +75,38 @@ class NotificationService {
       title: title,
       body: body,
       timestamp: DateTime.now(),
+      type: type,
     );
     await docRef.set(notification.toJson());
+  }
+
+  /// Mark a single notification as read.
+  Future<void> markAsRead(String userId, String notificationId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'read': true});
+    } catch (_) {}
+  }
+
+  /// Mark all notifications as read for a user.
+  Future<void> markAllAsRead(String userId) async {
+    try {
+      final snap = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .where('read', isEqualTo: false)
+          .get();
+      final batch = _db.batch();
+      for (final doc in snap.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+      await batch.commit();
+    } catch (_) {}
   }
 
   /// Stream notifications for a user (for notification screen)
