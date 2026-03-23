@@ -21,6 +21,14 @@ class MusicPlayerService extends ChangeNotifier {
       _isPlaying = state == PlayerState.playing;
       notifyListeners();
     });
+    _player.onPositionChanged.listen((pos) {
+      _position = pos;
+      notifyListeners();
+    });
+    _player.onDurationChanged.listen((dur) {
+      _duration = dur;
+      notifyListeners();
+    });
   }
 
   static final instance = MusicPlayerService._();
@@ -30,10 +38,19 @@ class MusicPlayerService extends ChangeNotifier {
   bool _isPlaying = false;
   int _currentIndex = 0;
   List<Song> _playlist = const [];
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
   Song? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
   int get currentIndex => _currentIndex;
+  List<Song> get playlist => List.unmodifiable(_playlist);
+  Duration get position => _position;
+  Duration get duration => _duration;
+  double get progress =>
+      _duration.inMilliseconds > 0
+          ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+          : 0.0;
 
   static const allSongs = <Song>[
     Song(title: 'Amazing God', artist: 'CCF Exalt Worship', assetPath: 'songs/Amazing God  Lyrics and Chords  CCF Exalt Worship.mp3'),
@@ -55,6 +72,8 @@ class MusicPlayerService extends ChangeNotifier {
     _currentSong = song;
     _currentIndex = index;
     _playlist = playlist;
+    _position = Duration.zero;
+    _duration = Duration.zero;
     notifyListeners();
     try {
       await _player.stop();
@@ -87,6 +106,10 @@ class MusicPlayerService extends ChangeNotifier {
     } catch (e) {
       debugPrint('MusicPlayerService: error toggling play/pause: $e');
     }
+  }
+
+  Future<void> seekTo(Duration position) async {
+    await _player.seek(position);
   }
 
   void _autoPlayNext() {
