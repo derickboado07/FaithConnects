@@ -68,7 +68,56 @@ This project progress checklist reflects the current repository contents and wha
 - [x] Firestore rules and indexes present
 - [ ] Backend Cloud Functions (if needed) — not present / check `functions/` if required
 - [x] Backend Cloud Functions (basic suggestion function added in `functions/`)
+- [x] Backend Cloud Functions (HTTP delete endpoint added in `functions/index.js`)
 - [ ] Automated tests coverage — minimal tests present (`test/widget_test.dart`) and should be expanded
+
+## Recent Changes (important)
+
+- Added a server-side HTTP Cloud Function `deleteMessageHttp` in `functions/index.js` that verifies the caller's Firebase ID token and deletes a message only if the caller is the original sender or an admin. This is intended to support "Delete for everyone" when client-side deletes are blocked by security rules.
+- Updated `firestore.rules` to allow message deletion only when `request.auth.uid == resource.data.senderId` or the caller has an admin claim. Deploy the rules before relying on client-side deletes.
+- Added the `http` Dart package to `pubspec.yaml` and wired `lib/services/message_service.dart` to call the HTTP function when `_functionsBaseUrl` is configured. Run `flutter pub get` after editing dependencies.
+
+## How to Deploy the Cloud Functions and Rules
+
+1. Deploy Cloud Functions (from the repo root):
+
+```bash
+cd functions
+firebase deploy --only functions
+```
+
+2. Deploy Firestore rules (from the repo root):
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+3. After functions are deployed, set the functions base URL in `lib/services/message_service.dart`:
+
+```dart
+// example value:
+static const String _functionsBaseUrl = 'https://us-central1-<project-id>.cloudfunctions.net';
+```
+
+4. Update Flutter packages and run the app:
+
+```bash
+flutter pub get
+flutter run -d <device-id>
+```
+
+## How to Test "Delete for everyone"
+
+1. Ensure you are signed in as the message sender (or as an admin user if testing admin path).
+2. Open the conversation and locate the message to delete.
+3. Tap the message, choose "Delete for everyone". The client will call the configured HTTP function which verifies your ID token and performs the deletion server-side (or the client will perform a direct delete if rules permit).
+4. If you see a Firestore permission error, verify you deployed `firestore.rules` that allow sender deletes or use the server function path above.
+
+## Notes and Cautions
+
+- Security: Do not broadly relax delete permissions in Firestore. The current change limits deletion to the message sender or admin users. If you need stricter control (audit logs, moderation), prefer server-side callable functions and an admin workflow.
+- Dependency: The `http` package was upgraded to `^1.6.0` to remain compatible with Firebase platform interfaces. If you update Firebase packages later, re-check `pubspec.yaml` for compatibility.
+
 
 Notes: The checked items are present in the repository as of this documentation creation. Missing items are left as explicitly unchecked.
 
