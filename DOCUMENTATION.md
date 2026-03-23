@@ -149,9 +149,10 @@ FaithConnects/
 | File | Purpose |
 |------|---------|
 | `chat_list_screen.dart` | Lists all conversations (direct + group) with last message and unread indicators |
-| `chat_screen.dart` | Real-time 1-on-1 or group message thread with image sending, emoji reactions, reply, forward, and delete options |
+| `chat_screen.dart` | Real-time 1-on-1 or group message thread with image sending, emoji reactions, reply, forward, delete options. Supports voice/video call initiation, note reply rendering, and auto-scroll to latest messages. Group avatar in the AppBar streams live from Firestore. |
+| `call_screen.dart` | Full-screen call UI for voice and video calls. Shows ringing/accepted/ended status, call duration timer, mute/camera/speaker toggles. Uses Firestore-based signaling via `CallService`. |
 | `new_chat_screen.dart` | User search to start a new direct conversation |
-| `create_group_screen.dart` | Select members and name/photo to create a group |
+| `create_group_screen.dart` | Select members and name/photo to create a group. Group avatar uploads to Firebase Storage and displays immediately. |
 | `group_info_screen.dart` | Group metadata viewer; member list |
 | `group_settings_screen.dart` | Admin controls: rename group, change photo, add/remove members, promote/demote admins |
 
@@ -244,13 +245,17 @@ Manages all conversation and message operations.
 | `reactions` | Map\<String, List\<String\>\> | Emoji → list of reactor UIDs |
 | `deletedFor` | List\<String\> | UIDs for whom this is hidden ("delete for me") |
 | `isSystemMessage` | bool | True for group event notifications |
+| `mydayMediaUrl` | String? | My Day story media URL (for story replies) |
+| `mydayOwnerName` | String? | Name of the story owner being replied to |
+| `repliedToNote` | String? | Text of the user note being replied to |
+| `repliedToNoteOwnerName` | String? | Name of the note owner being replied to |
 
 **Key methods**:
 - `conversationsStream(uid)` — Real-time stream of all user conversations
 - `messagesStream(convoId)` — Real-time stream of messages
 - `getOrCreateDirectConvo(myUid, otherUid)` → conversation ID (deterministic)
 - `createGroup(name, participantUids, creatorUid, photoBytes?)` → conversation ID
-- `sendMessage(convoId, senderId, senderName, text, {imageBytes?})`
+- `sendMessage(convoId, senderId, senderName, text, {imageBytes?, repliedToNote?, repliedToNoteOwnerName?})`
 - `deleteMessageForMe(convoId, msgId, myUid)` — Soft delete (adds UID to `deletedFor`)
 - `deleteMessageForEveryone(convoId, msgId, senderId)` — Hard delete via Firestore or HTTP function
 - `reactToMessage(convoId, msgId, emoji, uid)` — Toggle reaction
@@ -332,6 +337,22 @@ Manages ephemeral 24-hour story entries ("My Day"), similar to Stories in messag
 - `activeStoriesForFeed(uids)` — Fetches stories for a list of UIDs (used to populate story row in home feed)
 - Video clips must be ≤ 15 seconds (enforced by the caller/upload UI)
 - Supported formats: JPEG, PNG, GIF, WEBP images; MP4/WEBM videos
+
+---
+
+#### `call_service.dart` — `CallService`
+
+Manages voice and video call signaling via Firestore documents.
+
+**Key methods**:
+- `startCall(participants, type, convoId)` → `String` — Creates a call document with status `'ringing'` and returns the call ID
+- `acceptCall(callId)` — Updates call status to `'accepted'` with server timestamp
+- `endCall(callId)` — Updates call status to `'ended'` with server timestamp
+- `callStream(callId)` — Real-time stream of call document changes (ringing → accepted → ended)
+- `incomingCallsStream()` — Stream of calls where current user is a participant and status is `'ringing'`
+- `sendMissedCallMessage(convoId, type)` — Writes a system message to the conversation for missed calls
+
+Calls are stored in the `calls/` collection with fields: `callId`, `callerId`, `participants`, `type` (`'voice'`/`'video'`), `status`, `convoId`, `createdAt`, `acceptedAt`, `endedAt`.
 
 ---
 
@@ -511,6 +532,18 @@ conversations/{convoId}
     reactions (map emoji→[uids])
     deletedFor ([uid,...])                — soft-delete per user
     isSystemMessage (bool)                — group event notifications
+    mydayMediaUrl                         — My Day story URL (story replies)
+    mydayOwnerName                        — story owner name
+    repliedToNote                         — note text being replied to
+    repliedToNoteOwnerName                — note owner name
+
+calls/{callId}
+  callId, callerId                        — call identity
+  participants ([uid,...])                — all call participants
+  type ('voice'|'video')                  — call type
+  status ('ringing'|'accepted'|'ended')   — current state
+  convoId                                 — linked conversation
+  createdAt, acceptedAt, endedAt          — timestamps
 
 products/{productId}
   productName, description, price
@@ -550,6 +583,7 @@ carts/{userId}/items/{productId}
 | `orders/{orderId}` | Buyer or seller | Create: buyer; Update/Delete: disallowed |
 | `conversations/{convoId}` | Participants only | Create: caller in participants; Update: participant (admin-guarded for name/photo/members); Delete: group admin |
 | `conversations/{convoId}/messages` | Participants only | Read/Create: participants; Update: participants (reactions/deletedFor); Delete: sender, `token.admin == true`, or group admin |
+| `calls/{callId}` | Any authenticated user | Create/Update: any authenticated; Delete: disallowed |
 
 ---
 
@@ -791,6 +825,10 @@ firebase deploy --only hosting
 - [x] Firestore security rules and composite indexes
 - [x] Cloud Functions: `suggest`, `deleteMessage`, `deleteMessageHttp`, `sendMessageHttp`, `addGroupMemberHttp`, `removeGroupMemberHttp`
 - [x] Per-user upload quota (20 posts/day)
+- [x] Voice/video call signaling — Firestore-based call documents with ringing/accepted/ended states
+- [x] Note reply in chat — reply to a user's status note with visual context in the message bubble
+- [x] Auto-scroll chat to latest messages on open
+- [x] Live group avatar — streams from Firestore in real-time in the chat AppBar
 - [ ] Push notifications (FCM) — not yet implemented
 - [ ] Automated test coverage — only `test/widget_test.dart` exists; should be expanded
 
