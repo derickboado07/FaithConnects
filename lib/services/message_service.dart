@@ -633,6 +633,35 @@ class MessageService {
     }
   }
 
+  /// Sends an image message using a pre-uploaded download URL.
+  /// Use this when the image has already been uploaded to Firebase Storage.
+  Future<void> sendImageMessageWithUrl(String convoId, String imageUrl) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
+    try {
+      await _db
+          .collection('conversations')
+          .doc(convoId)
+          .collection('messages')
+          .add({
+            'senderId': uid,
+            'senderName': senderName,
+            'text': '',
+            'ts': now,
+            'imageUrl': imageUrl,
+          });
+      await _db.collection('conversations').doc(convoId).set({
+        'lastMessage': '[image]',
+        'lastSenderId': uid,
+        'updatedAt': now,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to send image message: $e');
+    }
+  }
+
   /// Toggle reaction for a message: adds or removes current user's uid from the emoji array.
   Future<void> toggleReaction(
     String convoId,

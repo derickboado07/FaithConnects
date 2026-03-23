@@ -1,11 +1,19 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/message_service.dart';
+import '../services/media_upload_service.dart';
+import '../services/call_service.dart';
 import '../widgets/message_suggestion_bar.dart';
 import '../widgets/online_indicator.dart';
 import 'group_settings_screen.dart';
+import 'call_screen.dart';
+import 'image_viewer_screen.dart';
 
 // Reaction definitions for chat messages (emoji-first for FaithConnects)
 const List<_ChatReaction> _chatReactions = [
@@ -47,6 +55,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _ctrl = TextEditingController();
   bool _sending = false;
+  bool _uploadingImage = false;
   final Map<String, String> _senderNames = {};
 
   // In-chat search state
@@ -54,6 +63,121 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
   Timer? _debounce;
+
+  // ── Image picking ────────────────────────────────────────────────────
+  Future<void> _pickAndSendImage() async {
+    Uint8List? bytes;
+    String? filename;
+
+    if (kIsWeb) {
+      // Use file_picker for web/desktop
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      if (result != null && result.files.single.bytes != null) {
+        bytes = result.files.single.bytes!;
+        filename = result.files.single.name;
+      }
+    } else {
+      // Use image_picker for mobile
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1920,
+      );
+      if (picked != null) {
+        bytes = await picked.readAsBytes();
+        filename = picked.name;
+      }
+    }
+
+    if (bytes == null || filename == null) return;
+    setState(() => _uploadingImage = true);
+
+    // Step 1: Upload image bytes to Firebase Storage
+    String url;
+    try {
+      url = await MediaUploadService.instance.uploadChatImage(
+        convoId: widget.convoId,
+        bytes: bytes,
+        filename: filename,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploadingImage = false);
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Storage upload failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Step 2: Write the message document to Firestore with the download URL
+    try {
+      await MessageService.instance.sendImageMessageWithUrl(
+        widget.convoId,
+        url,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send image: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
+  }
+
+  // ── Call initiation ──────────────────────────────────────────────────
+  Future<void> _startCall(String type) async {
+    final myUid = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (myUid.isEmpty) return;
+    final participants =
+        widget.conversation?.participants ??
+        (widget.peerId.isNotEmpty ? [myUid, widget.peerId] : [myUid]);
+
+    try {
+      final callId = await CallService.instance.startCall(
+        participants: participants,
+        type: type,
+        convoId: widget.convoId,
+      );
+
+      // Resolve peer name for the call screen
+      final peerName = await _fetchPeerName();
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CallScreen(
+            callId: callId,
+            convoId: widget.convoId,
+            peerName: peerName,
+            type: type,
+            isIncoming: false,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start call: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
 
   void _onSearchChanged(String query) {
     _debounce?.cancel();
@@ -497,6 +621,18 @@ class _ChatScreenState extends State<ChatScreen> {
               )
             : null,
         actions: [
+          // Voice call button
+          IconButton(
+            icon: const Icon(Icons.call, color: Color(0xFFD4AF37)),
+            tooltip: 'Voice Call',
+            onPressed: () => _startCall('voice'),
+          ),
+          // Video call button
+          IconButton(
+            icon: const Icon(Icons.videocam, color: Color(0xFFD4AF37)),
+            tooltip: 'Video Call',
+            onPressed: () => _startCall('video'),
+          ),
           // Search toggle for in-conversation search
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search),
@@ -688,14 +824,65 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                           )
                                   : (m.imageUrl != null
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            child: Image.network(
-                                              m.imageUrl!,
-                                              width: 180,
-                                              fit: BoxFit.cover,
+                                        ? GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      ImageViewerScreen(
+                                                        imageUrl: m.imageUrl!,
+                                                        heroTag: 'img_${m.id}',
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                            child: Hero(
+                                              tag: 'img_${m.id}',
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Image.network(
+                                                  m.imageUrl!,
+                                                  width: 200,
+                                                  fit: BoxFit.cover,
+                                                  loadingBuilder:
+                                                      (ctx, child, progress) {
+                                                        if (progress == null)
+                                                          return child;
+                                                        return const SizedBox(
+                                                          width: 200,
+                                                          height: 150,
+                                                          child: Center(
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                  color: Color(
+                                                                    0xFFD4AF37,
+                                                                  ),
+                                                                ),
+                                                          ),
+                                                        );
+                                                      },
+                                                  errorBuilder:
+                                                      (
+                                                        ctx,
+                                                        err,
+                                                        st,
+                                                      ) => const SizedBox(
+                                                        width: 200,
+                                                        height: 120,
+                                                        child: Center(
+                                                          child: Icon(
+                                                            Icons
+                                                                .broken_image_outlined,
+                                                            color:
+                                                                Colors.white54,
+                                                            size: 40,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                ),
+                                              ),
                                             ),
                                           )
                                         : const SizedBox.shrink()),
@@ -780,56 +967,92 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             builder: (context, _) => const SizedBox.shrink(),
           ),
+          // Upload progress indicator
+          if (_uploadingImage)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: LinearProgressIndicator(color: Color(0xFFD4AF37)),
+            ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 children: [
+                  // Image upload button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.photo_camera,
+                      color: Color(0xFFD4AF37),
+                    ),
+                    tooltip: 'Send image',
+                    onPressed: _uploadingImage ? null : _pickAndSendImage,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _ctrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message',
+                      decoration: InputDecoration(
+                        hintText: 'Aa',
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF0F0F0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _sending
-                        ? null
-                        : () async {
-                            final txt = _ctrl.text.trim();
-                            if (txt.isEmpty) return;
-                            setState(() => _sending = true);
-                            try {
-                              await MessageService.instance.sendMessage(
-                                widget.convoId,
-                                txt,
-                              );
-                              _ctrl.clear();
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(this.context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to send: $e'),
-                                    backgroundColor: Colors.redAccent,
-                                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: const CircleBorder(),
+                        backgroundColor: const Color(0xFFD4AF37),
+                      ),
+                      onPressed: _sending
+                          ? null
+                          : () async {
+                              final txt = _ctrl.text.trim();
+                              if (txt.isEmpty) return;
+                              setState(() => _sending = true);
+                              try {
+                                await MessageService.instance.sendMessage(
+                                  widget.convoId,
+                                  txt,
                                 );
+                                _ctrl.clear();
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(
+                                    this.context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to send: $e'),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _sending = false);
                               }
-                            } finally {
-                              if (mounted) setState(() => _sending = false);
-                            }
-                          },
-                    child: _sending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.send),
+                            },
+                      child: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send, size: 18),
+                    ),
                   ),
                 ],
               ),

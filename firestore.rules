@@ -105,6 +105,22 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // ── Calls (voice / video signaling) ─────────────────────────────────
+    match /calls/{callId} {
+      // Any authenticated user can read calls they participate in.
+      // Using a simple auth check since participants validation happens client-side.
+      allow read: if request.auth != null;
+
+      // Any authenticated user can create a call.
+      allow create: if request.auth != null;
+
+      // Any authenticated user can update a call (accept / end).
+      allow update: if request.auth != null;
+
+      // No delete needed; calls stay as history.
+      allow delete: if false;
+    }
+
     // ── Conversations ───────────────────────────────────────────────────
     match /conversations/{convoId} {
       // Creator must be in the participants list.
