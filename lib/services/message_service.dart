@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_storage/firebase_storage.dart';
+// cloud_functions client not used here; server-side callable function is available
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class Conversation {
   final String id;
@@ -97,6 +100,11 @@ class MessageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   String get _myUid => _auth.currentUser?.uid ?? '';
+
+  // Set this to your deployed functions base URL, for example:
+  // https://us-central1-<your-project-id>.cloudfunctions.net
+  // Leave empty to attempt direct client delete (may fail if security rules block it).
+  static const String _functionsBaseUrl = '';
 
   String _convoId(String a, String b) {
     final parts = [a, b]..sort();
@@ -226,6 +234,30 @@ class MessageService {
     String convoId,
     String messageId,
   ) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/deleteMessageHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'messageId': messageId}),
+      );
+      if (resp.statusCode != 200) {
+        String body = resp.body ?? '';
+        throw Exception('Function error (${resp.statusCode}): $body');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to delete message: ${resp.body}');
+      }
+      return;
+    }
+
     final msgRef = _db
         .collection('conversations')
         .doc(convoId)

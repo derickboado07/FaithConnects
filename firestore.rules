@@ -112,7 +112,9 @@ service cloud.firestore {
         // participants may perform updates.
         allow update: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
-        allow delete: if false;
+        // Allow the original sender to delete their own message, or an admin.
+        allow delete: if request.auth != null
+          && (resource.data.senderId == request.auth.uid || request.auth.token.admin == true);
       }
     }
   }

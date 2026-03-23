@@ -185,15 +185,45 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 );
                 if (choice == 'me') {
-                  await MessageService.instance.deleteMessageForMe(
-                    widget.convoId,
-                    m.id,
-                  );
+                  try {
+                    await MessageService.instance.deleteMessageForMe(
+                      widget.convoId,
+                      m.id,
+                    );
+                    if (!mounted) return;
+                    setState(
+                      () {},
+                    ); // force rebuild to hide locally-deleted message
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(content: Text('Message deleted for you')),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete: $e')),
+                    );
+                  }
                 } else if (choice == 'everyone') {
-                  await MessageService.instance.deleteMessageForEveryone(
-                    widget.convoId,
-                    m.id,
-                  );
+                  try {
+                    await MessageService.instance.deleteMessageForEveryone(
+                      widget.convoId,
+                      m.id,
+                    );
+                    if (!mounted) return;
+                    setState(() {});
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Message deleted for everyone'),
+                      ),
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete for everyone: $e'),
+                      ),
+                    );
+                  }
                 }
               },
             ),
@@ -222,22 +252,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 final conv = list[i];
                 final currentUid =
                     fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
-                return ListTile(
-                  title: Text(
-                    conv.participants.where((p) => p != currentUid).join(', '),
-                  ),
-                  subtitle: conv.lastMessage != null
-                      ? Text(conv.lastMessage!)
-                      : null,
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await MessageService.instance.sendForwardedMessage(
-                      conv.id,
-                      m,
-                    );
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(content: Text('Message forwarded')),
+                final otherId = conv.participants.firstWhere(
+                  (p) => p != currentUid,
+                  orElse: () => conv.participants.isNotEmpty
+                      ? conv.participants.first
+                      : currentUid,
+                );
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(otherId)
+                      .get(),
+                  builder: (ctx, userSnap) {
+                    final displayName =
+                        (userSnap.hasData && userSnap.data!.exists)
+                        ? (userSnap.data!['name'] ?? otherId)
+                        : otherId;
+                    return ListTile(
+                      title: Text(displayName),
+                      subtitle: conv.lastMessage != null
+                          ? Text(conv.lastMessage!)
+                          : null,
+                      onTap: () async {
+                        Navigator.pop(context);
+                        try {
+                          await MessageService.instance.sendForwardedMessage(
+                            conv.id,
+                            m,
+                          );
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(content: Text('Message forwarded')),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(content: Text('Failed to forward: $e')),
+                          );
+                        }
+                      },
                     );
                   },
                 );
@@ -268,7 +321,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final msgs = snap.data ?? [];
+                final all = snap.data ?? [];
+                final msgs = all.where((m) {
+                  try {
+                    final hidden = m.deletedFor[myUid] == true;
+                    return !hidden;
+                  } catch (_) {
+                    return true;
+                  }
+                }).toList();
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: msgs.length,
