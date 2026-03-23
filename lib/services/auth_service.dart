@@ -15,6 +15,7 @@ class AuthUser {
   final String? dob; // ISO date string (YYYY-MM-DD)
   final String avatarUrl;
   final String bannerUrl;
+  final String note; // Short status message (Messenger-like note)
 
   AuthUser({
     required this.id,
@@ -26,6 +27,7 @@ class AuthUser {
     this.dob,
     this.avatarUrl = '',
     this.bannerUrl = '',
+    this.note = '',
   });
 
   AuthUser copyWith({
@@ -36,6 +38,7 @@ class AuthUser {
     String? dob,
     String? avatarUrl,
     String? bannerUrl,
+    String? note,
   }) {
     return AuthUser(
       id: id,
@@ -47,6 +50,7 @@ class AuthUser {
       dob: dob ?? this.dob,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
+      note: note ?? this.note,
     );
   }
 
@@ -60,6 +64,7 @@ class AuthUser {
     'dob': dob,
     'avatar': avatarUrl,
     'banner': bannerUrl,
+    'note': note,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -72,6 +77,7 @@ class AuthUser {
     dob: j['dob'],
     avatarUrl: j['avatar'] ?? '',
     bannerUrl: j['banner'] ?? '',
+    note: j['note'] ?? '',
   );
 }
 

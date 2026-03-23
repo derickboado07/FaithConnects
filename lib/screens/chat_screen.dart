@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
 import '../widgets/message_suggestion_bar.dart';
+import '../widgets/online_indicator.dart';
 import 'group_settings_screen.dart';
 
 // Reaction definitions for chat messages (emoji-first for FaithConnects)
@@ -47,6 +49,19 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _sending = false;
   final Map<String, String> _senderNames = {};
 
+  // In-chat search state
+  bool _isSearching = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounce;
+
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _searchQuery = query.toLowerCase().trim());
+    });
+  }
+
   void _cacheSenderName(String uid) {
     if (uid.isEmpty || uid == 'system' || _senderNames.containsKey(uid)) return;
     _senderNames[uid] = uid; // placeholder to avoid duplicate fetches
@@ -60,6 +75,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _searchCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -354,12 +371,43 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final myUid = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
+    final isGroup = widget.conversation?.type == 'group';
     return Scaffold(
       appBar: AppBar(
-        title: FutureBuilder<String>(
-          future: _fetchPeerName(),
-          builder: (context, snap) => Text(snap.data ?? 'Chat'),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                onChanged: _onSearchChanged,
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
+                decoration: const InputDecoration(
+                  hintText: 'Search in conversation...',
+                  hintStyle: TextStyle(color: Color(0xFF888888)),
+                  border: InputBorder.none,
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FutureBuilder<String>(
+                    future: _fetchPeerName(),
+                    builder: (context, snap) => Text(
+                      snap.data ?? 'Chat',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  // Show peer status below name (only for direct chats)
+                  if (!isGroup && widget.peerId.isNotEmpty)
+                    UserStatusText(
+                      uid: widget.peerId,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                ],
+              ),
         leading: widget.conversation != null
             ? Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -448,25 +496,36 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               )
             : null,
-        actions:
-            widget.conversation != null &&
-                (widget.conversation!.type == 'group')
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: 'Group Settings',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            GroupSettingsScreen(convoId: widget.convoId),
-                      ),
-                    );
-                  },
-                ),
-              ]
-            : null,
+        actions: [
+          // Search toggle for in-conversation search
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            tooltip: _isSearching ? 'Close search' : 'Search messages',
+            onPressed: () {
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchCtrl.clear();
+                  _searchQuery = '';
+                }
+              });
+            },
+          ),
+          if (isGroup)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Group Settings',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        GroupSettingsScreen(convoId: widget.convoId),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -478,7 +537,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final all = snap.data ?? [];
-                final msgs = all.where((m) {
+                var msgs = all.where((m) {
                   try {
                     final hidden = m.deletedFor[myUid] == true;
                     return !hidden;
@@ -486,6 +545,39 @@ class _ChatScreenState extends State<ChatScreen> {
                     return true;
                   }
                 }).toList();
+
+                // Apply in-chat search filter
+                if (_searchQuery.isNotEmpty) {
+                  msgs = msgs
+                      .where(
+                        (m) =>
+                            m.text.toLowerCase().contains(_searchQuery) ||
+                            (m.senderName ?? '').toLowerCase().contains(
+                              _searchQuery,
+                            ),
+                      )
+                      .toList();
+                }
+
+                if (_searchQuery.isNotEmpty && msgs.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 48,
+                          color: Color(0xFFCCCCCC),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'No messages found',
+                          style: TextStyle(color: Color(0xFF888888)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: msgs.length,
@@ -581,14 +673,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: m.text.isNotEmpty
-                                  ? Text(
-                                      m.text,
-                                      style: TextStyle(
-                                        color: isMe
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      ),
-                                    )
+                                  ? _searchQuery.isNotEmpty
+                                        ? _buildHighlightedMessage(
+                                            m.text,
+                                            _searchQuery,
+                                            isMe: isMe,
+                                          )
+                                        : Text(
+                                            m.text,
+                                            style: TextStyle(
+                                              color: isMe
+                                                  ? Colors.white
+                                                  : Colors.black87,
+                                            ),
+                                          )
                                   : (m.imageUrl != null
                                         ? ClipRRect(
                                             borderRadius: BorderRadius.circular(
@@ -740,5 +838,47 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  /// Builds a RichText widget with search matches highlighted in the message bubble.
+  Widget _buildHighlightedMessage(
+    String text,
+    String query, {
+    required bool isMe,
+  }) {
+    if (query.isEmpty) {
+      return Text(
+        text,
+        style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+      );
+    }
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final spans = <TextSpan>[];
+    final baseStyle = TextStyle(color: isMe ? Colors.white : Colors.black87);
+    int start = 0;
+    while (true) {
+      final idx = lowerText.indexOf(lowerQuery, start);
+      if (idx == -1) {
+        spans.add(TextSpan(text: text.substring(start), style: baseStyle));
+        break;
+      }
+      if (idx > start) {
+        spans.add(TextSpan(text: text.substring(start, idx), style: baseStyle));
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(idx, idx + query.length),
+          style: baseStyle.copyWith(
+            backgroundColor: isMe
+                ? Colors.white.withValues(alpha: 0.35)
+                : const Color(0xFFF5E6B3),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+      start = idx + query.length;
+    }
+    return RichText(text: TextSpan(children: spans));
   }
 }

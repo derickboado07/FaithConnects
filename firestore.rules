@@ -88,6 +88,23 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── My Day stories ──────────────────────────────────────────────────
+    match /my_day/{docId} {
+      // Any authenticated user can read My Day stories.
+      allow read: if request.auth != null;
+
+      // Only the owner can create their own My Day entry.
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+
+      // Only the owner can delete their own My Day entry.
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+
+      // No updates needed — stories are immutable once posted.
+      allow update: if false;
+    }
+
     // ── Conversations ───────────────────────────────────────────────────
     match /conversations/{convoId} {
       // Creator must be in the participants list.

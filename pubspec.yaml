@@ -44,6 +44,7 @@ dependencies:
   firebase_storage: ^13.1.0
   audioplayers: ^6.6.0
   http: ^1.6.0
+  video_player: ^2.11.1
   # share_plus removed to avoid win32 version conflict with file_picker
 
 dev_dependencies:
