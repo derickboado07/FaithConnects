@@ -69,8 +69,7 @@ flutter:
 
   assets:
     - assets/
-    - lib/Bible/EN-English/asv.sql
-    - lib/Bible/TL-Wikang_Tagalog/tagab.sql
+    - lib/Bible/
     - songs/
     - lib/LOGO/
 

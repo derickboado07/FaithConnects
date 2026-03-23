@@ -15,6 +15,7 @@ class AuthUser {
   final String? dob; // ISO date string (YYYY-MM-DD)
   final String avatarUrl;
   final String bannerUrl;
+  final String verseBackground;
 
   AuthUser({
     required this.id,
@@ -26,6 +27,7 @@ class AuthUser {
     this.dob,
     this.avatarUrl = '',
     this.bannerUrl = '',
+    this.verseBackground = '',
   });
 
   AuthUser copyWith({
@@ -36,6 +38,7 @@ class AuthUser {
     String? dob,
     String? avatarUrl,
     String? bannerUrl,
+    String? verseBackground,
   }) {
     return AuthUser(
       id: id,
@@ -47,6 +50,7 @@ class AuthUser {
       dob: dob ?? this.dob,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
+      verseBackground: verseBackground ?? this.verseBackground,
     );
   }
 
@@ -60,6 +64,7 @@ class AuthUser {
     'dob': dob,
     'avatar': avatarUrl,
     'banner': bannerUrl,
+    'verseBackground': verseBackground,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -72,6 +77,7 @@ class AuthUser {
     dob: j['dob'],
     avatarUrl: j['avatar'] ?? '',
     bannerUrl: j['banner'] ?? '',
+    verseBackground: j['verseBackground'] ?? '',
   );
 }
 
@@ -322,8 +328,12 @@ class AuthService {
     try {
       final file = File(localPath);
       if (!await file.exists()) return null;
-      final ref = _storage.ref().child('verse_backgrounds').child('$uid.jpg');
-      final task = await ref.putFile(file);
+      final ref = _storage.ref().child('verse_backgrounds').child(uid).child('current');
+      final filename = localPath.split(RegExp(r'[/\\]')).last;
+      final task = await ref.putFile(
+        file,
+        SettableMetadata(contentType: _mimeFromFilename(filename)),
+      );
       final url = await task.ref.getDownloadURL();
       return url;
     } catch (e) {
@@ -365,6 +375,19 @@ class AuthService {
     } catch (e) {
       debugPrint('AuthService: image bytes upload failed: $e');
       return null;
+    }
+  }
+
+  Future<void> _tryDeleteStorageFileFromUrl(String? url) async {
+    if (url == null || url.isEmpty) return;
+    if (!url.contains('firebasestorage.googleapis.com') &&
+        !url.contains('storage.googleapis.com')) {
+      return;
+    }
+    try {
+      await _storage.refFromURL(url).delete();
+    } catch (_) {
+      // Ignore missing files or non-storage URLs.
     }
   }
 
@@ -462,6 +485,7 @@ class AuthService {
 
   /// Uploads (or saves) a dedicated verse background for the user and stores
   /// the resulting URL in the user's `/users/{uid}.verseBackground` field.
+  /// File uploads replace a single stable Firebase Storage object for the user.
   /// Returns the saved URL on success, or null on failure.
   Future<String?> uploadAndSaveVerseBackground({
     required String email,
@@ -476,29 +500,62 @@ class AuthService {
       final doc = q.docs.first;
       final uid = doc.id;
 
-      String? savedUrl = doc.data()['verseBackground'];
+      final String? oldUrl = doc.data()['verseBackground'];
+      String? newUrl;
+      final storagePath = 'verse_backgrounds/$uid/current';
 
       if (bytes != null && filename != null) {
-        final uploaded = await _uploadImageBytes('verse_backgrounds/$uid/${filename}', bytes, filename);
-        if (uploaded != null) savedUrl = uploaded;
+        final uploaded = await _uploadImageBytes(storagePath, bytes, filename);
+        if (uploaded != null) newUrl = uploaded;
       } else if (localPath != null && localPath.isNotEmpty) {
         if (localPath.startsWith('/') || localPath.contains(':\\') || localPath.startsWith('file://')) {
           final uploaded = await _uploadVerseBackground(uid, localPath.replaceFirst('file://', ''));
-          if (uploaded != null) savedUrl = uploaded;
+          if (uploaded != null) newUrl = uploaded;
         }
       } else if (url != null && url.isNotEmpty) {
-        // Save provided remote URL directly.
-        savedUrl = url;
+        newUrl = url;
       }
 
-      if (savedUrl != null) {
-        await _db.collection('users').doc(uid).set({'verseBackground': savedUrl}, SetOptions(merge: true));
-        return savedUrl;
+      if (newUrl != null) {
+        // File uploads overwrite a stable Storage path, so no extra delete is
+        // needed there. Delete the old storage file only when switching away
+        // from a previously uploaded Firebase Storage image.
+        final isDirectUrlUpdate = url != null && url.isNotEmpty;
+        if (isDirectUrlUpdate && oldUrl != null && oldUrl != newUrl) {
+          await _tryDeleteStorageFileFromUrl(oldUrl);
+        }
+        await _db.collection('users').doc(uid).set({'verseBackground': newUrl}, SetOptions(merge: true));
+        // Update in-memory user so the UI reflects the change immediately
+        final updatedDoc = await _db.collection('users').doc(uid).get();
+        if (updatedDoc.exists) {
+          currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
+        }
+        return newUrl;
       }
       return null;
     } catch (e) {
       debugPrint('AuthService.uploadAndSaveVerseBackground error: $e');
       return null;
+    }
+  }
+
+  /// Deletes the current verse background image from Storage and clears
+  /// the `verseBackground` field in the user's Firestore document.
+  Future<void> clearVerseBackground({required String email}) async {
+    try {
+      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
+      if (q.docs.isEmpty) return;
+      final doc = q.docs.first;
+      final uid = doc.id;
+      final String? oldUrl = doc.data()['verseBackground'];
+      await _tryDeleteStorageFileFromUrl(oldUrl);
+      await _db.collection('users').doc(uid).set({'verseBackground': ''}, SetOptions(merge: true));
+      final updatedDoc = await _db.collection('users').doc(uid).get();
+      if (updatedDoc.exists) {
+        currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
+      }
+    } catch (e) {
+      debugPrint('AuthService.clearVerseBackground error: $e');
     }
   }
 

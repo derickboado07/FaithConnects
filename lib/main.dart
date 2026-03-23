@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
@@ -726,16 +727,75 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
   BibleVerse? _verse;
   bool _loading = true;
   bool _liked = false;
+  int _heartCount = 0;
   bool _sharingToFeed = false;
   // Verse background image support
   bool _useBackgroundImage = false;
   String? _backgroundImageUrl;
   String? _loadError;
+  StreamSubscription? _heartSub;
 
   @override
   void initState() {
     super.initState();
     _loadVerse();
+    _loadSavedBackground();
+    _listenHeartCount();
+    _checkUserHearted();
+  }
+
+  void _loadSavedBackground() {
+    final user = AuthService.instance.currentUser.value;
+    if (user != null && user.verseBackground.isNotEmpty) {
+      setState(() {
+        _backgroundImageUrl = user.verseBackground;
+        _useBackgroundImage = true;
+      });
+    }
+  }
+
+  void _listenHeartCount() {
+    _heartSub = BibleService.instance.dailyVerseHeartCountStream().listen((count) {
+      if (mounted) setState(() => _heartCount = count);
+    });
+  }
+
+  Future<void> _checkUserHearted() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user == null) return;
+    final hearted = await BibleService.instance.hasUserHeartedDailyVerse(user.id);
+    if (mounted) setState(() => _liked = hearted);
+  }
+
+  Future<void> _toggleHeart() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to heart this verse.')),
+      );
+      return;
+    }
+    final nowLiked = await BibleService.instance.toggleDailyVerseHeart(user.id);
+    if (mounted) setState(() => _liked = nowLiked);
+  }
+
+  @override
+  void dispose() {
+    _heartSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _clearVerseBackground() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user != null) {
+      await AuthService.instance.clearVerseBackground(email: user.email);
+    }
+    if (!mounted) return;
+    setState(() {
+      _useBackgroundImage = false;
+      _backgroundImageUrl = null;
+    });
   }
 
   Future<void> _promptForBackgroundImage() async {
@@ -851,10 +911,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
     }
 
     if (choice == 'clear') {
-      setState(() {
-        _useBackgroundImage = false;
-        _backgroundImageUrl = null;
-      });
+      await _clearVerseBackground();
       return;
     }
 
@@ -886,10 +943,17 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
         const SnackBar(content: Text('Uploading image...')),
       );
 
-      final savedUrl = await AuthService.instance.uploadAndSaveVerseBackground(
-        email: user.email,
-        localPath: picked.path,
-      );
+      final savedUrl = kIsWeb
+          ? await AuthService.instance.uploadAndSaveVerseBackground(
+              email: user.email,
+              bytes: await picked.readAsBytes(),
+              filename: picked.name,
+            )
+          : await AuthService.instance.uploadAndSaveVerseBackground(
+              email: user.email,
+              localPath: picked.path,
+              filename: picked.name,
+            );
 
       if (!mounted) return;
       if (savedUrl != null) {
@@ -1063,10 +1127,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                         _actionIcon(
                           Icons.close,
                           Colors.white70,
-                          () => setState(() {
-                            _useBackgroundImage = false;
-                            _backgroundImageUrl = null;
-                          }),
+                          () => _clearVerseBackground(),
                         ),
                     ],
                   ),
@@ -1135,10 +1196,33 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      _actionIcon(
-                        _liked ? Icons.favorite : Icons.favorite_border,
-                        _liked ? Colors.redAccent : Colors.white,
-                        () => setState(() => _liked = !_liked),
+                      InkWell(
+                        onTap: _toggleHeart,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _liked ? Icons.favorite : Icons.favorite_border,
+                                color: _liked ? Colors.redAccent : Colors.white,
+                                size: 22,
+                              ),
+                              if (_heartCount > 0) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$_heartCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 14),
                       _actionIcon(
