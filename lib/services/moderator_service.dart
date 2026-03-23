@@ -119,7 +119,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .update({'status': 'banned'});
+        .set({'status': 'banned'}, SetOptions(merge: true));
     await _log('ban_user', userId);
   }
 
@@ -128,7 +128,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .update({'status': 'active'});
+        .set({'status': 'active'}, SetOptions(merge: true));
     await _log('unban_user', userId);
   }
 
@@ -137,7 +137,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .update({'canPost': false});
+        .set({'canPost': false}, SetOptions(merge: true));
     await _log('disable_posting', userId);
   }
 
@@ -146,7 +146,7 @@ class ModeratorService {
     await _db
         .collection('users')
         .doc(userId)
-        .update({'canPost': true});
+        .set({'canPost': true}, SetOptions(merge: true));
     await _log('enable_posting', userId);
   }
 

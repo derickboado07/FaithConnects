@@ -119,12 +119,19 @@ class AuthService {
 
       final loadedUser = AuthUser.fromJson(doc.data()!);
       if (loadedUser.isBanned) {
+        debugPrint('AuthService: User $uid has been banned. Signing out.');
         currentUser.value = null;
-        await _auth.signOut();
+        try {
+          await _auth.signOut();
+        } catch (e) {
+          debugPrint('AuthService: Error signing out banned user: $e');
+        }
         return;
       }
 
       currentUser.value = loadedUser;
+    }, onError: (e) {
+      debugPrint('AuthService: Error in user doc subscription: $e');
     });
   }
 
@@ -289,6 +296,7 @@ class AuthService {
           return 'This account has been banned.';
         }
         currentUser.value = loadedUser;
+        await _bindCurrentUserDoc(uid);
       } else {
         // User exists in Auth but not in Firestore — create the doc.
         final u = AuthUser(
@@ -300,6 +308,7 @@ class AuthService {
           await _db.collection('users').doc(uid).set(u.toJson());
         } catch (_) {}
         currentUser.value = u;
+        await _bindCurrentUserDoc(uid);
       }
       return null;
     } on fb_auth.FirebaseAuthException catch (e) {
