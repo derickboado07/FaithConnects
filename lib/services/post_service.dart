@@ -4,9 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'notification_service.dart'; // For showing notifications to post owner
 
 class Comment {
   final String id;
+  final String authorId;
   final String author;
   final String text;
   final String ts;
@@ -14,6 +16,7 @@ class Comment {
 
   Comment({
     required this.id,
+    required this.authorId,
     required this.author,
     required this.text,
     required this.ts,
@@ -21,6 +24,7 @@ class Comment {
   }) : reactions = reactions ?? {};
   Map<String, dynamic> toJson() => {
     'id': id,
+    'authorId': authorId,
     'author': author,
     'text': text,
     'ts': ts,
@@ -29,6 +33,7 @@ class Comment {
 
   static Comment fromJson(Map<String, dynamic> j) => Comment(
     id: j['id'],
+    authorId: j['authorId'] ?? '',
     author: j['author'],
     text: j['text'],
     ts: j['ts'],
@@ -525,10 +530,14 @@ class PostService {
         .doc(postId)
         .collection('comments')
         .doc(commentId);
+    bool reactionAdded = false;
+    String? commentAuthorId;
+
     await _db.runTransaction((tx) async {
       final snap = await tx.get(docRef);
       if (!snap.exists) return;
       final data = snap.data()!;
+      commentAuthorId = data['authorId'] as String?;
       final Map<String, dynamic> existing =
           (data['reactions'] as Map<String, dynamic>?) ?? {};
       final List<String> list = List<String>.from(existing[reactionKey] ?? []);
@@ -536,11 +545,33 @@ class PostService {
         list.remove(userId);
       } else {
         list.add(userId);
+        reactionAdded = true;
       }
       final updated = Map<String, dynamic>.from(existing);
       updated[reactionKey] = list;
       tx.update(docRef, {'reactions': updated});
     });
+
+    // Notify comment author when someone adds a reaction to their comment
+    if (reactionAdded && commentAuthorId != null && commentAuthorId != userId) {
+      try {
+        final userDoc = await _db.collection('users').doc(userId).get();
+        final userName =
+            (userDoc.data()?['name'] as String?)?.isNotEmpty == true
+            ? userDoc.data()!['name'] as String
+            : (userDoc.data()?['email'] as String?) ?? 'Someone';
+        await NotificationService.instance.showNotification(
+          userId: commentAuthorId!,
+          title: 'Someone reacted to your comment!',
+          body: '$userName reacted "$reactionKey" to your comment.',
+          type: 'comment_reaction',
+        );
+      } catch (e) {
+        debugPrint(
+          'PostService: comment reaction notification failed (non-fatal): $e',
+        );
+      }
+    }
   }
 
   Future<List<Post>> getPostsForUser(String email, {String? userId}) async {
@@ -675,6 +706,7 @@ class PostService {
     final doc = commentsRef.doc();
     final comment = Comment(
       id: doc.id,
+      authorId: authorId,
       author: authorEmail,
       text: text,
       ts: DateTime.now().toIso8601String(),

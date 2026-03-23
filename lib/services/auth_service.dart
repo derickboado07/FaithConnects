@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'notification_service.dart';
 
 class AuthUser {
   final String id;
@@ -567,6 +568,23 @@ class AuthService {
         batch.set(myFollowingRef, since);
         batch.set(theirFollowersRef, since);
         await batch.commit();
+
+        // Notify the target user that someone followed them
+        try {
+          final myDoc = await _db.collection('users').doc(cur.uid).get();
+          final myName = (myDoc.data()?['name'] as String?)?.isNotEmpty == true
+              ? myDoc.data()!['name'] as String
+              : (myDoc.data()?['email'] as String?) ?? 'Someone';
+          await NotificationService.instance.showNotification(
+            userId: targetUid,
+            title: 'New follower!',
+            body: '$myName started following you.',
+            type: 'follow',
+          );
+        } catch (e) {
+          debugPrint('AuthService: follow notification failed (non-fatal): $e');
+        }
+
         return true; // now following
       }
     } catch (_) {

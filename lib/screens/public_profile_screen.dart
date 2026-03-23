@@ -459,6 +459,7 @@ class _PublicPostCardState extends State<_PublicPostCard> {
     }
   }
 
+  /// Handles reacting (liking) a post. Notification is handled by PostService.
   Future<void> _react(String key) async {
     if (_busy) return;
     final u = AuthService.instance.currentUser.value;
