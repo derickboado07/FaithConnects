@@ -562,6 +562,7 @@ class _HomePageState extends State<HomePage> {
           ListenableBuilder(
             listenable: MusicPlayerService.instance,
             builder: (context, _) {
+              if (_selectedIndex == 3) return const SizedBox.shrink();
               if (!MusicPlayerService.instance.isPlaying) {
                 return const SizedBox.shrink();
               }
