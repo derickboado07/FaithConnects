@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'auth_service.dart';
 // cloud_functions client not used here; server-side callable function is available
 import 'dart:typed_data';
 import 'dart:convert';
@@ -8,7 +9,13 @@ import 'package:http/http.dart' as http;
 
 class Conversation {
   final String id;
-  final List<String> participants;
+  final String type; // 'direct' or 'group'
+  final String? name; // group name
+  final String? photoUrl; // group avatar
+  final String? createdBy;
+  final String createdAt;
+  final List<String> participants; // members for group or two uids for direct
+  final List<String> admins; // group admins
   final String? lastMessage;
   final String? lastSenderId;
   final String updatedAt;
@@ -16,12 +23,19 @@ class Conversation {
 
   Conversation({
     required this.id,
+    required this.type,
+    this.name,
+    this.photoUrl,
+    this.createdBy,
+    required this.createdAt,
     required this.participants,
+    List<String>? admins,
     this.lastMessage,
     this.lastSenderId,
     required this.updatedAt,
     Map<String, String>? lastRead,
-  }) : lastRead = lastRead ?? {};
+  }) : admins = admins ?? [],
+       lastRead = lastRead ?? {};
 
   factory Conversation.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -33,7 +47,13 @@ class Conversation {
     }
     return Conversation(
       id: doc.id,
+      type: (d['type'] ?? 'direct') as String,
+      name: d['name'] as String?,
+      photoUrl: d['photoUrl'] as String?,
+      createdBy: d['createdBy'] as String?,
+      createdAt: d['createdAt'] ?? '',
       participants: List<String>.from(d['participants'] ?? []),
+      admins: d['admins'] is List ? List<String>.from(d['admins']) : [],
       lastMessage: d['lastMessage'],
       lastSenderId: d['lastSenderId'],
       updatedAt: d['updatedAt'] ?? '',
@@ -45,6 +65,7 @@ class Conversation {
 class MessageItem {
   final String id;
   final String senderId;
+  final String? senderName;
   final String text;
   final String ts;
   final String? imageUrl;
@@ -54,6 +75,7 @@ class MessageItem {
   MessageItem({
     required this.id,
     required this.senderId,
+    this.senderName,
     required this.text,
     required this.ts,
     this.imageUrl,
@@ -69,6 +91,7 @@ class MessageItem {
     return MessageItem(
       id: doc.id,
       senderId: d['senderId'] ?? '',
+      senderName: d['senderName'],
       text: d['text'] ?? '',
       ts: d['ts'] ?? '',
       imageUrl: d['imageUrl'],
@@ -150,19 +173,107 @@ class MessageService {
     final docRef = _db.collection('conversations').doc(id);
     await docRef.set({
       'participants': [uid, otherUid],
+      'type': 'direct',
       'createdAt': DateTime.now().toIso8601String(),
       'updatedAt': DateTime.now().toIso8601String(),
     });
     return id;
   }
 
-  Future<void> markConversationRead(String convoId) async {
+  /// Create a group conversation. Returns the new conversation id.
+  Future<String> createGroup({
+    required String name,
+    required List<String> memberUids,
+    Uint8List? avatarBytes,
+    String? avatarFilename,
+  }) async {
     final uid = _myUid;
-    if (uid.isEmpty) return;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final docRef = _db.collection('conversations').doc();
     final now = DateTime.now().toIso8601String();
-    await _db.collection('conversations').doc(convoId).set({
-      'lastRead': {uid: now},
-    }, SetOptions(merge: true));
+    final convoId = docRef.id;
+    String? photoUrl;
+    if (avatarBytes != null && avatarFilename != null) {
+      final storagePath = 'group_avatars/$convoId/$avatarFilename';
+      final upload = await _storage
+          .ref()
+          .child(storagePath)
+          .putData(avatarBytes);
+      photoUrl = await upload.ref.getDownloadURL();
+    }
+    final members = <String>{...memberUids};
+    members.add(uid);
+    final data = {
+      'type': 'group',
+      'name': name,
+      'photoUrl': photoUrl,
+      'createdBy': uid,
+      'createdAt': now,
+      'participants': members.toList(),
+      'admins': [uid],
+      'updatedAt': now,
+    };
+    await docRef.set(data);
+    return convoId;
+  }
+
+  Future<void> addMember(String convoId, String uidToAdd) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/addGroupMemberHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'uidToAdd': uidToAdd}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to add member: ${resp.body}');
+      }
+      return;
+    }
+
+    await _db.collection('conversations').doc(convoId).update({
+      'participants': FieldValue.arrayUnion([uidToAdd]),
+    });
+  }
+
+  Future<void> removeMember(String convoId, String uidToRemove) async {
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/removeGroupMemberHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'uidToRemove': uidToRemove}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to remove member: ${resp.body}');
+      }
+      return;
+    }
+
+    await _db.collection('conversations').doc(convoId).update({
+      'participants': FieldValue.arrayRemove([uidToRemove]),
+      'admins': FieldValue.arrayRemove([uidToRemove]),
+    });
   }
 
   Future<void> sendMessage(String convoId, String text) async {
@@ -173,8 +284,40 @@ class MessageService {
         .doc(convoId)
         .collection('messages');
     final now = DateTime.now().toIso8601String();
+
+    // If functions base URL is configured, use server to validate membership and write
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/sendMessageHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'text': text}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to send message: ${resp.body}');
+      }
+      return;
+    }
+
+    // Client-side write when functions not configured
     try {
-      await messagesRef.add({'senderId': uid, 'text': text, 'ts': now});
+      final senderName = AuthService.instance.currentUser.value?.name ?? '';
+      await messagesRef.add({
+        'senderId': uid,
+        'senderName': senderName,
+        'text': text,
+        'ts': now,
+      });
     } catch (e) {
       throw Exception('Failed to write message: $e');
     }
@@ -190,6 +333,25 @@ class MessageService {
     }
   }
 
+  Future<void> deleteGroup(String convoId) async {
+    // remove doc and all messages subcollection documents
+    final convoRef = _db.collection('conversations').doc(convoId);
+    final msgs = await convoRef.collection('messages').get();
+    for (final d in msgs.docs) {
+      await d.reference.delete();
+    }
+    await convoRef.delete();
+  }
+
+  Future<void> markConversationRead(String convoId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) return;
+    final now = DateTime.now().toIso8601String();
+    await _db.collection('conversations').doc(convoId).set({
+      'lastRead': {uid: now},
+    }, SetOptions(merge: true));
+  }
+
   /// Send a forwarded message into an existing conversation.
   Future<void> sendForwardedMessage(String convoId, MessageItem m) async {
     final uid = _myUid;
@@ -199,8 +361,10 @@ class MessageService {
         .doc(convoId)
         .collection('messages');
     final now = DateTime.now().toIso8601String();
+    final senderName = AuthService.instance.currentUser.value?.name ?? '';
     final payload = {
       'senderId': uid,
+      'senderName': senderName,
       'text': m.text,
       'ts': now,
       'forwarded': true,
@@ -284,8 +448,10 @@ class MessageService {
     try {
       final upload = await _storage.ref().child(storagePath).putData(bytes);
       final url = await upload.ref.getDownloadURL();
+      final senderName = AuthService.instance.currentUser.value?.name ?? '';
       await docRef.set({
         'senderId': uid,
+        'senderName': senderName,
         'text': '',
         'ts': now,
         'imageUrl': url,

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
+import 'create_group_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -21,9 +22,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: AppBar(title: const Text('Messages')),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.create),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const NewChatScreen()),
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          builder: (c) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt_1),
+                  title: const Text('New Chat'),
+                  onTap: () {
+                    Navigator.pop(c);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NewChatScreen()),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.group_add),
+                  title: const Text('Create Group'),
+                  onTap: () {
+                    Navigator.pop(c);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CreateGroupScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: StreamBuilder<List<Conversation>>(
@@ -69,10 +100,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
             itemCount: convosToShow.length,
             itemBuilder: (context, i) {
               final c = convosToShow[i];
-              final peerId = c.participants.firstWhere(
-                (p) => p != myUid,
-                orElse: () => c.participants.first,
-              );
+              final peerId = c.participants.isNotEmpty
+                  ? c.participants.firstWhere(
+                      (p) => p != myUid,
+                      orElse: () => c.participants.first,
+                    )
+                  : '';
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
                     .collection('users')
@@ -80,13 +113,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     .get(),
                 builder: (context, userSnap) {
                   final userDoc = userSnap.data;
-                  final data = (userDoc != null && userDoc.exists)
-                      ? (userDoc.data() as Map<String, dynamic>?)
-                      : null;
-                  final name = (data != null && data.isNotEmpty)
-                      ? (data['name'] ?? data['email'] ?? 'User')
-                      : 'User';
-                  final avatar = data != null ? (data['avatar'] ?? '') : '';
+                  String name = 'User';
+                  String avatar = '';
+                  if (c.type == 'group') {
+                    name = c.name ?? 'Group';
+                    avatar = c.photoUrl ?? '';
+                  } else {
+                    final data = (userDoc != null && userDoc.exists)
+                        ? (userDoc.data() as Map<String, dynamic>?)
+                        : null;
+                    name = (data != null && data.isNotEmpty)
+                        ? (data['name'] ?? data['email'] ?? 'User')
+                        : 'User';
+                    avatar = data != null ? (data['avatar'] ?? '') : '';
+                  }
 
                   final lastMsg = c.lastMessage ?? '';
                   final lastSender = c.lastSenderId ?? '';
@@ -242,16 +282,28 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           const Icon(Icons.chevron_right),
                       ],
                     ),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          convoId: c.id,
-                          peerId: peerId,
-                          peerName: name,
-                        ),
-                      ),
-                    ),
+                    onTap: () {
+                      if (c.type == 'group') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ChatScreen(convoId: c.id, conversation: c),
+                          ),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              convoId: c.id,
+                              peerId: peerId,
+                              peerName: name,
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   );
                 },
               );

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
 import '../widgets/message_suggestion_bar.dart';
+import 'group_info_screen.dart';
 
 // Reaction definitions for chat messages (emoji-first for FaithConnects)
 const List<_ChatReaction> _chatReactions = [
@@ -27,12 +28,14 @@ class ChatScreen extends StatefulWidget {
   final String convoId;
   final String peerId;
   final String? peerName;
+  final Conversation? conversation;
 
   const ChatScreen({
     super.key,
     required this.convoId,
-    required this.peerId,
+    this.peerId = '',
     this.peerName,
+    this.conversation,
   });
 
   @override
@@ -50,7 +53,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<String> _fetchPeerName() async {
+    if (widget.conversation != null)
+      return widget.conversation!.name ?? 'Group';
     if (widget.peerName != null) return widget.peerName!;
+    if (widget.peerId.isEmpty) return 'Chat';
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(widget.peerId)
@@ -258,6 +264,38 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? conv.participants.first
                       : currentUid,
                 );
+                if (conv.type == 'group') {
+                  return ListTile(
+                    leading: conv.photoUrl != null && conv.photoUrl!.isNotEmpty
+                        ? CircleAvatar(
+                            backgroundImage: NetworkImage(conv.photoUrl!),
+                          )
+                        : const CircleAvatar(child: Icon(Icons.group)),
+                    title: Text(conv.name ?? 'Group'),
+                    subtitle: conv.lastMessage != null
+                        ? Text(conv.lastMessage!)
+                        : null,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      try {
+                        await MessageService.instance.sendForwardedMessage(
+                          conv.id,
+                          m,
+                        );
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(content: Text('Message forwarded')),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          SnackBar(content: Text('Failed to forward: $e')),
+                        );
+                      }
+                    },
+                  );
+                }
+
                 return FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
                       .collection('users')
@@ -311,6 +349,34 @@ class _ChatScreenState extends State<ChatScreen> {
           future: _fetchPeerName(),
           builder: (context, snap) => Text(snap.data ?? 'Chat'),
         ),
+        leading:
+            widget.conversation != null &&
+                (widget.conversation!.photoUrl?.isNotEmpty ?? false)
+            ? Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircleAvatar(
+                  backgroundImage: NetworkImage(widget.conversation!.photoUrl!),
+                ),
+              )
+            : null,
+        actions:
+            widget.conversation != null &&
+                (widget.conversation!.type == 'group')
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            GroupInfoScreen(conversation: widget.conversation!),
+                      ),
+                    );
+                  },
+                ),
+              ]
+            : null,
       ),
       body: Column(
         children: [
@@ -336,6 +402,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemBuilder: (context, i) {
                     final m = msgs[i];
                     final isMe = myUid.isNotEmpty && m.senderId == myUid;
+                    final isGroup = widget.conversation?.type == 'group';
                     // Gather non-empty reactions
                     final reactionEntries = m.reactions.entries
                         .where((e) => e.value.isNotEmpty)
@@ -358,6 +425,40 @@ class _ChatScreenState extends State<ChatScreen> {
                               ? CrossAxisAlignment.end
                               : CrossAxisAlignment.start,
                           children: [
+                            if (isGroup && !(m.senderName?.isEmpty ?? true))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  m.senderName ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              )
+                            else if (isGroup && (m.senderName?.isEmpty ?? true))
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(m.senderId)
+                                    .get(),
+                                builder: (ctx, snap2) {
+                                  final nm =
+                                      (snap2.hasData && snap2.data!.exists)
+                                      ? (snap2.data!['name'] ?? m.senderId)
+                                      : m.senderId;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Text(
+                                      nm,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF666666),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,

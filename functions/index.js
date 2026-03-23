@@ -129,3 +129,218 @@ exports.deleteMessageHttp = functions.https.onRequest(async (req, res) => {
     res.status(500).json({ error: String(e) });
   }
 });
+
+// HTTP endpoint to send a message after verifying the caller is a member of the conversation.
+// POST JSON body: { convoId: string, text: string }
+// Authorization: Bearer <ID_TOKEN>
+exports.sendMessageHttp = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+  const authHeader = req.get('Authorization') || req.get('authorization') || '';
+  const match = authHeader.match(/^Bearer (.*)$/);
+  if (!match) {
+    res.status(401).json({ error: 'Missing Authorization header' });
+    return;
+  }
+  const idToken = match[1];
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid ID token' });
+    return;
+  }
+  const uid = decoded.uid;
+  const convoId = req.body && req.body.convoId ? String(req.body.convoId) : null;
+  const text = req.body && req.body.text ? String(req.body.text) : '';
+  if (!convoId || !text) {
+    res.status(400).json({ error: 'Missing convoId or text' });
+    return;
+  }
+  const convoRef = admin.firestore().collection('conversations').doc(convoId);
+  const convoSnap = await convoRef.get();
+  if (!convoSnap.exists) {
+    res.status(404).json({ error: 'Conversation not found' });
+    return;
+  }
+  const convo = convoSnap.data();
+  const participants = convo && convo.participants ? convo.participants : [];
+  if (!participants.includes(uid)) {
+    res.status(403).json({ error: 'User is not a member of the conversation' });
+    return;
+  }
+  try {
+    const now = new Date().toISOString();
+    const messagesRef = convoRef.collection('messages');
+    const docRef = messagesRef.doc();
+    await docRef.set({ senderId: uid, senderName: decoded.name || '', text: text, ts: now });
+    await convoRef.set({ lastMessage: text, lastSenderId: uid, updatedAt: now }, { merge: true });
+    res.json({ success: true, messageId: docRef.id });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// HTTP endpoint to add a member to a group (admin-only).
+// POST JSON body: { convoId: string, uidToAdd: string }
+// Authorization: Bearer <ID_TOKEN>
+exports.addGroupMemberHttp = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+  const authHeader = req.get('Authorization') || req.get('authorization') || '';
+  const match = authHeader.match(/^Bearer (.*)$/);
+  if (!match) {
+    res.status(401).json({ error: 'Missing Authorization header' });
+    return;
+  }
+  const idToken = match[1];
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid ID token' });
+    return;
+  }
+  const uid = decoded.uid;
+  const convoId = req.body && req.body.convoId ? String(req.body.convoId) : null;
+  const uidToAdd = req.body && req.body.uidToAdd ? String(req.body.uidToAdd) : null;
+  if (!convoId || !uidToAdd) {
+    res.status(400).json({ error: 'Missing convoId or uidToAdd' });
+    return;
+  }
+  const convoRef = admin.firestore().collection('conversations').doc(convoId);
+  const convoSnap = await convoRef.get();
+  if (!convoSnap.exists) {
+    res.status(404).json({ error: 'Conversation not found' });
+    return;
+  }
+  const convo = convoSnap.data();
+  if (convo.type !== 'group') {
+    res.status(400).json({ error: 'Not a group conversation' });
+    return;
+  }
+  const admins = convo && convo.admins ? convo.admins : [];
+  const isAdmin = admins.includes(uid) || decoded.admin === true;
+  if (!isAdmin) {
+    res.status(403).json({ error: 'Only admins can add members' });
+    return;
+  }
+  try {
+    await convoRef.update({ participants: admin.firestore.FieldValue.arrayUnion(uidToAdd) });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// HTTP endpoint to remove a member from a group (admin-only).
+// POST JSON body: { convoId: string, uidToRemove: string }
+// Authorization: Bearer <ID_TOKEN>
+exports.removeGroupMemberHttp = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+  const authHeader = req.get('Authorization') || req.get('authorization') || '';
+  const match = authHeader.match(/^Bearer (.*)$/);
+  if (!match) {
+    res.status(401).json({ error: 'Missing Authorization header' });
+    return;
+  }
+  const idToken = match[1];
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid ID token' });
+    return;
+  }
+  const uid = decoded.uid;
+  const convoId = req.body && req.body.convoId ? String(req.body.convoId) : null;
+  const uidToRemove = req.body && req.body.uidToRemove ? String(req.body.uidToRemove) : null;
+  if (!convoId || !uidToRemove) {
+    res.status(400).json({ error: 'Missing convoId or uidToRemove' });
+    return;
+  }
+  const convoRef = admin.firestore().collection('conversations').doc(convoId);
+  const convoSnap = await convoRef.get();
+  if (!convoSnap.exists) {
+    res.status(404).json({ error: 'Conversation not found' });
+    return;
+  }
+  const convo = convoSnap.data();
+  if (convo.type !== 'group') {
+    res.status(400).json({ error: 'Not a group conversation' });
+    return;
+  }
+  const admins = convo && convo.admins ? convo.admins : [];
+  const isAdmin = admins.includes(uid) || decoded.admin === true;
+  if (!isAdmin) {
+    res.status(403).json({ error: 'Only admins can remove members' });
+    return;
+  }
+  try {
+    await convoRef.update({ participants: admin.firestore.FieldValue.arrayRemove(uidToRemove), admins: admin.firestore.FieldValue.arrayRemove(uidToRemove) });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// HTTP endpoint to rename a group (admin-only).
+// POST JSON body: { convoId: string, newName: string }
+// Authorization: Bearer <ID_TOKEN>
+exports.renameGroupHttp = functions.https.onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+  const authHeader = req.get('Authorization') || req.get('authorization') || '';
+  const match = authHeader.match(/^Bearer (.*)$/);
+  if (!match) {
+    res.status(401).json({ error: 'Missing Authorization header' });
+    return;
+  }
+  const idToken = match[1];
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    res.status(401).json({ error: 'Invalid ID token' });
+    return;
+  }
+  const uid = decoded.uid;
+  const convoId = req.body && req.body.convoId ? String(req.body.convoId) : null;
+  const newName = req.body && req.body.newName ? String(req.body.newName) : null;
+  if (!convoId || !newName) {
+    res.status(400).json({ error: 'Missing convoId or newName' });
+    return;
+  }
+  const convoRef = admin.firestore().collection('conversations').doc(convoId);
+  const convoSnap = await convoRef.get();
+  if (!convoSnap.exists) {
+    res.status(404).json({ error: 'Conversation not found' });
+    return;
+  }
+  const convo = convoSnap.data();
+  if (convo.type !== 'group') {
+    res.status(400).json({ error: 'Not a group conversation' });
+    return;
+  }
+  const admins = convo && convo.admins ? convo.admins : [];
+  const isAdmin = admins.includes(uid) || decoded.admin === true;
+  if (!isAdmin) {
+    res.status(403).json({ error: 'Only admins can rename group' });
+    return;
+  }
+  try {
+    await convoRef.update({ name: newName, updatedAt: new Date().toISOString() });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
