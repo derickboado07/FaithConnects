@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -15,6 +16,9 @@ class AuthUser {
   final String? dob; // ISO date string (YYYY-MM-DD)
   final String avatarUrl;
   final String bannerUrl;
+  final String role; // 'user' | 'moderator'
+  final String status; // 'active' | 'banned'
+  final bool canPost;
 
   AuthUser({
     required this.id,
@@ -26,7 +30,13 @@ class AuthUser {
     this.dob,
     this.avatarUrl = '',
     this.bannerUrl = '',
+    this.role = 'user',
+    this.status = 'active',
+    this.canPost = true,
   });
+
+  bool get isModerator => role == 'moderator';
+  bool get isBanned => status == 'banned';
 
   AuthUser copyWith({
     String? name,
@@ -36,6 +46,9 @@ class AuthUser {
     String? dob,
     String? avatarUrl,
     String? bannerUrl,
+    String? role,
+    String? status,
+    bool? canPost,
   }) {
     return AuthUser(
       id: id,
@@ -47,6 +60,9 @@ class AuthUser {
       dob: dob ?? this.dob,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bannerUrl: bannerUrl ?? this.bannerUrl,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      canPost: canPost ?? this.canPost,
     );
   }
 
@@ -60,6 +76,9 @@ class AuthUser {
     'dob': dob,
     'avatar': avatarUrl,
     'banner': bannerUrl,
+    // role is NOT written here — moderator role is set manually in Firestore
+    'status': status,
+    'canPost': canPost,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -72,6 +91,9 @@ class AuthUser {
     dob: j['dob'],
     avatarUrl: j['avatar'] ?? '',
     bannerUrl: j['banner'] ?? '',
+    role: j['role'] as String? ?? 'user',
+    status: j['status'] as String? ?? 'active',
+    canPost: j['canPost'] as bool? ?? true,
   );
 }
 
@@ -84,17 +106,47 @@ class AuthService {
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+
+  Future<void> _bindCurrentUserDoc(String uid) async {
+    await _userDocSub?.cancel();
+    _userDocSub = _db.collection('users').doc(uid).snapshots().listen((doc) async {
+      if (!doc.exists) {
+        currentUser.value = null;
+        await _auth.signOut();
+        return;
+      }
+
+      final loadedUser = AuthUser.fromJson(doc.data()!);
+      if (loadedUser.isBanned) {
+        currentUser.value = null;
+        await _auth.signOut();
+        return;
+      }
+
+      currentUser.value = loadedUser;
+    });
+  }
 
   Future<void> init() async {
     // Listen to auth state and load Firestore user
     _auth.authStateChanges().listen((fbUser) async {
       if (fbUser == null) {
+        await _userDocSub?.cancel();
+        _userDocSub = null;
         currentUser.value = null;
         return;
       }
       final doc = await _db.collection('users').doc(fbUser.uid).get();
       if (doc.exists) {
-        currentUser.value = AuthUser.fromJson(doc.data()!);
+        final loadedUser = AuthUser.fromJson(doc.data()!);
+        if (loadedUser.isBanned) {
+          currentUser.value = null;
+          await _auth.signOut();
+          return;
+        }
+        currentUser.value = loadedUser;
+        await _bindCurrentUserDoc(fbUser.uid);
       } else {
         // Create minimal user doc if missing
         final u = AuthUser(
@@ -104,13 +156,23 @@ class AuthService {
         );
         await _db.collection('users').doc(fbUser.uid).set(u.toJson());
         currentUser.value = u;
+        await _bindCurrentUserDoc(fbUser.uid);
       }
     });
     // If already signed in, trigger loading
     final cur = _auth.currentUser;
     if (cur != null) {
       final doc = await _db.collection('users').doc(cur.uid).get();
-      if (doc.exists) currentUser.value = AuthUser.fromJson(doc.data()!);
+      if (doc.exists) {
+        final loadedUser = AuthUser.fromJson(doc.data()!);
+        if (loadedUser.isBanned) {
+          currentUser.value = null;
+          await _auth.signOut();
+        } else {
+          currentUser.value = loadedUser;
+          await _bindCurrentUserDoc(cur.uid);
+        }
+      }
     }
     // mark active if already signed in
     if (_auth.currentUser != null) {
@@ -220,7 +282,13 @@ class AuthService {
       final uid = cred.user!.uid;
       final doc = await _db.collection('users').doc(uid).get();
       if (doc.exists) {
-        currentUser.value = AuthUser.fromJson(doc.data()!);
+        final loadedUser = AuthUser.fromJson(doc.data()!);
+        if (loadedUser.isBanned) {
+          await _auth.signOut();
+          currentUser.value = null;
+          return 'This account has been banned.';
+        }
+        currentUser.value = loadedUser;
       } else {
         // User exists in Auth but not in Firestore — create the doc.
         final u = AuthUser(
@@ -259,6 +327,8 @@ class AuthService {
     try {
       await setPresence(false);
     } catch (_) {}
+    await _userDocSub?.cancel();
+    _userDocSub = null;
     await _auth.signOut();
     currentUser.value = null;
   }

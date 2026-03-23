@@ -974,6 +974,11 @@ class _UsersTabState extends State<_UsersTab> {
   String _filter = 'all'; // all | active | banned
   final TextEditingController _searchCtrl = TextEditingController();
 
+  void _showBannedUsers() {
+    if (!mounted) return;
+    setState(() => _filter = 'banned');
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -1085,7 +1090,11 @@ class _UsersTabState extends State<_UsersTab> {
                 itemBuilder: (ctx, i) {
                   final doc = docs[i];
                   final data = doc.data() as Map<String, dynamic>;
-                  return _UserCard(userId: doc.id, data: data);
+                  return _UserCard(
+                    userId: doc.id,
+                    data: data,
+                    onBanned: _showBannedUsers,
+                  );
                 },
               );
             },
@@ -1099,13 +1108,23 @@ class _UsersTabState extends State<_UsersTab> {
 class _UserCard extends StatelessWidget {
   final String userId;
   final Map<String, dynamic> data;
+  final VoidCallback? onBanned;
 
-  const _UserCard({required this.userId, required this.data});
+  const _UserCard({
+    required this.userId,
+    required this.data,
+    this.onBanned,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final name = data['name'] as String? ?? 'Unknown';
-    final email = data['email'] as String? ?? '';
+    final rawName = (data['name'] as String? ?? '').trim();
+    final email = (data['email'] as String? ?? '').trim();
+    final name = rawName.isNotEmpty
+        ? rawName
+        : email.isNotEmpty
+        ? email.split('@').first
+        : 'Unknown User';
     final status = data['status'] as String? ?? 'active';
     final role = data['role'] as String? ?? 'user';
     final isBanned = status == 'banned';
@@ -1123,179 +1142,162 @@ class _UserCard extends StatelessWidget {
               : const Color(0xFF2D2D44),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar placeholder
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: const Color(0xFFD4AF37).withValues(alpha: 0.15),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.bold,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        name,
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (email.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white38,
+                          fontSize: 12,
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (role == 'moderator') _StatusPill(label: 'MOD', color: const Color(0xFFD4AF37)),
+                        if (isBanned) _StatusPill(label: 'BANNED', color: Colors.redAccent),
+                        if (!canPost) _StatusPill(label: 'NO POST', color: Colors.orangeAccent),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    if (role == 'moderator')
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD4AF37).withValues(
-                            alpha: 0.15,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'MOD',
-                          style: TextStyle(
-                            color: Color(0xFFD4AF37),
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    if (isBanned) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'BANNED',
-                          style: TextStyle(
-                            color: Colors.redAccent,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (!canPost) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orangeAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'NO POST',
-                          style: TextStyle(
-                            color: Colors.orangeAccent,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  email,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
+              ),
+            ],
+          ),
+          if (role != 'moderator') ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (!isBanned)
+                  _ActionBtn(
+                    icon: Icons.block,
+                    label: 'Ban',
+                    color: Colors.redAccent,
+                    onTap: () async {
+                      if (await _confirmAction(
+                        context,
+                        'Ban User',
+                        'Ban this user? They will not be able to access the app.',
+                      )) {
+                        await ModeratorService.instance.banUser(userId);
+                        onBanned?.call();
+                      }
+                    },
+                  ),
+                if (isBanned)
+                  _ActionBtn(
+                    icon: Icons.check_circle_outline,
+                    label: 'Unban',
+                    color: Colors.greenAccent,
+                    onTap: () async {
+                      if (await _confirmAction(
+                        context,
+                        'Unban User',
+                        'Restore this user\'s access?',
+                      )) {
+                        await ModeratorService.instance.unbanUser(userId);
+                      }
+                    },
+                  ),
+                if (canPost)
+                  _ActionBtn(
+                    icon: Icons.edit_off,
+                    label: 'Disable Post',
+                    color: Colors.orangeAccent,
+                    onTap: () async {
+                      if (await _confirmAction(
+                        context,
+                        'Disable Posting',
+                        'Disable posting for this user?',
+                      )) {
+                        await ModeratorService.instance.disablePosting(userId);
+                      }
+                    },
+                  ),
+                if (!canPost)
+                  _ActionBtn(
+                    icon: Icons.edit,
+                    label: 'Enable Post',
+                    color: Colors.greenAccent,
+                    onTap: () async {
+                      if (await _confirmAction(
+                        context,
+                        'Enable Posting',
+                        'Allow this user to post again?',
+                      )) {
+                        await ModeratorService.instance.enablePosting(userId);
+                      }
+                    },
+                  ),
               ],
             ),
-          ),
-          // Actions
-          if (role != 'moderator') ...[
-            if (!isBanned)
-              _ActionBtn(
-                icon: Icons.block,
-                label: 'Ban',
-                color: Colors.redAccent,
-                onTap: () async {
-                  if (await _confirmAction(
-                    context,
-                    'Ban User',
-                    'Ban this user? They will not be able to access the app.',
-                  )) {
-                    await ModeratorService.instance.banUser(userId);
-                  }
-                },
-              ),
-            if (isBanned)
-              _ActionBtn(
-                icon: Icons.check_circle_outline,
-                label: 'Unban',
-                color: Colors.greenAccent,
-                onTap: () async {
-                  if (await _confirmAction(
-                    context,
-                    'Unban User',
-                    'Restore this user\'s access?',
-                  )) {
-                    await ModeratorService.instance.unbanUser(userId);
-                  }
-                },
-              ),
-            const SizedBox(width: 6),
-            if (canPost)
-              _ActionBtn(
-                icon: Icons.edit_off,
-                label: 'Disable Post',
-                color: Colors.orangeAccent,
-                onTap: () async {
-                  if (await _confirmAction(
-                    context,
-                    'Disable Posting',
-                    'Disable posting for this user?',
-                  )) {
-                    await ModeratorService.instance.disablePosting(userId);
-                  }
-                },
-              ),
-            if (!canPost)
-              _ActionBtn(
-                icon: Icons.edit,
-                label: 'Enable Post',
-                color: Colors.greenAccent,
-                onTap: () async {
-                  if (await _confirmAction(
-                    context,
-                    'Enable Posting',
-                    'Allow this user to post again?',
-                  )) {
-                    await ModeratorService.instance.enablePosting(userId);
-                  }
-                },
-              ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

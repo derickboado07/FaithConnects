@@ -472,6 +472,7 @@ class _AppRootState extends State<_AppRoot>
       valueListenable: AuthService.instance.currentUser,
       builder: (context, value, _) {
         if (value == null) return const LoginScreen();
+        if (value.isModerator) return const ModeratorDashboard();
         return const HomePage();
       },
     );

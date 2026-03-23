@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -68,49 +67,17 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    // Moderator login: verify role in Firestore
+    // Moderator login: check role that was loaded into AuthUser by AuthService
     if (_isModeratorLogin) {
-      final uid = AuthService.instance.currentUser.value?.id;
-      if (uid == null) {
-        setState(() => _loading = false);
-        return;
-      }
-      try {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
-        final role = doc.data()?['role'] as String? ?? 'user';
-        if (role != 'moderator') {
-          // Not a moderator — sign out and show error
-          await AuthService.instance.logout();
-          if (!mounted) return;
-          setState(() => _loading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Access denied. Not a moderator.'),
-              backgroundColor: Colors.red.shade700,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              duration: const Duration(seconds: 4),
-            ),
-          );
-          return;
-        }
-        // Valid moderator — navigate to dashboard
-        setState(() => _loading = false);
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/moderator_dashboard');
-        }
-      } catch (e) {
+      final user = AuthService.instance.currentUser.value;
+      if (user == null || !user.isModerator) {
+        // Not a moderator — sign out and show error
         await AuthService.instance.logout();
         if (!mounted) return;
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error verifying role: $e'),
+            content: const Text('Access denied. Not a moderator.'),
             backgroundColor: Colors.red.shade700,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -120,14 +87,34 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
       }
+      // If valid moderator, _AppRoot's ValueListenableBuilder routes automatically
+      setState(() => _loading = false);
       return;
     }
 
-    // Normal user login
-    setState(() => _loading = false);
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/');
+    // Normal user login — ensure they are NOT logging in as a moderator account
+    final user = AuthService.instance.currentUser.value;
+    if (user != null && user.isModerator) {
+      // A moderator tried to log in via the user tab — sign them out
+      await AuthService.instance.logout();
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('This is a moderator account. Please use Moderator Login.'),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
     }
+
+    // Normal user — _AppRoot routes automatically
+    setState(() => _loading = false);
   }
 
   InputDecoration _inputDec(String label, IconData icon, {Widget? suffix}) {
