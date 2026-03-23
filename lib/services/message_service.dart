@@ -194,12 +194,27 @@ class MessageService {
     final convoId = docRef.id;
     String? photoUrl;
     if (avatarBytes != null && avatarFilename != null) {
-      final storagePath = 'group_avatars/$convoId/$avatarFilename';
-      final upload = await _storage
-          .ref()
-          .child(storagePath)
-          .putData(avatarBytes);
-      photoUrl = await upload.ref.getDownloadURL();
+      try {
+        // Log uid for debugging authorization issues
+        try {
+          final currentUid = _auth.currentUser?.uid;
+          // ignore: avoid_print
+          print(
+            'createGroup: uploading avatar. currentUid=$currentUid convoId=$convoId',
+          );
+        } catch (_) {}
+        final storagePath = 'group_avatars/$convoId/$avatarFilename';
+        final upload = await _storage
+            .ref()
+            .child(storagePath)
+            .putData(avatarBytes);
+        photoUrl = await upload.ref.getDownloadURL();
+      } catch (e, st) {
+        // Ignore upload failure but log it so group creation can continue without avatar.
+        // ignore: avoid_print
+        print('createGroup: avatar upload failed: $e\n$st');
+        photoUrl = null;
+      }
     }
     final members = <String>{...memberUids};
     members.add(uid);
@@ -214,6 +229,11 @@ class MessageService {
       'updatedAt': now,
     };
     await docRef.set(data);
+    // Debug: log the saved photoUrl for troubleshooting
+    try {
+      // ignore: avoid_print
+      print('createGroup: saved conversation $convoId photoUrl=$photoUrl');
+    } catch (_) {}
     return convoId;
   }
 

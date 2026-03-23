@@ -349,13 +349,91 @@ class _ChatScreenState extends State<ChatScreen> {
           future: _fetchPeerName(),
           builder: (context, snap) => Text(snap.data ?? 'Chat'),
         ),
-        leading:
-            widget.conversation != null &&
-                (widget.conversation!.photoUrl?.isNotEmpty ?? false)
+        leading: widget.conversation != null
             ? Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: CircleAvatar(
-                  backgroundImage: NetworkImage(widget.conversation!.photoUrl!),
+                  radius: 18,
+                  backgroundColor: Colors.grey.shade200,
+                  child: ClipOval(
+                    child:
+                        (widget.conversation!.photoUrl != null &&
+                            widget.conversation!.photoUrl!.isNotEmpty)
+                        ? Image.network(
+                            widget.conversation!.photoUrl!,
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (ctx, child, progress) {
+                              if (progress == null) return child;
+                              return const SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (ctx, err, st) {
+                              // ignore: avoid_print
+                              print(
+                                'chat_screen: failed to load group avatar ${widget.conversation!.photoUrl!} -> $err',
+                              );
+                              // Fall back to initials
+                              final n = widget.conversation!.name ?? '';
+                              final initials = (n.isNotEmpty)
+                                  ? n
+                                        .trim()
+                                        .split(RegExp('\\s+'))
+                                        .where((s) => s.isNotEmpty)
+                                        .map((s) => s[0])
+                                        .take(2)
+                                        .join()
+                                        .toUpperCase()
+                                  : 'G';
+                              return SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: Center(
+                                  child: Text(
+                                    initials,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : // No photoUrl — show initials or group icon
+                          SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: Center(
+                              child: Text(
+                                ((widget.conversation!.name ?? '').isNotEmpty)
+                                    ? widget.conversation!.name!
+                                          .trim()
+                                          .split(RegExp('\\s+'))
+                                          .where((s) => s.isNotEmpty)
+                                          .map((s) => s[0])
+                                          .take(2)
+                                          .join()
+                                          .toUpperCase()
+                                    : 'G',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
                 ),
               )
             : null,
