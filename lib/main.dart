@@ -29,6 +29,7 @@ import 'services/music_player_service.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/marketplace_screen.dart';
 import 'screens/product_list_screen.dart';
+import 'screens/search_screen.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
@@ -36,6 +37,12 @@ Widget _buildIconButton(BuildContext context, IconData icon) {
     onTap: () {
       if (icon == Icons.chat_bubble_outline) {
         Navigator.pushNamed(context, '/messages');
+        return;
+      }
+
+      if (icon == Icons.search) {
+        Navigator.pushNamed(context, '/search');
+        return;
       }
     },
     borderRadius: BorderRadius.circular(12),
@@ -276,6 +283,7 @@ class FaithConnectApp extends StatelessWidget {
 
         '/create_post': (_) => const CreatePostScreen(),
         '/messages': (_) => const ChatListScreen(),
+        '/search': (_) => const SearchScreen(),
       },
 
       home: const _AppRoot(),

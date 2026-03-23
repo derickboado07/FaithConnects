@@ -224,6 +224,19 @@ class PostService {
     return posts;
   }
 
+  /// Fetch a paged set of posts ordered by 'ts' (newest first).
+  /// [startAfterTs] should be the ISO8601 timestamp of the last item
+  /// from the previous page (for descending order use the last item's ts).
+  Future<List<Post>> fetchFeedPaged({int limit = 20, String? startAfterTs}) async {
+    Query<Map<String, dynamic>> query = _db.collection('posts').orderBy('ts', descending: true);
+    if (startAfterTs != null && startAfterTs.isNotEmpty) {
+      query = query.startAfter([startAfterTs]);
+    }
+    final snap = await query.limit(limit).get();
+    final posts = snap.docs.map((d) => Post.fromJson(Map<String, dynamic>.from(d.data() as Map))).toList();
+    return posts;
+  }
+
   /// Real-time stream of feed posts.
   Stream<List<Post>> streamFeed({int limit = 50}) {
     return _db
@@ -251,6 +264,38 @@ class PostService {
       reactions: p.reactions,
       comments: comments,
     );
+  }
+
+  /// Basic search over posts by content or author (prefix match).
+  /// Note: Firestore does not provide full-text search; this does prefix
+  /// matching on the 'content' and 'author' fields and merges results.
+  Future<List<Post>> searchPosts(String query, {int limit = 20}) async {
+    final q = query.trim();
+    if (q.isEmpty) return [];
+    final end = q + '\uf8ff';
+
+    final contentSnap = await _db
+        .collection('posts')
+        .where('content', isGreaterThanOrEqualTo: q)
+        .where('content', isLessThanOrEqualTo: end)
+        .limit(limit)
+        .get();
+
+    final authorSnap = await _db
+        .collection('posts')
+        .where('author', isGreaterThanOrEqualTo: q)
+        .where('author', isLessThanOrEqualTo: end)
+        .limit(limit)
+        .get();
+
+    final docs = <QueryDocumentSnapshot>{};
+    docs.addAll(contentSnap.docs);
+    docs.addAll(authorSnap.docs);
+
+    final posts = docs
+      .map((d) => Post.fromJson(Map<String, dynamic>.from(d.data() as Map)))
+      .toList();
+    return posts;
   }
 
   // Upload media either from a local file path (mobile/desktop) or from

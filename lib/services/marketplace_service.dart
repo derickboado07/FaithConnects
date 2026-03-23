@@ -45,17 +45,35 @@ class MarketplaceService {
   /// The stream automatically emits updates whenever a product is added,
   /// updated, or removed in Firestore.
   Stream<List<Product>> getProductsStream({String? category}) {
-    Query<Map<String, dynamic>> query =
-        _db.collection('products').orderBy('createdAt', descending: true);
+    // To avoid requiring composite indexes (where + orderBy), we always
+    // order by createdAt on the server and apply the category filter client-side
+    // when a specific category is requested. This makes the stream resilient
+    // to missing indexes and prevents a transient empty/error snapshot that
+    // would hide items briefly in the UI.
+    final query = _db.collection('products').orderBy('createdAt', descending: true);
+    return query.snapshots().map((snapshot) {
+      final all = snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+      if (category != null && category.isNotEmpty && category != 'All') {
+        return all.where((p) => p.category == category).toList();
+      }
+      return all;
+    });
+  }
 
-    // Apply category filter if a specific category was selected.
-    if (category != null && category.isNotEmpty && category != 'All') {
-      query = query.where('category', isEqualTo: category);
+  /// Paged fetch for products (newest first). [startAfter] is the DateTime of
+  /// the last product from the previous page to continue pagination.
+  Future<List<Product>> getProductsPage({int limit = 20, DateTime? startAfter, String? category}) async {
+    // Query server for newest products and apply category filter client-side
+    Query<Map<String, dynamic>> query = _db.collection('products').orderBy('createdAt', descending: true);
+    if (startAfter != null) {
+      query = query.startAfter([Timestamp.fromDate(startAfter)]);
     }
-
-    // Map each QuerySnapshot to a List<Product> using fromFirestore().
-    return query.snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList());
+    final snap = await query.limit(limit).get();
+    final all = snap.docs.map((d) => Product.fromFirestore(d)).toList();
+    if (category != null && category.isNotEmpty && category != 'All') {
+      return all.where((p) => p.category == category).toList();
+    }
+    return all;
   }
 
   /// Fetches a single product document by ID. Returns null if not found.
@@ -63,6 +81,34 @@ class MarketplaceService {
     final doc = await _db.collection('products').doc(productId).get();
     if (!doc.exists) return null;
     return Product.fromFirestore(doc);
+  }
+
+  /// Basic product search by name or description (prefix match).
+  Future<List<Product>> searchProducts(String query, {int limit = 20}) async {
+    final q = query.trim();
+    if (q.isEmpty) return [];
+    final end = q + '\uf8ff';
+
+    final nameSnap = await _db
+        .collection('products')
+        .where('productName', isGreaterThanOrEqualTo: q)
+        .where('productName', isLessThanOrEqualTo: end)
+        .limit(limit)
+        .get();
+
+    final descSnap = await _db
+        .collection('products')
+        .where('description', isGreaterThanOrEqualTo: q)
+        .where('description', isLessThanOrEqualTo: end)
+        .limit(limit)
+        .get();
+
+    final docs = <QueryDocumentSnapshot>{};
+    docs.addAll(nameSnap.docs);
+    docs.addAll(descSnap.docs);
+
+    final products = docs.map((d) => Product.fromFirestore(d)).toList();
+    return products;
   }
 
   // ─── IMAGE UPLOAD TO FIREBASE STORAGE ───────────────────────────────────
@@ -226,7 +272,12 @@ class MarketplaceService {
     );
 
     // Write the order document to Firestore.
-    await docRef.set(order.toMap());
+    // Firestore security rules expect `buyerId` and `sellerId` keys —
+    // ensure these aliases are present so the create rule allows the write.
+    final map = order.toMap();
+    map['buyerId'] = userId;
+    map['sellerId'] = product.sellerId;
+    await docRef.set(map);
 
     // Remove the ordered item from the user's cart (best-effort; no throw).
     try {

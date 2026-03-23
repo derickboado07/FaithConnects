@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'product_list_screen.dart';
 import 'sell_product_screen.dart';
+import 'marketplace_feed.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MARKETPLACE SCREEN
@@ -235,6 +236,23 @@ class MarketplaceScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 30),
+
+                    // ── Marketplace Feed (Posts + Products) ─────────
+                    const Text(
+                      'Community Listings & Posts',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C2C2C),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    SizedBox(
+                      height: 600, // allow scrolling inside main scroll view
+                      child: const MarketplaceFeed(),
+                    ),
 
                     const Text(
                       'Browse by Category',
