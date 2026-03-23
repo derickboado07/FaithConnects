@@ -263,6 +263,27 @@ class AuthService {
     currentUser.value = null;
   }
 
+  /// Sends a password-reset email. Returns null on success or an error message.
+  Future<String?> sendPasswordReset(String email) async {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty) return 'Please enter your email address.';
+    try {
+      await _auth.sendPasswordResetEmail(email: trimmed);
+      return null;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return 'No account found for that email.';
+        case 'invalid-email':
+          return 'The email address is invalid.';
+        default:
+          return e.message ?? 'Failed to send reset email.';
+      }
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
   /// Marks the current user as online/offline in their /users/{uid} document.
   Future<void> setPresence(bool online) async {
     final cur = _auth.currentUser;

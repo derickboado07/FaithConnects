@@ -215,7 +215,7 @@ class MarketplaceService {
 
     final order = ProductOrder(
       orderId: docRef.id,
-      userId: userId,
+      buyerId: userId,
       productId: product.productId,
       productName: product.productName,
       imageUrl: product.imageUrl,

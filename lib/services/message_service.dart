@@ -71,6 +71,7 @@ class MessageItem {
   final String? imageUrl;
   final Map<String, List<String>> reactions;
   final Map<String, bool> deletedFor;
+  final bool isSystemMessage;
 
   MessageItem({
     required this.id,
@@ -81,10 +82,9 @@ class MessageItem {
     this.imageUrl,
     Map<String, List<String>>? reactions,
     Map<String, bool>? deletedFor,
+    this.isSystemMessage = false,
   }) : reactions = reactions ?? {},
        deletedFor = deletedFor ?? {};
-  // initialize deletedFor
-  // ignore: prefer_initializing_formals
 
   factory MessageItem.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -95,6 +95,7 @@ class MessageItem {
       text: d['text'] ?? '',
       ts: d['ts'] ?? '',
       imageUrl: d['imageUrl'],
+      isSystemMessage: d['isSystemMessage'] == true,
       reactions: d['reactions'] is Map<String, dynamic>
           ? (d['reactions'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -353,8 +354,154 @@ class MessageService {
     }
   }
 
+  /// Update group name (admin-only; uses Cloud Function when URL is set).
+  Future<void> updateGroupName(String convoId, String newName) async {
+    if (newName.isEmpty) throw Exception('Name cannot be empty');
+    if (newName.length > 60)
+      throw Exception('Name too long (max 60 characters)');
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/renameGroupHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId, 'newName': newName}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to rename group: ${resp.body}');
+      }
+      return;
+    }
+    await _db.collection('conversations').doc(convoId).update({
+      'name': newName,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// Upload avatar bytes and save the download URL to Firestore.
+  Future<void> updateGroupAvatar(
+    String convoId,
+    Uint8List bytes,
+    String filename,
+  ) async {
+    if (_myUid.isEmpty) throw Exception('Not signed in');
+    final storagePath =
+        'group_avatars/$convoId/${DateTime.now().millisecondsSinceEpoch}_$filename';
+    try {
+      // Determine content type from filename extension so Storage rules accept the upload
+      String contentType = 'image/jpeg';
+      final ext = filename.split('.').last.toLowerCase();
+      if (ext == 'png') {
+        contentType = 'image/png';
+      } else if (ext == 'gif') {
+        contentType = 'image/gif';
+      } else if (ext == 'webp') {
+        contentType = 'image/webp';
+      }
+      final upload = await _storage
+          .ref()
+          .child(storagePath)
+          .putData(bytes, SettableMetadata(contentType: contentType));
+      final photoUrl = await upload.ref.getDownloadURL();
+      await _db.collection('conversations').doc(convoId).update({
+        'photoUrl': photoUrl,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update avatar: $e');
+    }
+  }
+
+  /// Post a system message (e.g., "User X was added to the group").
+  Future<void> sendSystemMessage(String convoId, String text) async {
+    final now = DateTime.now().toIso8601String();
+    try {
+      await _db
+          .collection('conversations')
+          .doc(convoId)
+          .collection('messages')
+          .add({
+            'senderId': 'system',
+            'senderName': '',
+            'text': text,
+            'ts': now,
+            'isSystemMessage': true,
+          });
+    } catch (_) {
+      // System message failure is non-fatal
+    }
+  }
+
+  /// Promote a member to admin.
+  Future<void> promoteToAdmin(String convoId, String uid) async {
+    if (_myUid.isEmpty) throw Exception('Not signed in');
+    await _db.collection('conversations').doc(convoId).update({
+      'admins': FieldValue.arrayUnion([uid]),
+    });
+  }
+
+  /// Leave a group. If the caller is the sole admin, automatically promotes
+  /// the next available member before leaving.
+  Future<void> leaveGroup(String convoId) async {
+    final uid = _myUid;
+    if (uid.isEmpty) throw Exception('Not signed in');
+    final convoRef = _db.collection('conversations').doc(convoId);
+    final snap = await convoRef.get();
+    if (!snap.exists) throw Exception('Group not found');
+    final data = snap.data() as Map<String, dynamic>;
+    final members = List<String>.from(data['participants'] ?? []);
+    final admins = List<String>.from(data['admins'] ?? []);
+    // Auto-promote another member if this user is the sole admin and others remain
+    if (admins.contains(uid) && admins.length == 1 && members.length > 1) {
+      final newAdmin = members.firstWhere((m) => m != uid, orElse: () => '');
+      if (newAdmin.isNotEmpty) {
+        await convoRef.update({
+          'admins': FieldValue.arrayUnion([newAdmin]),
+        });
+      }
+    }
+    await convoRef.update({
+      'participants': FieldValue.arrayRemove([uid]),
+      'admins': FieldValue.arrayRemove([uid]),
+    });
+  }
+
+  /// Delete a group and all its messages.
+  /// Uses the deleteGroupHttp Cloud Function when _functionsBaseUrl is set;
+  /// falls back to client-side batched deletion.
   Future<void> deleteGroup(String convoId) async {
-    // remove doc and all messages subcollection documents
+    if (_functionsBaseUrl.isNotEmpty) {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Not signed in');
+      final token = await user.getIdToken();
+      final url = '$_functionsBaseUrl/deleteGroupHttp';
+      final resp = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'convoId': convoId}),
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('Function error (${resp.statusCode}): ${resp.body}');
+      }
+      final j = jsonDecode(resp.body);
+      if (j == null || j['success'] != true) {
+        throw Exception('Failed to delete group: ${resp.body}');
+      }
+      return;
+    }
+    // Client-side fallback — delete messages then the conversation doc
     final convoRef = _db.collection('conversations').doc(convoId);
     final msgs = await convoRef.collection('messages').get();
     for (final d in msgs.docs) {
@@ -432,7 +579,7 @@ class MessageService {
         body: jsonEncode({'convoId': convoId, 'messageId': messageId}),
       );
       if (resp.statusCode != 200) {
-        String body = resp.body ?? '';
+        final body = resp.body;
         throw Exception('Function error (${resp.statusCode}): $body');
       }
       final j = jsonDecode(resp.body);

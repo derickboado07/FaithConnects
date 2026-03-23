@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
+import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
 import 'create_group_screen.dart';
@@ -187,84 +188,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       children: [
                         // Avatar: load from network when available; otherwise show initials.
                         // `name` is the display name for group or user.
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.grey.shade200,
-                          child: ClipOval(
-                            child: avatar.isNotEmpty
-                                ? Image.network(
-                                    avatar,
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (ctx, child, progress) {
-                                      if (progress == null) return child;
-                                      return const SizedBox(
-                                        width: 40,
-                                        height: 40,
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (ctx, err, st) {
-                                      // ignore: avoid_print
-                                      print(
-                                        'chat_list: avatar load error for $avatar => $err',
-                                      );
-                                      final initials = (name.isNotEmpty)
-                                          ? name
-                                                .trim()
-                                                .split(RegExp('\\s+'))
-                                                .where((s) => s.isNotEmpty)
-                                                .map((s) => s[0])
-                                                .take(2)
-                                                .join()
-                                                .toUpperCase()
-                                          : '?';
-                                      return SizedBox(
-                                        width: 40,
-                                        height: 40,
-                                        child: Center(
-                                          child: Text(
-                                            initials,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : SizedBox(
-                                    width: 40,
-                                    height: 40,
-                                    child: Center(
-                                      child: Text(
-                                        (name.isNotEmpty)
-                                            ? name
-                                                  .trim()
-                                                  .split(RegExp('\\s+'))
-                                                  .where((s) => s.isNotEmpty)
-                                                  .map((s) => s[0])
-                                                  .take(2)
-                                                  .join()
-                                                  .toUpperCase()
-                                            : 'G',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ),
+                        UserAvatar(photoUrl: avatar, name: name, radius: 20),
                         // online indicator
                         if (userDoc != null && userDoc.exists)
                           Positioned(

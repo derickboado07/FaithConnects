@@ -14,7 +14,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProductOrder {
   final String orderId; // Auto-generated Firestore document ID
-  final String userId; // Firebase Auth UID of the buyer
+  final String buyerId; // Firebase Auth UID of the buyer
   final String productId; // ID of the purchased product
   final String productName; // Snapshot of product name at time of purchase
   final String imageUrl; // Snapshot of product image URL
@@ -26,7 +26,7 @@ class ProductOrder {
 
   const ProductOrder({
     required this.orderId,
-    required this.userId,
+    required this.buyerId,
     required this.productId,
     required this.productName,
     this.imageUrl = '',
@@ -43,7 +43,8 @@ class ProductOrder {
     final data = doc.data() as Map<String, dynamic>;
     return ProductOrder(
       orderId: data['orderId'] as String? ?? doc.id,
-      userId: data['userId'] as String? ?? '',
+      // Support both old 'userId' field and new 'buyerId' field
+      buyerId: (data['buyerId'] ?? data['userId']) as String? ?? '',
       productId: data['productId'] as String? ?? '',
       productName: data['productName'] as String? ?? '',
       imageUrl: data['imageUrl'] as String? ?? '',
@@ -60,7 +61,7 @@ class ProductOrder {
   Map<String, dynamic> toMap() {
     return {
       'orderId': orderId,
-      'userId': userId,
+      'buyerId': buyerId, // matches Firestore security rules
       'productId': productId,
       'productName': productName,
       'imageUrl': imageUrl,

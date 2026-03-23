@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../services/message_service.dart';
 import '../widgets/message_suggestion_bar.dart';
-import 'group_info_screen.dart';
+import 'group_settings_screen.dart';
 
 // Reaction definitions for chat messages (emoji-first for FaithConnects)
 const List<_ChatReaction> _chatReactions = [
@@ -45,6 +45,17 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _ctrl = TextEditingController();
   bool _sending = false;
+  final Map<String, String> _senderNames = {};
+
+  void _cacheSenderName(String uid) {
+    if (uid.isEmpty || uid == 'system' || _senderNames.containsKey(uid)) return;
+    _senderNames[uid] = uid; // placeholder to avoid duplicate fetches
+    FirebaseFirestore.instance.collection('users').doc(uid).get().then((d) {
+      if (d.exists && mounted) {
+        setState(() => _senderNames[uid] = d['name'] ?? uid);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -442,13 +453,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 (widget.conversation!.type == 'group')
             ? [
                 IconButton(
-                  icon: const Icon(Icons.info_outline),
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Group Settings',
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) =>
-                            GroupInfoScreen(conversation: widget.conversation!),
+                            GroupSettingsScreen(convoId: widget.convoId),
                       ),
                     );
                   },
@@ -479,6 +491,31 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: msgs.length,
                   itemBuilder: (context, i) {
                     final m = msgs[i];
+                    // System messages are rendered as centred notices
+                    if (m.isSystemMessage) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              child: Text(
+                                m.text,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF999999),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                      );
+                    }
                     final isMe = myUid.isNotEmpty && m.senderId == myUid;
                     final isGroup = widget.conversation?.type == 'group';
                     // Gather non-empty reactions
@@ -515,16 +552,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               )
                             else if (isGroup && (m.senderName?.isEmpty ?? true))
-                              FutureBuilder<DocumentSnapshot>(
-                                future: FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(m.senderId)
-                                    .get(),
-                                builder: (ctx, snap2) {
+                              Builder(
+                                builder: (_) {
+                                  _cacheSenderName(m.senderId);
                                   final nm =
-                                      (snap2.hasData && snap2.data!.exists)
-                                      ? (snap2.data!['name'] ?? m.senderId)
-                                      : m.senderId;
+                                      _senderNames[m.senderId] ?? m.senderId;
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Text(

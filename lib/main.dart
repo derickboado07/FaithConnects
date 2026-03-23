@@ -366,6 +366,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+
+  void navigateToTab(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -4064,9 +4069,7 @@ class MusicSection extends StatelessWidget {
                   // Navigate to Music tab (index 3 in bottom nav)
                   final state = context
                       .findAncestorStateOfType<_HomePageState>();
-                  if (state != null) {
-                    state.setState(() => state._selectedIndex = 3);
-                  }
+                  state?.navigateToTab(3);
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFD4AF37),
@@ -4143,9 +4146,7 @@ class MusicSection extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         final state = context.findAncestorStateOfType<_HomePageState>();
-        if (state != null) {
-          state.setState(() => state._selectedIndex = 3);
-        }
+        state?.navigateToTab(3);
       },
       child: Container(
         width: 120,

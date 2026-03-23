@@ -88,33 +88,64 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ── Conversations (1-to-1 direct messages) ──────────────────────────
+    // ── Conversations ───────────────────────────────────────────────────
     match /conversations/{convoId} {
-      // Any signed-in user can create; creator must be in participants array.
+      // Creator must be in the participants list.
       allow create: if request.auth != null
         && request.auth.uid in request.resource.data.participants;
 
-      // Participants can read, update (e.g. lastMessage), or re-create.
-      // resource == null guard handles the brief window before doc is visible.
-      allow read, update: if request.auth != null
-        && (resource == null || request.auth.uid in resource.data.participants);
+      // Only participants may read.
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.participants;
 
-      allow delete: if false;
+      // Participants may update metadata (lastMessage, updatedAt, lastRead).
+      // Changing admin-controlled fields (name, photoUrl, participants, admins)
+      // additionally requires the caller to be a group admin.
+      // Exception: a member may remove themselves from participants/admins
+      // (i.e., leave the group) without being an admin.
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participants
+        && (
+          // No admin-guarded fields are being changed
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['name', 'photoUrl', 'participants', 'admins'])
+          // OR the caller is an admin
+          || ('admins' in resource.data
+              && request.auth.uid in resource.data.admins)
+          // OR the caller is leaving (removing only themselves)
+          || (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['participants', 'admins', 'updatedAt'])
+            && !(request.auth.uid in request.resource.data.participants)
+          )
+        );
+
+      // Only group admins may delete the conversation document.
+      allow delete: if request.auth != null
+        && 'admins' in resource.data
+        && request.auth.uid in resource.data.admins;
 
       // ── Messages sub-collection ──────────────────────────────────────
-      // Allow any signed-in user to read/create messages.
-      // Security comes from the fact that convoIds are deterministic
-      // sorted-uid pairs and are never publicly enumerated.
       match /messages/{messageId} {
-        allow read, create: if request.auth != null;
-        // Allow participants to update messages (used for reactions). Clients
-        // should only update `reactions`, but keeping rule simple: only
-        // participants may perform updates.
+        // Only conversation participants may read or create messages.
+        allow read, create: if request.auth != null
+          && request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
+
+        // Participants may update messages (reactions, deletedFor flags).
         allow update: if request.auth != null
-          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
-        // Allow the original sender to delete their own message, or an admin.
+          && request.auth.uid in
+            get(/databases/$(database)/documents/conversations/$(convoId)).data.participants;
+
+        // The original sender, a privileged admin token, or a group admin
+        // may delete messages (needed for group deletion by admin).
         allow delete: if request.auth != null
-          && (resource.data.senderId == request.auth.uid || request.auth.token.admin == true);
+          && (resource.data.senderId == request.auth.uid
+              || request.auth.token.admin == true
+              || (
+                'admins' in get(/databases/$(database)/documents/conversations/$(convoId)).data
+                && request.auth.uid in get(/databases/$(database)/documents/conversations/$(convoId)).data.admins
+              ));
       }
     }
   }
