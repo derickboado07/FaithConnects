@@ -39,6 +39,7 @@ class ChatScreen extends StatefulWidget {
   final String peerId;
   final String? peerName;
   final Conversation? conversation;
+  final String? initialText;
 
   const ChatScreen({
     super.key,
@@ -46,6 +47,7 @@ class ChatScreen extends StatefulWidget {
     this.peerId = '',
     this.peerName,
     this.conversation,
+    this.initialText,
   });
 
   @override
@@ -54,6 +56,16 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialText != null && widget.initialText!.isNotEmpty) {
+      _ctrl.text = widget.initialText!;
+      _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+    }
+  }
+
   bool _sending = false;
   bool _uploadingImage = false;
   final Map<String, String> _senderNames = {};

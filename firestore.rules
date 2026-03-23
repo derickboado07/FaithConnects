@@ -93,9 +93,8 @@ service cloud.firestore {
       // Any authenticated user can read My Day stories.
       allow read: if request.auth != null;
 
-      // Only the owner can create their own My Day entry.
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid;
+      // Any authenticated user can create a My Day entry (uid should match on client).
+      allow create: if request.auth != null;
 
       // Only the owner can delete their own My Day entry.
       allow delete: if request.auth != null

@@ -172,12 +172,23 @@ class MessageService {
     if (uid.isEmpty) throw Exception('Not signed in');
     final id = _convoId(uid, otherUid);
     final docRef = _db.collection('conversations').doc(id);
-    await docRef.set({
-      'participants': [uid, otherUid],
-      'type': 'direct',
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+    bool exists = false;
+    try {
+      final snap = await docRef.get();
+      exists = snap.exists;
+    } catch (_) {
+      // Permission denied means the doc exists but user isn't in it — shouldn't
+      // happen with a deterministic id, but fall through to the create attempt.
+      exists = false;
+    }
+    if (!exists) {
+      await docRef.set({
+        'participants': [uid, otherUid],
+        'type': 'direct',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    }
     return id;
   }
 

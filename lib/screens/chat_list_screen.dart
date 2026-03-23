@@ -461,7 +461,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       builder: (context, myDaySnap) {
         final myDayMap = myDaySnap.data ?? {};
         return SizedBox(
-          height: 140,
+          height: 160,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -480,40 +480,64 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   /// Builds a note bubble overlay widget (Messenger-style speech bubble above the circle).
-  Widget _buildNoteBubble(String note) {
+  Widget _buildNoteBubble(String note, {VoidCallback? onReply}) {
     if (note.isEmpty) return const SizedBox.shrink();
-    // Truncate long notes for the bubble
-    final display = note.length > 28 ? '${note.substring(0, 26)}…' : note;
     return Positioned(
-      top: -6,
-      left: -8,
-      right: -8,
-      child: IgnorePointer(
-        child: Center(
+      top: 0,
+      left: -12,
+      right: -12,
+      child: Center(
+        child: GestureDetector(
+          onTap: onReply,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            constraints: const BoxConstraints(maxWidth: 140),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 6,
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
+              border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
             ),
-            child: Text(
-              display,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2C2C2C),
-                height: 1.2,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  note,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C2C2C),
+                    height: 1.3,
+                  ),
+                ),
+                if (onReply != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.reply, size: 11, color: Color(0xFFD4AF37)),
+                      SizedBox(width: 3),
+                      Text(
+                        'Reply',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Color(0xFFD4AF37),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -550,30 +574,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
         return GestureDetector(
           onTap: () {
-            if (hasMyDay) {
-              // Direct tap opens My Day viewer
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MyDayViewerScreen(
-                    uid: myUid,
-                    userName: name,
-                    userAvatar: avatar,
-                    items: myDayItems,
-                  ),
-                ),
-              );
-            } else {
-              // No My Day — show options (add My Day, set note)
-              _showMyCircleOptions(
-                context,
-                note,
-                myDayItems: myDayItems,
-                userName: name,
-                userAvatar: avatar,
-                myUid: myUid,
-              );
-            }
+            // Always show options (view, add, set note) on tap
+            _showMyCircleOptions(
+              context,
+              note,
+              myDayItems: myDayItems,
+              userName: name,
+              userAvatar: avatar,
+              myUid: myUid,
+            );
           },
           onLongPress: () => _showMyCircleOptions(
             context,
@@ -596,8 +605,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        // Note bubble overlay
-                        if (hasNote) _buildNoteBubble(note),
                         // Main circle
                         Positioned(
                           bottom: 0,
@@ -662,25 +669,33 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             ),
                           ),
                         ),
-                        // "+" badge
+                        // "+" badge — always visible; tapping goes straight to upload
                         Positioned(
                           right: 4,
                           bottom: 0,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD4AF37),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 14,
+                          child: GestureDetector(
+                            onTap: () => _uploadMyDay(context),
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD4AF37),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 14,
+                              ),
                             ),
                           ),
                         ),
+                        // Note bubble overlay — last child so it renders on top
+                        if (hasNote) _buildNoteBubble(note),
                       ],
                     ),
                   ),
@@ -760,6 +775,50 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 SetNoteDialog.show(context, currentNote: currentNote);
               },
             ),
+            if (hasMyDay)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text(
+                  'Delete My Day',
+                  style: TextStyle(color: Colors.red),
+                ),
+                subtitle: Text(
+                  'Remove all ${myDayItems.length} ${myDayItems.length == 1 ? 'story' : 'stories'}',
+                ),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (dlgCtx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Text('Delete My Day?'),
+                      content: Text(
+                        'This will permanently remove all ${myDayItems.length} ${myDayItems.length == 1 ? 'story' : 'stories'} from your My Day.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dlgCtx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(dlgCtx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm != true || !mounted) return;
+                  for (final item in myDayItems) {
+                    await MyDayService.instance.deleteMyDay(item.id);
+                  }
+                },
+              ),
           ],
         ),
       ),
@@ -933,7 +992,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
               );
             } else if (hasNote) {
-              _showNoteViewer(context, rawName, avatar, note);
+              _showNoteViewer(
+                context,
+                rawName,
+                avatar,
+                note,
+                peerId: uid,
+                peerName: rawName,
+              );
             }
           },
           child: Padding(
@@ -949,8 +1015,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        // Note bubble overlay
-                        if (hasNote) _buildNoteBubble(note),
                         // Main circle
                         Positioned(
                           bottom: 0,
@@ -1033,6 +1097,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ),
                             ),
                           ),
+                        // Note bubble overlay — last child so it renders on top
+                        if (hasNote)
+                          _buildNoteBubble(
+                            note,
+                            onReply: () => _showNoteViewer(
+                              context,
+                              rawName,
+                              avatar,
+                              note,
+                              peerId: uid,
+                              peerName: rawName,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1062,16 +1139,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   /// Bottom sheet that shows a user's note when tapping their circle.
+  /// Pass [peerId] and [peerName] to enable the Reply button.
   void _showNoteViewer(
     BuildContext context,
     String name,
     String avatar,
-    String note,
-  ) {
+    String note, {
+    String? peerId,
+    String? peerName,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      builder: (sheetCtx) => Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         decoration: BoxDecoration(
@@ -1122,6 +1202,48 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            // Reply button — only when peerId is provided
+            if (peerId != null && peerId.isNotEmpty)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.reply, size: 18),
+                  label: Text('Reply to ${peerName ?? name}'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD4AF37),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(sheetCtx);
+                    try {
+                      final convoId = await MessageService.instance
+                          .ensureConversationWith(peerId);
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            convoId: convoId,
+                            peerId: peerId,
+                            peerName: peerName ?? name,
+                            initialText: '📝 "$note"\n',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not open chat: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
             const SizedBox(height: 8),
           ],
         ),
