@@ -318,6 +318,20 @@ class AuthService {
     }
   }
 
+  Future<String?> _uploadVerseBackground(String uid, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+      final ref = _storage.ref().child('verse_backgrounds').child('$uid.jpg');
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+      return url;
+    } catch (e) {
+      debugPrint('AuthService: verse background upload failed: $e');
+      return null;
+    }
+  }
+
   String _mimeFromFilename(String filename) {
     final ext = filename.contains('.')
         ? filename.split('.').last.toLowerCase()
@@ -364,6 +378,7 @@ class AuthService {
     String? avatarPath,
     Uint8List? avatarBytes,
     String? avatarFilename,
+    String? avatarUrl,
     String? bannerPath,
     Uint8List? bannerBytes,
     String? bannerFilename,
@@ -379,7 +394,7 @@ class AuthService {
       final doc = q.docs.first;
       final uid = doc.id;
 
-      String? avatarUrl = doc.data()['avatar'];
+      String? currentAvatar = doc.data()['avatar'];
       if (avatarBytes != null && avatarFilename != null) {
         // Web: upload raw bytes directly to Firebase Storage
         final uploaded = await _uploadImageBytes(
@@ -387,7 +402,7 @@ class AuthService {
           avatarBytes,
           avatarFilename,
         );
-        if (uploaded != null) avatarUrl = uploaded;
+        if (uploaded != null) currentAvatar = uploaded;
       } else if (avatarPath != null && avatarPath.isNotEmpty) {
         if (avatarPath.startsWith('/') ||
             avatarPath.contains(':\\') ||
@@ -396,9 +411,12 @@ class AuthService {
             uid,
             avatarPath.replaceFirst('file://', ''),
           );
-          if (uploaded != null) avatarUrl = uploaded;
+          if (uploaded != null) currentAvatar = uploaded;
         }
         // Blob URLs and unrecognised paths are ignored — they are not permanent.
+      } else if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        // Caller provided a direct remote URL to use as the avatar. Save it as-is.
+        currentAvatar = avatarUrl;
       }
 
       String? bannerUrl = doc.data()['banner'];
@@ -428,7 +446,7 @@ class AuthService {
       if (phone != null) updateMap['phone'] = phone;
       if (gender != null) updateMap['gender'] = gender;
       if (dob != null) updateMap['dob'] = dob;
-      if (avatarUrl != null) updateMap['avatar'] = avatarUrl;
+      if (currentAvatar != null) updateMap['avatar'] = currentAvatar;
       if (bannerUrl != null) updateMap['banner'] = bannerUrl;
       if (updateMap.isNotEmpty) {
         await _db.collection('users').doc(uid).update(updateMap);
@@ -439,6 +457,48 @@ class AuthService {
     } catch (e) {
       debugPrint('AuthService.updateProfile error: $e');
       return false;
+    }
+  }
+
+  /// Uploads (or saves) a dedicated verse background for the user and stores
+  /// the resulting URL in the user's `/users/{uid}.verseBackground` field.
+  /// Returns the saved URL on success, or null on failure.
+  Future<String?> uploadAndSaveVerseBackground({
+    required String email,
+    String? localPath,
+    Uint8List? bytes,
+    String? filename,
+    String? url,
+  }) async {
+    try {
+      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
+      if (q.docs.isEmpty) return null;
+      final doc = q.docs.first;
+      final uid = doc.id;
+
+      String? savedUrl = doc.data()['verseBackground'];
+
+      if (bytes != null && filename != null) {
+        final uploaded = await _uploadImageBytes('verse_backgrounds/$uid/${filename}', bytes, filename);
+        if (uploaded != null) savedUrl = uploaded;
+      } else if (localPath != null && localPath.isNotEmpty) {
+        if (localPath.startsWith('/') || localPath.contains(':\\') || localPath.startsWith('file://')) {
+          final uploaded = await _uploadVerseBackground(uid, localPath.replaceFirst('file://', ''));
+          if (uploaded != null) savedUrl = uploaded;
+        }
+      } else if (url != null && url.isNotEmpty) {
+        // Save provided remote URL directly.
+        savedUrl = url;
+      }
+
+      if (savedUrl != null) {
+        await _db.collection('users').doc(uid).set({'verseBackground': savedUrl}, SetOptions(merge: true));
+        return savedUrl;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('AuthService.uploadAndSaveVerseBackground error: $e');
+      return null;
     }
   }
 
