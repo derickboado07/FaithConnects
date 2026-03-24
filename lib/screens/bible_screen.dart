@@ -30,9 +30,6 @@ class _BibleScreenState extends State<BibleScreen> {
   bool _searching = false;
 
   static const _gold = Color(0xFFD4AF37);
-  static const _bg = Color(0xFF1A1A2E);
-  static const _card = Color(0xFF16213E);
-  static const _border = Color(0xFF2D2D44);
 
   @override
   void initState() {
@@ -106,7 +103,7 @@ class _BibleScreenState extends State<BibleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -120,26 +117,27 @@ class _BibleScreenState extends State<BibleScreen> {
   }
 
   Widget _buildHeader() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: _bg,
-        border: Border(bottom: BorderSide(color: _border, width: 1)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 1)),
       ),
       child: Row(
         children: [
           if (_searchActive)
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: cs.onSurface),
               onPressed: _closeSearch,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             )
           else
-            const Text(
+            Text(
               'Bible',
               style: TextStyle(
-                color: Colors.white,
+                color: cs.onSurface,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -148,7 +146,7 @@ class _BibleScreenState extends State<BibleScreen> {
           const Spacer(),
           if (!_searchActive) ...[
             IconButton(
-              icon: const Icon(Icons.search, color: Colors.white70),
+              icon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
               onPressed: _loading ? null : _openSearch,
               tooltip: 'Search verses',
             ),
@@ -161,8 +159,9 @@ class _BibleScreenState extends State<BibleScreen> {
   }
 
   Widget _buildSearchBar() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: _card,
+      color: Theme.of(context).cardColor,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,22 +169,22 @@ class _BibleScreenState extends State<BibleScreen> {
           TextField(
             controller: _searchCtrl,
             autofocus: true,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: cs.onSurface),
             decoration: InputDecoration(
               hintText: _language == 'tl'
                   ? 'Hanapin ang talata o salita…'
                   : 'Search verses or keywords…',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(
+              hintStyle: TextStyle(color: cs.onSurface.withValues(alpha: 0.4)),
+              prefixIcon: Icon(
                 Icons.search,
-                color: Colors.white38,
+                color: cs.onSurface.withValues(alpha: 0.4),
                 size: 20,
               ),
               suffixIcon: _searchCtrl.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
-                        color: Colors.white38,
+                        color: cs.onSurface.withValues(alpha: 0.4),
                         size: 18,
                       ),
                       onPressed: () {
@@ -195,7 +194,7 @@ class _BibleScreenState extends State<BibleScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: _bg,
+              fillColor: Theme.of(context).scaffoldBackgroundColor,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 10,
@@ -265,7 +264,7 @@ class _BibleScreenState extends State<BibleScreen> {
                   : _language == 'tl'
                   ? 'Nilo-load ang Biblia…\n(Unang beses lang ito)'
                   : 'Building Bible database…\n(First launch only)',
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -285,10 +284,10 @@ class _BibleScreenState extends State<BibleScreen> {
                 size: 52,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Failed to load Bible',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
@@ -296,7 +295,7 @@ class _BibleScreenState extends State<BibleScreen> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -335,7 +334,7 @@ class _BibleScreenState extends State<BibleScreen> {
             _language == 'tl'
                 ? 'I-type ang salita o talata upang hanapin.'
                 : 'Type a word or verse reference to search.',
-            style: const TextStyle(color: Colors.white38, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 14),
             textAlign: TextAlign.center,
           ),
         );
@@ -344,7 +343,7 @@ class _BibleScreenState extends State<BibleScreen> {
         return Center(
           child: Text(
             _language == 'tl' ? 'Walang nahanap.' : 'No results found.',
-            style: const TextStyle(color: Colors.white54, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
           ),
         );
       }
@@ -400,14 +399,16 @@ class _SearchVerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onLongPress: () => _showVerseActions(context, verse),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,8 +431,8 @@ class _SearchVerseTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               verse.displayText,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontSize: 14,
                 height: 1.6,
               ),
@@ -571,6 +572,7 @@ class _BookTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -586,8 +588,9 @@ class _BookTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
@@ -613,14 +616,14 @@ class _BookTile extends StatelessWidget {
             Expanded(
               child: Text(
                 bookName,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF5A5A7A), size: 20),
+            Icon(Icons.chevron_right, color: cs.onSurface.withValues(alpha: 0.35), size: 20),
           ],
         ),
       ),
@@ -678,14 +681,14 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
         title: Text(
           widget.bookName,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -709,8 +712,8 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
                     _language == 'tl'
                         ? 'Pumili ng Kabanata'
                         : 'Select a Chapter',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       fontSize: 13,
                       letterSpacing: 0.5,
                     ),
@@ -744,17 +747,17 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16213E),
+                              color: Theme.of(context).cardColor,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: const Color(0xFF2D2D44),
+                                color: Theme.of(context).dividerColor,
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 '$chap',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -862,14 +865,14 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
         : BibleService.bookNames[widget.bookNum - 1];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
         title: Text(
           '$bookName $_chapter',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -880,7 +883,7 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(44),
           child: Container(
-            color: const Color(0xFF16213E),
+            color: Theme.of(context).cardColor,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
@@ -894,8 +897,8 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
                   child: Center(
                     child: Text(
                       '${_language == 'tl' ? 'Kabanata' : 'Chapter'} $_chapter / ${widget.totalChapters}',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         fontSize: 12,
                       ),
                     ),
@@ -926,10 +929,10 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
   Widget _buildVerseList(String bookName) {
     final verses = _verses ?? [];
     if (verses.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No verses found.',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
         ),
       );
     }
@@ -966,6 +969,7 @@ class _VerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onLongPress: () => _showVerseActions(context, verse),
       child: Padding(
@@ -998,8 +1002,8 @@ class _VerseTile extends StatelessWidget {
               ),
               TextSpan(
                 text: verse.displayText,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 15,
                   height: 1.65,
                   letterSpacing: 0.2,
@@ -1075,9 +1079,7 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
         SnackBar(
           content: Text(
             'Copied: ${widget.verse.reference}',
-            style: const TextStyle(color: Colors.white),
           ),
-          backgroundColor: const Color(0xFF16213E),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -1090,7 +1092,7 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.copy, size: 18, color: Colors.white54),
+          icon: Icon(Icons.copy, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
           onPressed: _copyVerse,
           tooltip: 'Copy',
           padding: EdgeInsets.zero,
@@ -1116,7 +1118,7 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
             icon: Icon(
               _saved ? Icons.bookmark : Icons.bookmark_border,
               size: 18,
-              color: _saved ? const Color(0xFFD4AF37) : Colors.white54,
+              color: _saved ? const Color(0xFFD4AF37) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             onPressed: _toggleSave,
             tooltip: _saved ? 'Remove from saved' : 'Save verse',
@@ -1135,7 +1137,7 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
 void _showVerseActions(BuildContext context, BibleVerse verse) {
   showModalBottomSheet(
     context: context,
-    backgroundColor: const Color(0xFF16213E),
+    backgroundColor: Theme.of(context).cardColor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -1244,9 +1246,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
           const SnackBar(
             content: Text(
               'Shared to your newsfeed!',
-              style: TextStyle(color: Colors.white),
             ),
-            backgroundColor: Color(0xFF1A1A2E),
             duration: Duration(seconds: 2),
           ),
         );
@@ -1282,7 +1282,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5A5A7A),
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1298,8 +1298,8 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
             const SizedBox(height: 6),
             Text(
               '"${widget.verse.displayText}"',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -1307,7 +1307,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 20),
-            const Divider(color: Color(0xFF2D2D44)),
+            Divider(color: Theme.of(context).dividerColor),
             _ActionRow(
               icon: Icons.copy,
               label: 'Copy verse',
@@ -1348,6 +1348,7 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1355,12 +1356,12 @@ class _ActionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Row(
           children: [
-            Icon(icon, color: iconColor ?? Colors.white70, size: 22),
+            Icon(icon, color: iconColor ?? cs.onSurface.withValues(alpha: 0.7), size: 22),
             const SizedBox(width: 16),
             Text(
               label,
               style: TextStyle(
-                color: onTap == null ? Colors.white38 : Colors.white,
+                color: onTap == null ? cs.onSurface.withValues(alpha: 0.35) : cs.onSurface,
                 fontSize: 15,
               ),
             ),
@@ -1467,9 +1468,7 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
       SnackBar(
         content: Text(
           'Copied: ${_verse!.reference}',
-          style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF16213E),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -1477,12 +1476,13 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     if (_loading) {
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -1502,7 +1502,7 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -1542,8 +1542,8 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
           const SizedBox(height: 10),
           Text(
             '"${_verse!.displayText}"',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: cs.onSurface,
               fontSize: 15,
               height: 1.6,
               fontStyle: FontStyle.italic,
@@ -1562,12 +1562,12 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
                     vertical: 6,
                   ),
                   child: Row(
-                    children: const [
-                      Icon(Icons.copy, size: 14, color: Colors.white54),
-                      SizedBox(width: 4),
+                    children: [
+                      Icon(Icons.copy, size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
                       Text(
                         'Copy',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12),
                       ),
                     ],
                   ),
@@ -1663,13 +1663,13 @@ class _SavedVersesScreenState extends State<SavedVersesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface),
+        title: Text(
           'Saved Verses',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
         ),
       ),
       body: _loading
@@ -1677,11 +1677,11 @@ class _SavedVersesScreenState extends State<SavedVersesScreen> {
               child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
             )
           : (_verses == null || _verses!.isEmpty)
-          ? const Center(
+          ? Center(
               child: Text(
                 'No saved verses yet.\nLong-press any verse to save it.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
               ),
             )
           : ListView.builder(
@@ -1726,12 +1726,14 @@ class _SavedVerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1749,7 +1751,7 @@ class _SavedVerseTile extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.copy, size: 18, color: Colors.white54),
+                icon: Icon(Icons.copy, size: 18, color: cs.onSurface.withValues(alpha: 0.5)),
                 onPressed: () => _copy(context),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 30),
@@ -1770,8 +1772,8 @@ class _SavedVerseTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             verse.displayText,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: cs.onSurface,
               fontSize: 14,
               height: 1.55,
             ),
@@ -1798,22 +1800,23 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFD4AF37) : const Color(0xFF1A1A2E),
+          color: selected ? const Color(0xFFD4AF37) : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? const Color(0xFFD4AF37) : const Color(0xFF2D2D44),
+            color: selected ? const Color(0xFFD4AF37) : Theme.of(context).dividerColor,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.black : Colors.white70,
+            color: selected ? Colors.black : cs.onSurface.withValues(alpha: 0.7),
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -1836,8 +1839,9 @@ class _LangToggle extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFF2D2D44),
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1859,6 +1863,7 @@ class _LangChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -1869,7 +1874,7 @@ class _LangChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: active ? Colors.black : Colors.white54,
+          color: active ? Colors.black : cs.onSurface.withValues(alpha: 0.5),
           fontSize: 12,
           fontWeight: active ? FontWeight.bold : FontWeight.normal,
         ),

@@ -189,7 +189,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       style: TextStyle(
                                         color: isMe
                                             ? Colors.white
-                                            : Colors.black87,
+                                            : Theme.of(context).colorScheme.onSurface,
                                       ),
                                     )
                                   : (m.imageUrl != null
@@ -246,9 +246,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                       const SizedBox(width: 3),
                                       Text(
                                         '$totalReactions',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
-                                          color: Color(0xFF666666),
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                         ),
                                       ),
                                     ],

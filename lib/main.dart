@@ -33,8 +33,96 @@ import 'screens/product_list_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/moderator_dashboard.dart';
 
+// Messenger-style chat bubble icon — gradient fill + white lightning bolt.
+// Adapts gradient brightness for dark / light backgrounds.
+class _MessengerChatIcon extends StatelessWidget {
+  final double size;
+  final bool isDark;
+  const _MessengerChatIcon({required this.size, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _MessengerIconPainter(isDark: isDark)),
+    );
+  }
+}
+
+class _MessengerIconPainter extends CustomPainter {
+  final bool isDark;
+  const _MessengerIconPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Gradient: blue → purple — brighter on dark bg, deeper on light bg
+    final shader = LinearGradient(
+      begin: Alignment.bottomLeft,
+      end: Alignment.topRight,
+      colors: isDark
+          ? const [Color(0xFF0A84FF), Color(0xFFBF5AF2)] // vivid on dark
+          : const [Color(0xFF0062E0), Color(0xFF9333EA)], // deeper on white
+    ).createShader(Offset.zero & size);
+
+    final fillPaint = Paint()..shader = shader;
+
+    // ── Near-circular speech bubble ──────────────────────────────────
+    final bLeft = w * 0.04;
+    final bTop = h * 0.02;
+    final bRight = w * 0.96;
+    final bBot = h * 0.84;
+    final bubblePath = Path()
+      ..addRRect(RRect.fromLTRBR(
+          bLeft, bTop, bRight, bBot, Radius.circular((bRight - bLeft) / 2)));
+
+    // ── Small downward-left tail ─────────────────────────────────────
+    final tailPath = Path()
+      ..moveTo(w * 0.15, bBot)
+      ..lineTo(w * 0.04, h * 0.97)
+      ..lineTo(w * 0.36, bBot)
+      ..close();
+
+    final bubble = Path.combine(PathOperation.union, bubblePath, tailPath);
+
+    // Subtle glow/shadow so icon reads on white in light mode
+    if (!isDark) {
+      canvas.drawPath(
+        bubble,
+        Paint()
+          ..color = const Color(0xFF0062E0).withValues(alpha: 0.22)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+      );
+    }
+
+    canvas.drawPath(bubble, fillPaint);
+
+    // ── Lightning bolt (white, rounded caps) ─────────────────────────
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.27, h * 0.62)
+        ..lineTo(w * 0.46, h * 0.37)
+        ..lineTo(w * 0.54, h * 0.52)
+        ..lineTo(w * 0.73, h * 0.28),
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.105
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MessengerIconPainter old) => old.isDark != isDark;
+}
+
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   return InkWell(
     onTap: () {
       if (icon == Icons.chat_bubble_outline) {
@@ -50,7 +138,10 @@ Widget _buildIconButton(BuildContext context, IconData icon) {
     borderRadius: BorderRadius.circular(12),
     child: Padding(
       padding: const EdgeInsets.all(6),
-      child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+      child: icon == Icons.chat_bubble_outline
+          ? _MessengerChatIcon(size: 22, isDark: isDark)
+          : Icon(icon, size: 22,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
     ),
   );
 }
@@ -620,18 +711,7 @@ class _MiniMusicPlayer extends StatelessWidget {
         child: Row(
           children: [
             // Album art
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFD4AF37), Color(0xFFE8C95A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: const Icon(Icons.album, color: Colors.white, size: 28),
-            ),
+            SongAlbumArt(size: 64, song: song),
             const SizedBox(width: 12),
             // Song info
             Expanded(
@@ -1495,6 +1575,63 @@ const List<_ReactionInfo> _reactions = [
 
 // ============================================
 
+// FADE + SLIDE-UP ANIMATION WRAPPER
+
+// ============================================
+
+class _FadeSlideIn extends StatefulWidget {
+  final Widget child;
+  final int index;
+
+  const _FadeSlideIn({required this.child, required this.index});
+
+  @override
+  State<_FadeSlideIn> createState() => _FadeSlideInState();
+}
+
+class _FadeSlideInState extends State<_FadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+    // Stagger by index (max 5 items staggered)
+    final delay = Duration(milliseconds: 60 * (widget.index % 6));
+    Future.delayed(delay, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
+  }
+}
+
+// ============================================
+
 // FEED POSTS SECTION
 
 // ============================================
@@ -1641,22 +1778,27 @@ class _FeedPostsSectionState extends State<FeedPostsSection> {
         return Column(
           children: [
             // First 3 posts
-            ...posts
-                .take(3)
-                .map((post) => PostCard(post: post, onRefresh: () {})),
+            ...posts.take(3).toList().asMap().entries.map(
+              (e) => _FadeSlideIn(
+                index: e.key,
+                child: PostCard(post: e.value, onRefresh: () {}),
+              ),
+            ),
 
-            // Marketplace preview � shown after first batch of posts
+            // Marketplace preview - shown after first batch of posts
             const SizedBox(height: 16),
             const MarketplacePreviewSection(),
             const SizedBox(height: 16),
 
             // Next 3 posts
-            ...posts
-                .skip(3)
-                .take(3)
-                .map((post) => PostCard(post: post, onRefresh: () {})),
+            ...posts.skip(3).take(3).toList().asMap().entries.map(
+              (e) => _FadeSlideIn(
+                index: e.key + 3,
+                child: PostCard(post: e.value, onRefresh: () {}),
+              ),
+            ),
 
-            // Music preview � shown after second batch of posts
+            // Music preview - shown after second batch of posts
             if (posts.length > 3) ...[
               const SizedBox(height: 16),
               const MusicSection(),
@@ -1664,9 +1806,12 @@ class _FeedPostsSectionState extends State<FeedPostsSection> {
             ],
 
             // Remaining posts
-            ...posts
-                .skip(6)
-                .map((post) => PostCard(post: post, onRefresh: () {})),
+            ...posts.skip(6).toList().asMap().entries.map(
+              (e) => _FadeSlideIn(
+                index: e.key % 6,
+                child: PostCard(post: e.value, onRefresh: () {}),
+              ),
+            ),
           ],
         );
       },
