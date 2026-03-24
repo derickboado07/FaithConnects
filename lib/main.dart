@@ -33,91 +33,101 @@ import 'screens/product_list_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/moderator_dashboard.dart';
 
-// Messenger-style chat bubble icon — gradient fill + white lightning bolt.
-// Adapts gradient brightness for dark / light backgrounds.
-class _MessengerChatIcon extends StatelessWidget {
+// ── FaithConnect Chat Icon ────────────────────────────────────────────
+// Unique design: a cross (†) made of two pill-ended arms forms the outer
+// silhouette, a small rounded tail at the bottom-right marks it as a chat
+// icon, and three white dots inside communicate "messaging".
+// Gradient adapts for dark / light backgrounds — no plain icon fallback.
+class _FaithChatIcon extends StatelessWidget {
   final double size;
   final bool isDark;
-  const _MessengerChatIcon({required this.size, required this.isDark});
+  const _FaithChatIcon({required this.size, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _MessengerIconPainter(isDark: isDark)),
+      child: CustomPaint(painter: _FaithChatPainter(isDark: isDark)),
     );
   }
 }
 
-class _MessengerIconPainter extends CustomPainter {
+class _FaithChatPainter extends CustomPainter {
   final bool isDark;
-  const _MessengerIconPainter({required this.isDark});
+  const _FaithChatPainter({required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // Gradient: blue → purple — brighter on dark bg, deeper on light bg
+    // ── Gradient: adapts to theme ──────────────────────────────────
     final shader = LinearGradient(
-      begin: Alignment.bottomLeft,
-      end: Alignment.topRight,
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
       colors: isDark
-          ? const [Color(0xFF0A84FF), Color(0xFFBF5AF2)] // vivid on dark
-          : const [Color(0xFF0062E0), Color(0xFF9333EA)], // deeper on white
+          ? const [Color(0xFFD4AF37), Color(0xFFB85E1A)] // gold → warm ember
+          : const [Color(0xFF1A56DB), Color(0xFF7E22CE)], // royal blue → violet
     ).createShader(Offset.zero & size);
+    final bodyPaint = Paint()..shader = shader;
 
-    final fillPaint = Paint()..shader = shader;
+    // ── Cross body: union of horizontal + vertical pill-shaped bars ──
+    // Centre is placed slightly up-left to leave room for the tail.
+    final cx = w * 0.44;
+    final cy = h * 0.41;
+    final thick = w * 0.30; // arm thickness
+    final crossW = w * 0.78; // total width of horizontal bar
+    final crossH = h * 0.78; // total height of vertical bar
+    final pill = Radius.circular(thick / 2); // fully curved ends
 
-    // ── Near-circular speech bubble ──────────────────────────────────
-    final bLeft = w * 0.04;
-    final bTop = h * 0.02;
-    final bRight = w * 0.96;
-    final bBot = h * 0.84;
-    final bubblePath = Path()
-      ..addRRect(RRect.fromLTRBR(
-          bLeft, bTop, bRight, bBot, Radius.circular((bRight - bLeft) / 2)));
+    final crossShape = Path.combine(
+      PathOperation.union,
+      Path()
+        ..addRRect(RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(cx, cy), width: crossW, height: thick),
+            pill)),
+      Path()
+        ..addRRect(RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(cx, cy), width: thick, height: crossH),
+            pill)),
+    );
 
-    // ── Small downward-left tail ─────────────────────────────────────
-    final tailPath = Path()
-      ..moveTo(w * 0.15, bBot)
-      ..lineTo(w * 0.04, h * 0.97)
-      ..lineTo(w * 0.36, bBot)
+    // ── Tail: a soft rounded triangle at the bottom-right ────────────
+    // Anchored to the bottom-right quadrant of the cross.
+    final tailShape = Path()
+      ..moveTo(cx + thick * 0.08, cy + crossH * 0.5 - thick * 0.18)
+      ..lineTo(cx + thick * 0.52, cy + crossH * 0.5 - thick * 0.18)
+      ..lineTo(cx + w * 0.40, cy + crossH * 0.5 + h * 0.136)
       ..close();
 
-    final bubble = Path.combine(PathOperation.union, bubblePath, tailPath);
+    final fullShape = Path.combine(PathOperation.union, crossShape, tailShape);
 
-    // Subtle glow/shadow so icon reads on white in light mode
+    // ── Light-mode shadow so icon reads on white ───────────────────
     if (!isDark) {
       canvas.drawPath(
-        bubble,
+        fullShape,
         Paint()
-          ..color = const Color(0xFF0062E0).withValues(alpha: 0.22)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+          ..color = const Color(0xFF1A56DB).withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
       );
     }
 
-    canvas.drawPath(bubble, fillPaint);
+    canvas.drawPath(fullShape, bodyPaint);
 
-    // ── Lightning bolt (white, rounded caps) ─────────────────────────
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.27, h * 0.62)
-        ..lineTo(w * 0.46, h * 0.37)
-        ..lineTo(w * 0.54, h * 0.52)
-        ..lineTo(w * 0.73, h * 0.28),
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.105
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
+    // ── Three white dots — universally understood as "chat" ────────
+    final dotPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.88)
+      ..style = PaintingStyle.fill;
+    final dotR = w * 0.048;
+    final spacing = thick * 0.38;
+    canvas.drawCircle(Offset(cx - spacing, cy + thick * 0.04), dotR, dotPaint);
+    canvas.drawCircle(Offset(cx, cy + thick * 0.04), dotR, dotPaint);
+    canvas.drawCircle(Offset(cx + spacing, cy + thick * 0.04), dotR, dotPaint);
   }
 
   @override
-  bool shouldRepaint(_MessengerIconPainter old) => old.isDark != isDark;
+  bool shouldRepaint(_FaithChatPainter old) => old.isDark != isDark;
 }
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
@@ -139,7 +149,7 @@ Widget _buildIconButton(BuildContext context, IconData icon) {
     child: Padding(
       padding: const EdgeInsets.all(6),
       child: icon == Icons.chat_bubble_outline
-          ? _MessengerChatIcon(size: 22, isDark: isDark)
+          ? _FaithChatIcon(size: 22, isDark: isDark)
           : Icon(icon, size: 22,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
     ),
