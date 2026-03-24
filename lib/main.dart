@@ -36,6 +36,9 @@ import 'screens/search_screen.dart';
 import 'screens/moderator_dashboard.dart';
 import 'screens/notification_screen.dart';
 import 'services/notification_service.dart';
+import 'screens/product_detail_screen.dart';
+import 'services/marketplace_service.dart';
+import 'models/product_model.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
@@ -2055,9 +2058,81 @@ class _PostCardState extends State<PostCard> {
 
   bool _busy = false;
 
+  // Cached author info resolved from Firestore
+  String? _resolvedName;
+  String? _resolvedAvatar;
+  String? _resolvedSharedName;
+  String? _resolvedSharedAvatar;
+
   @override
   void initState() {
     super.initState();
+    _resolveAuthor();
+  }
+
+  @override
+  void didUpdateWidget(PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.authorId != widget.post.authorId) {
+      _resolveAuthor();
+    }
+  }
+
+  Future<void> _resolveAuthor() async {
+    // If the current user is the author, use their cached data
+    final me = AuthService.instance.currentUser.value;
+    if (me != null && me.id == widget.post.authorId) {
+      if (mounted) {
+        setState(() {
+          _resolvedName = me.name;
+          _resolvedAvatar = me.avatarUrl;
+        });
+      }
+    } else {
+      // Otherwise look up from Firestore
+      final user = await AuthService.instance.getUserById(widget.post.authorId);
+      if (user != null && mounted) {
+        setState(() {
+          _resolvedName = user.name;
+          _resolvedAvatar = user.avatarUrl;
+        });
+      }
+    }
+
+    // Also resolve the shared (original) post's author if this is a shared post
+    if (widget.post.isSharedPost && widget.post.sharedPostId != null) {
+      _resolveSharedAuthor();
+    }
+  }
+
+  Future<void> _resolveSharedAuthor() async {
+    try {
+      final doc = await PostService.instance.getById(widget.post.sharedPostId!);
+      if (doc == null || !mounted) return;
+      final user = await AuthService.instance.getUserById(doc.authorId);
+      if (user != null && mounted) {
+        setState(() {
+          _resolvedSharedName = user.name;
+          _resolvedSharedAvatar = user.avatarUrl;
+        });
+      }
+    } catch (_) {
+      // Silently fail — fall back to email prefix
+    }
+  }
+
+  String get _displayName {
+    if (_resolvedName != null && _resolvedName!.isNotEmpty)
+      return _resolvedName!;
+    return widget.post.authorEmail.contains('@')
+        ? widget.post.authorEmail.split('@').first
+        : widget.post.authorEmail;
+  }
+
+  String get _displayAvatar {
+    if (_resolvedAvatar != null && _resolvedAvatar!.isNotEmpty)
+      return _resolvedAvatar!;
+    return widget.post.authorAvatarUrl;
   }
 
   String? get _myReaction {
@@ -2162,9 +2237,7 @@ class _PostCardState extends State<PostCard> {
   }
 
   Widget _authorInitial() {
-    final name = widget.post.authorEmail.contains('@')
-        ? widget.post.authorEmail.split('@').first
-        : widget.post.authorEmail;
+    final name = _displayName;
 
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
@@ -2271,9 +2344,9 @@ class _PostCardState extends State<PostCard> {
                             ),
 
                             child: ClipOval(
-                              child: widget.post.authorAvatarUrl.isNotEmpty
+                              child: _displayAvatar.isNotEmpty
                                   ? Image.network(
-                                      widget.post.authorAvatarUrl,
+                                      _displayAvatar,
 
                                       fit: BoxFit.cover,
 
@@ -2292,9 +2365,7 @@ class _PostCardState extends State<PostCard> {
 
                               children: [
                                 Text(
-                                  widget.post.authorEmail.contains('@')
-                                      ? widget.post.authorEmail.split('@').first
-                                      : widget.post.authorEmail,
+                                  _displayName,
 
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
@@ -2425,10 +2496,14 @@ class _PostCardState extends State<PostCard> {
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
                 child: _SharedPostPreview(
                   authorEmail: widget.post.sharedAuthorEmail ?? '',
-                  authorAvatarUrl: widget.post.sharedAuthorAvatarUrl ?? '',
+                  authorAvatarUrl:
+                      _resolvedSharedAvatar ??
+                      widget.post.sharedAuthorAvatarUrl ??
+                      '',
                   content: widget.post.sharedContent ?? '',
                   mediaUrl: widget.post.sharedMediaUrl,
                   mediaType: widget.post.sharedMediaType,
+                  resolvedAuthorName: _resolvedSharedName,
                 ),
               ),
 
@@ -2717,6 +2792,7 @@ class SharedPostPreview extends StatelessWidget {
   final String content;
   final String? mediaUrl;
   final String? mediaType;
+  final String? resolvedAuthorName;
 
   const SharedPostPreview({
     super.key,
@@ -2725,13 +2801,17 @@ class SharedPostPreview extends StatelessWidget {
     required this.content,
     this.mediaUrl,
     this.mediaType,
+    this.resolvedAuthorName,
   });
 
   @override
   Widget build(BuildContext context) {
-    final authorName = authorEmail.contains('@')
-        ? authorEmail.split('@').first
-        : authorEmail;
+    final authorName =
+        (resolvedAuthorName != null && resolvedAuthorName!.isNotEmpty)
+        ? resolvedAuthorName!
+        : (authorEmail.contains('@')
+              ? authorEmail.split('@').first
+              : authorEmail);
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Theme.of(context).dividerColor),
@@ -3584,6 +3664,33 @@ class ShareSheetState extends State<ShareSheet> {
   final TextEditingController _thoughtCtrl = TextEditingController();
 
   bool _sharing = false;
+  String? _resolvedAuthorName;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolvePostAuthor();
+  }
+
+  Future<void> _resolvePostAuthor() async {
+    final me = AuthService.instance.currentUser.value;
+    if (me != null && me.id == widget.post.authorId) {
+      if (mounted) setState(() => _resolvedAuthorName = me.name);
+      return;
+    }
+    final user = await AuthService.instance.getUserById(widget.post.authorId);
+    if (user != null && mounted) {
+      setState(() => _resolvedAuthorName = user.name);
+    }
+  }
+
+  String get _postAuthorName {
+    if (_resolvedAuthorName != null && _resolvedAuthorName!.isNotEmpty)
+      return _resolvedAuthorName!;
+    return widget.post.authorEmail.contains('@')
+        ? widget.post.authorEmail.split('@').first
+        : widget.post.authorEmail;
+  }
 
   @override
   void dispose() {
@@ -3680,9 +3787,7 @@ class ShareSheetState extends State<ShareSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final authorName = widget.post.authorEmail.contains('@')
-        ? widget.post.authorEmail.split('@').first
-        : widget.post.authorEmail;
+    final authorName = _postAuthorName;
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -4387,21 +4492,16 @@ class MarketplacePreviewSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-
           child: Row(
             children: [
               Text(
                 'Marketplace',
-
                 style: TextStyle(
                   fontSize: 18,
-
                   fontWeight: FontWeight.bold,
-
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -4424,188 +4524,151 @@ class MarketplacePreviewSection extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 12),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-
-          child: GridView.count(
-            shrinkWrap: true,
-
-            physics: const NeverScrollableScrollPhysics(),
-
-            crossAxisCount: 2,
-
-            crossAxisSpacing: 12,
-
-            mainAxisSpacing: 12,
-
-            childAspectRatio: 0.75,
-
-            children: [
-              _buildProductCard(
-                context,
-                'Christian T-Shirt',
-
-                '₱150.00',
-
-                'assets/Christian T-shrit.webp',
+        StreamBuilder<List<Product>>(
+          stream: MarketplaceService.instance.getProductsStream(),
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFD4AF37),
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+            final products = snap.data ?? [];
+            if (products.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 40,
+                        color: Colors.grey.shade300,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No products yet',
+                        style: TextStyle(
+                          color: Color(0xFF888888),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            final displayProducts = products.take(4).toList();
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75,
+                ),
+                itemCount: displayProducts.length,
+                itemBuilder: (context, index) {
+                  final product = displayProducts[index];
+                  return _MarketplaceProductCard(product: product);
+                },
               ),
-
-              _buildProductCard(
-                context,
-                'Bible Cover',
-
-                '₱200.00',
-
-                'assets/Bible cover.jpg',
-              ),
-
-              _buildProductCard(
-                context,
-                'Worship Journal',
-
-                '₱179.00',
-
-                'assets/worship journal.webp',
-              ),
-
-              _buildProductCard(
-                context,
-                'Prayer Beads',
-
-                '₱100.00',
-
-                'assets/prayerbeeds.webp',
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ],
     );
   }
+}
 
-  Widget _buildProductCard(BuildContext context, String title, String price, String imagePath) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+class _MarketplaceProductCard extends StatelessWidget {
+  final Product product;
+  const _MarketplaceProductCard({required this.product});
 
-        borderRadius: BorderRadius.circular(16),
-
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
-
-            blurRadius: 10,
-
-            offset: const Offset(0, 2),
-          ),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailScreen(product: product),
+        ),
       ),
-
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-
-        children: [
-          // Product Image
-          Container(
-            height: 100,
-
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product Image
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                color: const Color(0xFFF0F0F0),
               ),
-
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-
-                fit: BoxFit.cover,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: product.imageUrl.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl,
+                        width: double.infinity,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Color(0xFFCCCCCC),
+                            size: 32,
+                          ),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(
+                          Icons.storefront_outlined,
+                          color: Color(0xFFCCCCCC),
+                          size: 32,
+                        ),
+                      ),
               ),
             ),
-          ),
-
-          // Product Info
-          Padding(
-            padding: const EdgeInsets.all(12),
-
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                Text(
-                  title,
-
-                  style: TextStyle(
-                    fontSize: 13,
-
-                    fontWeight: FontWeight.w600,
-
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-
-                  maxLines: 2,
-
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  price,
-
-                  style: const TextStyle(
-                    fontSize: 15,
-
-                    fontWeight: FontWeight.bold,
-
-                    color: Color(0xFFD4AF37),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                SizedBox(
-                  width: double.infinity,
-
-                  child: GestureDetector(
-                    onTap: () {
-                      final state = context.findAncestorStateOfType<_HomePageState>();
-                      if (state != null) {
-                        state.setState(() => state._selectedIndex = 2);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-
-                        borderRadius: BorderRadius.circular(8),
-
-                        border: Border.all(color: const Color(0xFFD4AF37)),
-                      ),
-
-                      child: const Text(
-                        'View',
-
-                        textAlign: TextAlign.center,
-
-                        style: TextStyle(
-                          fontSize: 12,
-
-                          fontWeight: FontWeight.w600,
-
+            // Product Info\n            Padding(\n              padding: const EdgeInsets.all(12),\n              child: Column(\n                crossAxisAlignment: CrossAxisAlignment.start,\n                children: [\n                  Text(\n                    product.productName,\n                    style: const TextStyle(\n                      fontSize: 13,\n                      fontWeight: FontWeight.w600,\n                      color: Color(0xFF333333),\n                    ),\n                    maxLines: 2,\n                    overflow: TextOverflow.ellipsis,\n                  ),\n                  const SizedBox(height: 8),\n                  Text(\n                    '₱${product.price.toStringAsFixed(2)}',\n                    style: const TextStyle(\n                      fontSize: 15,\n                      fontWeight: FontWeight.bold,\n                      color: Color(0xFFD4AF37),\n                    ),\n                  ),\n                  const SizedBox(height: 8),\n                  SizedBox(\n                    width: double.infinity,\n                    child: Container(\n                      padding: const EdgeInsets.symmetric(vertical: 8),\n                      decoration: BoxDecoration(\n                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),\n                        borderRadius: BorderRadius.circular(8),\n                        border: Border.all(color: const Color(0xFFD4AF37)),\n                      ),\n                      child: const Text(\n                        'View',\n                        textAlign: TextAlign.center,\n                        style: TextStyle(\n                          fontSize: 12,\n                          fontWeight: FontWeight.w600,
                           color: Color(0xFFD4AF37),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4865,170 +4928,189 @@ class ProfilePreviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+    return ValueListenableBuilder<AuthUser?>(
+      valueListenable: AuthService.instance.currentUser,
+      builder: (context, user, _) {
+        if (user == null) return const SizedBox.shrink();
 
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-
-        borderRadius: BorderRadius.circular(20),
-
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-
-            blurRadius: 15,
-
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-
-      child: Column(
-        children: [
-          // Cover Photo
-          Container(
-            height: 100,
-
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFD4AF37), Color(0xFFF5E6B3)],
-
-                begin: Alignment.topLeft,
-
-                end: Alignment.bottomRight,
-              ),
-
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        return GestureDetector(
+          onTap: () {
+            final state = context.findAncestorStateOfType<_HomePageState>();
+            state?.navigateToTab(4);
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.15),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-
-            child: const Center(
-              child: Icon(Icons.landscape, size: 40, color: Colors.white),
-            ),
-          ),
-
-          // Profile Info
-          Padding(
-            padding: const EdgeInsets.all(16),
-
             child: Column(
               children: [
-                // Profile Picture
-                Transform.translate(
-                  offset: const Offset(0, -30),
-
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-
-                      shape: BoxShape.circle,
-
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.3),
-
-                          blurRadius: 10,
-                        ),
-                      ],
+                // Cover Photo / Banner
+                Container(
+                  height: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
-
-                    child: Container(
-                      width: 70,
-
-                      height: 70,
-
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-
-                        border: Border.all(
-                          color: const Color(0xFF64B5F6),
-
-                          width: 3,
-                        ),
-                      ),
-
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/Profile.jpg',
-
-                          fit: BoxFit.cover,
-
-                          width: 70,
-
-                          height: 70,
-                        ),
-                      ),
+                    gradient: user.bannerUrl.isEmpty
+                        ? const LinearGradient(
+                            colors: [Color(0xFFD4AF37), Color(0xFFF5E6B3)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
+                    child: user.bannerUrl.isNotEmpty
+                        ? Image.network(
+                            user.bannerUrl,
+                            width: double.infinity,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFFD4AF37),
+                                    Color(0xFFF5E6B3),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.landscape,
+                                  size: 40,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.landscape,
+                              size: 40,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 
-                Transform.translate(
-                  offset: const Offset(0, -20),
-
+                // Profile Info
+                Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      const Text(
-                        'Mark Frederick Boado',
-
-                        style: TextStyle(
-                          fontSize: 18,
-
-                          fontWeight: FontWeight.bold,
-
-                          color: Color(0xFF333333),
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      const Text(
-                        'Child of God • Worship Leader',
-
-                        style: TextStyle(
-                          fontSize: 13,
-
-                          color: Color(0xFF888888),
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      const Text(
-                        'Sharing my faith journey one post at a time ✝️',
-
-                        textAlign: TextAlign.center,
-
-                        style: TextStyle(
-                          fontSize: 13,
-
-                          color: Color(0xFF666666),
-
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-
-                        children: [
-                          _StatColumn(number: '2.5K', label: 'Followers'),
-
-                          Container(
-                            height: 30,
-
-                            width: 1,
-
-                            margin: const EdgeInsets.symmetric(horizontal: 20),
-
-                            color: Theme.of(context).dividerColor,
+                      // Profile Picture
+                      Transform.translate(
+                        offset: const Offset(0, -30),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                              ),
+                            ],
                           ),
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF64B5F6),
+                                width: 3,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: user.avatarUrl.isNotEmpty
+                                  ? Image.network(
+                                      user.avatarUrl,
+                                      fit: BoxFit.cover,
+                                      width: 70,
+                                      height: 70,
+                                      errorBuilder: (_, __, ___) =>
+                                          _ProfilePreviewFallback(
+                                            name: user.name,
+                                          ),
+                                    )
+                                  : _ProfilePreviewFallback(name: user.name),
+                            ),
+                          ),
+                        ),
+                      ),
 
-                          _StatColumn(number: '890', label: 'Following'),
-                        ],
+                      Transform.translate(
+                        offset: const Offset(0, -20),
+                        child: Column(
+                          children: [
+                            Text(
+                              user.name.isNotEmpty ? user.name : 'Your Name',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            if (user.bio.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                user.bio,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF888888),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                StreamBuilder<int>(
+                                  stream: AuthService.instance
+                                      .streamFollowersCount(user.id),
+                                  builder: (_, snap) => _StatColumn(
+                                    number: _fmtStatCount(snap.data ?? 0),
+                                    label: 'Followers',
+                                  ),
+                                ),
+                                Container(
+                                  height: 30,
+                                  width: 1,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  color: const Color(0xFFE0E0E0),
+                                ),
+                                StreamBuilder<int>(
+                                  stream: AuthService.instance
+                                      .streamFollowingCount(user.id),
+                                  builder: (_, snap) => _StatColumn(
+                                    number: _fmtStatCount(snap.data ?? 0),
+                                    label: 'Following',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -5036,10 +5118,38 @@ class ProfilePreviewSection extends StatelessWidget {
               ],
             ),
           ),
-        ],
+        );
+      },
+    );
+  }
+}
+
+class _ProfilePreviewFallback extends StatelessWidget {
+  final String name;
+  const _ProfilePreviewFallback({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFE8D5B7),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
+}
+
+String _fmtStatCount(int n) {
+  if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+  if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+  return '$n';
 }
 
 class _StatColumn extends StatelessWidget {
