@@ -114,6 +114,7 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
+  StreamSubscription<fb_auth.User?>? _authStateSub;
 
   Future<void> _bindCurrentUserDoc(String uid) async {
     await _userDocSub?.cancel();
@@ -142,9 +143,11 @@ class AuthService {
     });
   }
 
-  Future<void> init() async {
-    // Listen to auth state and load Firestore user
-    _auth.authStateChanges().listen((fbUser) async {
+  /// Sets up the Firebase auth state listener. Safe to call multiple times —
+  /// cancels any previous subscription before creating a new one.
+  Future<void> _setupAuthStateListener() async {
+    await _authStateSub?.cancel();
+    _authStateSub = _auth.authStateChanges().listen((fbUser) async {
       if (fbUser == null) {
         await _userDocSub?.cancel();
         _userDocSub = null;
@@ -173,6 +176,10 @@ class AuthService {
         await _bindCurrentUserDoc(fbUser.uid);
       }
     });
+  }
+
+  Future<void> init() async {
+    await _setupAuthStateListener();
     // If already signed in, trigger loading
     final cur = _auth.currentUser;
     if (cur != null) {
@@ -317,6 +324,8 @@ class AuthService {
         currentUser.value = u;
         await _bindCurrentUserDoc(uid);
       }
+      // Re-establish auth state listener (cancelled during logout)
+      await _setupAuthStateListener();
       return null;
     } on fb_auth.FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -345,6 +354,9 @@ class AuthService {
     } catch (_) {}
     await _userDocSub?.cancel();
     _userDocSub = null;
+    await _authStateSub?.cancel();
+    _authStateSub = null;
+    NotificationService.instance.stopListening();
     await _auth.signOut();
     currentUser.value = null;
   }

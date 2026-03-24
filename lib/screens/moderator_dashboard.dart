@@ -53,7 +53,7 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
             onPressed: () async {
               await AuthService.instance.logout();
               if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
+                Navigator.of(context).popUntil((route) => route.isFirst);
               }
             },
           ),
