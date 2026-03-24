@@ -77,7 +77,31 @@ class _BibleScreenState extends State<BibleScreen> {
     if (_language == value) {
       return;
     }
-    setState(() => _language = value);
+    setState(() {
+      _language = value;
+      _loading = true;
+      _error = null;
+    });
+    _loadVersion(value);
+  }
+
+  Future<void> _loadVersion(String language) async {
+    try {
+      await BibleService.instance.ensureVersionLoaded(
+        language,
+        bundle: DefaultAssetBundle.of(context),
+      );
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to load ${language.toUpperCase()}: $e';
+        });
+      }
+    }
     if (_searchActive && _searchCtrl.text.trim().isNotEmpty) {
       _runSearch(_searchCtrl.text);
     }
@@ -494,9 +518,7 @@ class _BookListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final names = language == 'tl'
-        ? BibleService.tagalogBookNames
-        : BibleService.bookNames;
+    final names = BibleService.bookNamesFor(language);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
@@ -708,7 +730,20 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
       _language = value;
       _chapterCount = null;
     });
-    _loadChapterCount();
+    _loadChapterCountForLanguage(value);
+  }
+
+  Future<void> _loadChapterCountForLanguage(String language) async {
+    try {
+      await BibleService.instance.ensureVersionLoaded(language);
+      final c = await BibleService.instance.getChapterCount(
+        widget.bookNum,
+        language: language,
+      );
+      if (mounted) setState(() => _chapterCount = c);
+    } catch (_) {
+      if (mounted) setState(() => _chapterCount = 1);
+    }
   }
 
   @override

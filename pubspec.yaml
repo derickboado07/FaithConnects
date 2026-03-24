@@ -70,6 +70,36 @@ flutter:
   assets:
     - assets/
     - lib/Bible/
+    - lib/Bible/EN-English/
+    - lib/Bible/TL-Wikang_Tagalog/
+    - lib/Bible/AKJV/
+    - lib/Bible/AMP/
+    - lib/Bible/BRG/
+    - lib/Bible/CSB/
+    - lib/Bible/EHV/
+    - lib/Bible/ESV/
+    - lib/Bible/ESVUK/
+    - lib/Bible/GNV/
+    - lib/Bible/GW/
+    - lib/Bible/ISV/
+    - lib/Bible/JUB/
+    - lib/Bible/KJ21/
+    - lib/Bible/KJV/
+    - lib/Bible/LEB/
+    - lib/Bible/MEV/
+    - lib/Bible/NASB/
+    - lib/Bible/NASB1995/
+    - lib/Bible/NET/
+    - lib/Bible/NIV/
+    - lib/Bible/NIVUK/
+    - lib/Bible/NKJV/
+    - lib/Bible/NLT/
+    - lib/Bible/NLV/
+    - lib/Bible/NOG/
+    - lib/Bible/NRSV/
+    - lib/Bible/NRSVUE/
+    - lib/Bible/WEB/
+    - lib/Bible/YLT/
     - songs/
     - lib/LOGO/
 

@@ -299,7 +299,7 @@ class BibleService {
   Future<void>? _initFuture;
   Future<void>? _discoverFuture;
 
-  bool get isInitialized => _en != null && _tl != null;
+  bool get isInitialized => _en != null || _tl != null;
 
   static List<String> bookNamesFor(String versionId) {
     return versionId == 'tl' ? tagalogBookNames : bookNames;
@@ -472,7 +472,9 @@ class BibleService {
 
   Future<List<BibleVersionInfo>> getAvailableVersions({AssetBundle? bundle}) async {
     await _discoverVersions(bundle: bundle);
-    final versions = _versionRegistry.values.toList()
+    final versions = _versionRegistry.values
+        .where((v) => v.isAvailable && !v.isPartial)
+        .toList()
       ..sort((a, b) {
         if (a.id == 'en') return -1;
         if (b.id == 'en') return 1;
@@ -806,13 +808,21 @@ class BibleService {
   }
 
   Future<void> _doInit() async {
-    // Load both translation in parallel.
+    // Load both translations in parallel, with individual error handling.
     final results = await Future.wait([
-      _loadAsset('lib/Bible/EN-English/asv.sql', 'en'),
-      _loadAsset('lib/Bible/TL-Wikang_Tagalog/tagab.sql', 'tl'),
+      _loadAsset('lib/Bible/EN-English/asv.sql', 'en').catchError((dynamic _) => <BibleVerse>[]),
+      _loadAsset('lib/Bible/TL-Wikang_Tagalog/tagab.sql', 'tl').catchError((dynamic _) => <BibleVerse>[]),
     ]);
-    _en = results[0];
-    _tl = results[1];
+    _en = results[0].isNotEmpty ? results[0] : null;
+    _tl = results[1].isNotEmpty ? results[1] : null;
+    // If English failed, don't block — other versions may still work.
+    if (_en == null && _tl == null) {
+      throw StateError(
+        'Failed to load any Bible translation. '
+        'Check that lib/Bible/EN-English/asv.sql and '
+        'lib/Bible/TL-Wikang_Tagalog/tagab.sql are valid assets.',
+      );
+    }
   }
 
   /// Load a SQL dump asset and parse all INSERT rows.
@@ -875,7 +885,24 @@ class BibleService {
     }
     const aliases = {
       'Psalms': ['Psalm'],
-      'Song of Solomon': ['Song Of Solomon'],
+      'Song of Solomon': ['Song Of Solomon', 'Song of Songs'],
+      '1 Samuel': ['I Samuel'],
+      '2 Samuel': ['II Samuel'],
+      '1 Kings': ['I Kings'],
+      '2 Kings': ['II Kings'],
+      '1 Chronicles': ['I Chronicles'],
+      '2 Chronicles': ['II Chronicles'],
+      '1 Corinthians': ['I Corinthians'],
+      '2 Corinthians': ['II Corinthians'],
+      '1 Thessalonians': ['I Thessalonians'],
+      '2 Thessalonians': ['II Thessalonians'],
+      '1 Timothy': ['I Timothy'],
+      '2 Timothy': ['II Timothy'],
+      '1 Peter': ['I Peter'],
+      '2 Peter': ['II Peter'],
+      '1 John': ['I John'],
+      '2 John': ['II John'],
+      '3 John': ['III John'],
     };
     for (final alias in aliases[bookName] ?? const <String>[]) {
       final value = decoded[alias];

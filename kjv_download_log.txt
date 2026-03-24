@@ -1,0 +1,69 @@
+[1/66] Downloading Genesis... OK (50 chapters)
+[2/66] Downloading Exodus... OK (40 chapters)
+[3/66] Downloading Leviticus... OK (27 chapters)
+[4/66] Downloading Numbers... OK (36 chapters)
+[5/66] Downloading Deuteronomy... OK (34 chapters)
+[6/66] Downloading Joshua... OK (24 chapters)
+[7/66] Downloading Judges... OK (21 chapters)
+[8/66] Downloading Ruth... OK (4 chapters)
+[9/66] Downloading 1 Samuel... FAILED: HTTP Error 404: Not Found
+[10/66] Downloading 2 Samuel... FAILED: HTTP Error 404: Not Found
+[11/66] Downloading 1 Kings... FAILED: HTTP Error 404: Not Found
+[12/66] Downloading 2 Kings... FAILED: HTTP Error 404: Not Found
+[13/66] Downloading 1 Chronicles... FAILED: HTTP Error 404: Not Found
+[14/66] Downloading 2 Chronicles... FAILED: HTTP Error 404: Not Found
+[15/66] Downloading Ezra... OK (10 chapters)
+[16/66] Downloading Nehemiah... OK (13 chapters)
+[17/66] Downloading Esther... OK (10 chapters)
+[18/66] Downloading Job... OK (42 chapters)
+[19/66] Downloading Psalms... OK (150 chapters)
+[20/66] Downloading Proverbs... OK (31 chapters)
+[21/66] Downloading Ecclesiastes... OK (12 chapters)
+[22/66] Downloading Song of Solomon... FAILED: HTTP Error 404: Not Found
+[23/66] Downloading Isaiah... OK (66 chapters)
+[24/66] Downloading Jeremiah... OK (52 chapters)
+[25/66] Downloading Lamentations... OK (5 chapters)
+[26/66] Downloading Ezekiel... OK (48 chapters)
+[27/66] Downloading Daniel... OK (12 chapters)
+[28/66] Downloading Hosea... OK (14 chapters)
+[29/66] Downloading Joel... OK (3 chapters)
+[30/66] Downloading Amos... OK (9 chapters)
+[31/66] Downloading Obadiah... OK (1 chapters)
+[32/66] Downloading Jonah... OK (4 chapters)
+[33/66] Downloading Micah... OK (7 chapters)
+[34/66] Downloading Nahum... OK (3 chapters)
+[35/66] Downloading Habakkuk... OK (3 chapters)
+[36/66] Downloading Zephaniah... OK (3 chapters)
+[37/66] Downloading Haggai... OK (2 chapters)
+[38/66] Downloading Zechariah... OK (14 chapters)
+[39/66] Downloading Malachi... OK (4 chapters)
+[40/66] Downloading Matthew... OK (28 chapters)
+[41/66] Downloading Mark... OK (16 chapters)
+[42/66] Downloading Luke... OK (24 chapters)
+[43/66] Downloading John... OK (21 chapters)
+[44/66] Downloading Acts... OK (28 chapters)
+[45/66] Downloading Romans... OK (16 chapters)
+[46/66] Downloading 1 Corinthians... FAILED: HTTP Error 404: Not Found
+[47/66] Downloading 2 Corinthians... FAILED: HTTP Error 404: Not Found
+[48/66] Downloading Galatians... OK (6 chapters)
+[49/66] Downloading Ephesians... OK (6 chapters)
+[50/66] Downloading Philippians... OK (4 chapters)
+[51/66] Downloading Colossians... OK (4 chapters)
+[52/66] Downloading 1 Thessalonians... FAILED: HTTP Error 404: Not Found
+[53/66] Downloading 2 Thessalonians... FAILED: HTTP Error 404: Not Found
+[54/66] Downloading 1 Timothy... FAILED: HTTP Error 404: Not Found
+[55/66] Downloading 2 Timothy... FAILED: HTTP Error 404: Not Found
+[56/66] Downloading Titus... OK (3 chapters)
+[57/66] Downloading Philemon... OK (1 chapters)
+[58/66] Downloading Hebrews... OK (13 chapters)
+[59/66] Downloading James... OK (5 chapters)
+[60/66] Downloading 1 Peter... FAILED: HTTP Error 404: Not Found
+[61/66] Downloading 2 Peter... FAILED: HTTP Error 404: Not Found
+[62/66] Downloading 1 John... FAILED: HTTP Error 404: Not Found
+[63/66] Downloading 2 John... FAILED: HTTP Error 404: Not Found
+[64/66] Downloading 3 John... FAILED: HTTP Error 404: Not Found
+[65/66] Downloading Jude... OK (1 chapters)
+[66/66] Downloading Revelation... OK (22 chapters)
+
+Saved to lib\Bible\KJV\KJV_bible.json (48 books)
+DONE
