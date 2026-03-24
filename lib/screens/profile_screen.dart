@@ -151,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F4F4),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: ValueListenableBuilder<AuthUser?>(
         valueListenable: AuthService.instance.currentUser,
         builder: (context, user, _) {
@@ -175,18 +175,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
+                    Text(
                       'Not logged in',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF444444),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Sign in to access your profile',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF888888)),
+                      style: TextStyle(fontSize: 14, color: Theme.of(context).hintColor),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -348,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: Theme.of(context).cardColor,
                                     width: 3,
                                   ),
                                   color: const Color(0xFFE8D5B7),
@@ -1098,9 +1098,9 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                       const SizedBox(width: 5),
                       Text(
                         '$totalReactions',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF888888),
+                          color: Theme.of(context).hintColor,
                         ),
                       ),
                     ],
@@ -1123,9 +1123,9 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                           ),
                           child: Text(
                             '${widget.post.commentCount} comment${widget.post.commentCount != 1 ? "s" : ""}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF888888),
+                              color: Theme.of(context).hintColor,
                             ),
                           ),
                         ),
@@ -1134,12 +1134,12 @@ class _ProfilePostCardState extends State<_ProfilePostCard> {
                 ),
               ),
 
-            const Padding(
-              padding: EdgeInsets.fromLTRB(14, 10, 14, 0),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
               child: Divider(
                 height: 1,
                 thickness: 0.8,
-                color: Color(0xFFEEEEEE),
+                color: Theme.of(context).dividerColor,
               ),
             ),
 
@@ -1250,9 +1250,9 @@ class _ProfileReactionPicker extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: const Color(0xFFEEEEEE)),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

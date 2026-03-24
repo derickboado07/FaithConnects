@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/music_player_service.dart';
@@ -67,40 +67,43 @@ class _MusicScreenState extends State<MusicScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFFBF8F0),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Add Song', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2A2015))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(labelText: 'Song Title', labelStyle: TextStyle(color: Color(0xFFB8A070))),
+      builder: (ctx) {
+        final t = Theme.of(ctx);
+        return AlertDialog(
+          backgroundColor: t.dialogTheme.backgroundColor ?? t.colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Add Song', style: TextStyle(fontWeight: FontWeight.w700, color: t.colorScheme.onSurface)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(labelText: 'Song Title', labelStyle: TextStyle(color: t.hintColor)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: artistCtrl,
+                decoration: InputDecoration(labelText: 'Artist', labelStyle: TextStyle(color: t.hintColor)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: TextStyle(color: t.hintColor)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: artistCtrl,
-              decoration: const InputDecoration(labelText: 'Artist', labelStyle: TextStyle(color: Color(0xFFB8A070))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Add'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF999999))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD4AF37),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed != true) return;
@@ -119,16 +122,18 @@ class _MusicScreenState extends State<MusicScreen> {
   void _confirmRemoveSong(Song song) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFFBF8F0),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Remove Song', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2A2015))),
-        content: Text('Remove "${song.title}" from your library?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF999999))),
-          ),
+      builder: (ctx) {
+        final t = Theme.of(ctx);
+        return AlertDialog(
+          backgroundColor: t.dialogTheme.backgroundColor ?? t.colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Remove Song', style: TextStyle(fontWeight: FontWeight.w700, color: t.colorScheme.onSurface)),
+          content: Text('Remove "${song.title}" from your library?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: TextStyle(color: t.hintColor)),
+            ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
@@ -142,7 +147,8 @@ class _MusicScreenState extends State<MusicScreen> {
             child: const Text('Remove'),
           ),
         ],
-      ),
+      );
+      },
     );
   }
 
@@ -157,19 +163,25 @@ class _MusicScreenState extends State<MusicScreen> {
     final currentSong = _service.currentSong;
     final isPlaying = _service.isPlaying;
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceVariant = theme.hintColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0E8),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F0E8),
+        backgroundColor: scaffoldBg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               'Worship Music',
               style: TextStyle(
-                color: Color(0xFF2A2015),
+                color: onSurface,
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.3,
@@ -178,7 +190,7 @@ class _MusicScreenState extends State<MusicScreen> {
             Text(
               'Your sacred playlist',
               style: TextStyle(
-                color: Color(0xFFB8A070),
+                color: onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -208,14 +220,14 @@ class _MusicScreenState extends State<MusicScreen> {
             child: Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F0E8),
+                color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF5F0E8),
                 shape: BoxShape.circle,
-                boxShadow: [
+                boxShadow: isDark ? [] : [
                   BoxShadow(color: Colors.white.withOpacity(0.9), blurRadius: 8, offset: const Offset(-3, -3)),
                   BoxShadow(color: const Color(0xFFD4C4A0).withOpacity(0.55), blurRadius: 8, offset: const Offset(3, 3)),
                 ],
               ),
-              child: const Icon(Icons.tune_rounded, color: Color(0xFFB8A070), size: 20),
+              child: Icon(Icons.tune_rounded, color: onSurfaceVariant, size: 20),
             ),
           ),
         ],
@@ -229,27 +241,25 @@ class _MusicScreenState extends State<MusicScreen> {
           Widget searchBar = Container(
             margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFEADF),
+              color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFEFEADF),
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                // inner-shadow illusion: dark inset bottom-right
+              boxShadow: isDark ? [] : [
                 BoxShadow(color: const Color(0xFFCDBF9A).withOpacity(0.60), blurRadius: 8, offset: const Offset(4, 4)),
-                // inner-shadow illusion: light inset top-left
                 const BoxShadow(color: Colors.white, blurRadius: 8, offset: Offset(-4, -4)),
               ],
             ),
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v),
-              style: const TextStyle(fontSize: 14, color: Color(0xFF2A2015)),
+              style: TextStyle(fontSize: 14, color: onSurface),
               decoration: InputDecoration(
                 hintText: 'Search songs or artist...',
-                hintStyle: const TextStyle(color: Color(0xFFB8A88A), fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFB8A070), size: 22),
+                hintStyle: TextStyle(color: onSurfaceVariant, fontSize: 14),
+                prefixIcon: Icon(Icons.search_rounded, color: onSurfaceVariant, size: 22),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? GestureDetector(
                         onTap: () => setState(() { _searchQuery = ''; _searchController.clear(); }),
-                        child: const Icon(Icons.close_rounded, color: Color(0xFFB8A070), size: 18),
+                        child: Icon(Icons.close_rounded, color: onSurfaceVariant, size: 18),
                       )
                     : null,
                 border: InputBorder.none,
@@ -326,7 +336,7 @@ class _MusicScreenState extends State<MusicScreen> {
                     12 * scale,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: theme.cardColor,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withValues(alpha: 0.15),
@@ -344,7 +354,7 @@ class _MusicScreenState extends State<MusicScreen> {
                           margin: EdgeInsets.only(bottom: 12 * scale),
                           child: LinearProgressIndicator(
                             value: isPlaying ? 0.4 : 0,
-                            backgroundColor: const Color(0xFFE8E8E8),
+                            backgroundColor: theme.dividerColor,
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Color(0xFFD4AF37),
                             ),
@@ -382,7 +392,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                     style: TextStyle(
                                       fontSize: 14 * scale,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF2C2C2C),
+                                      color: onSurface,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -392,7 +402,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                     currentSong.artist,
                                     style: TextStyle(
                                       fontSize: 12 * scale,
-                                      color: const Color(0xFF888888),
+                                      color: onSurfaceVariant,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -407,7 +417,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                   onPressed: _service.playPrevious,
                                   icon: const Icon(Icons.skip_previous_rounded),
                                   iconSize: 28 * scale,
-                                  color: const Color(0xFF5C5C5C),
+                                  color: theme.iconTheme.color,
                                 ),
                                 GestureDetector(
                                   onTap: () async =>
@@ -439,7 +449,7 @@ class _MusicScreenState extends State<MusicScreen> {
                                   onPressed: _service.playNext,
                                   icon: const Icon(Icons.skip_next_rounded),
                                   iconSize: 28 * scale,
-                                  color: const Color(0xFF5C5C5C),
+                                  color: theme.iconTheme.color,
                                 ),
                               ],
                             ),
@@ -457,7 +467,7 @@ class _MusicScreenState extends State<MusicScreen> {
                 Container(
                   width: constraints.maxWidth * 0.38,
                   padding: const EdgeInsets.all(16),
-                  color: Colors.white,
+                  color: theme.cardColor,
                   child: Column(
                     children: [
                       if (currentSong != null) ...[
@@ -543,6 +553,8 @@ class _SongTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -555,16 +567,16 @@ class _SongTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
-              : Colors.white,
+              : theme.cardColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFD4AF37).withValues(alpha: 0.3)
-                : const Color(0xFFEEEEEE),
+                : theme.dividerColor,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.08),
+              color: theme.shadowColor.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -618,7 +630,7 @@ class _SongTile extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? const Color(0xFFD4AF37)
-                          : const Color(0xFF2C2C2C),
+                          : theme.colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -626,9 +638,9 @@ class _SongTile extends StatelessWidget {
                   SizedBox(height: 4 * scale),
                   Text(
                     song.artist,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF888888),
+                      color: theme.hintColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -642,12 +654,12 @@ class _SongTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? const Color(0xFFD4AF37)
-                    : const Color(0xFFF5F5F5),
+                    : (isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF5F5F5)),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: isSelected ? Colors.white : const Color(0xFF888888),
+                color: isSelected ? Colors.white : theme.hintColor,
                 size: 20 * scale,
               ),
             ),
@@ -667,16 +679,18 @@ class _SoftIconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: size + 16,
         height: size + 16,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F0E8).withOpacity(0.70),
+          color: isDark ? theme.colorScheme.surfaceContainerHighest.withOpacity(0.70) : const Color(0xFFF5F0E8).withOpacity(0.70),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: const Color(0xFF7A6840), size: size),
+        child: Icon(icon, color: theme.iconTheme.color, size: size),
       ),
     );
   }
@@ -727,6 +741,8 @@ class _FullPlayerSheetState extends State<_FullPlayerSheet>
     final sh = MediaQuery.of(context).size.height;
     final sw = MediaQuery.of(context).size.width;
     final albumSize = (sw * 0.65).clamp(200.0, 310.0);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return ListenableBuilder(
       listenable: _s,
@@ -749,14 +765,21 @@ class _FullPlayerSheetState extends State<_FullPlayerSheet>
         return ConstrainedBox(
           constraints: BoxConstraints(maxHeight: sh * 0.94),
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFFFCF9F2),
-                  Color(0xFFF6EDDA),
-                  Color(0xFFF0E3C4),
-                  Color(0xFFE8D6AA),
-                ],
+                colors: isDark
+                    ? [
+                        const Color(0xFF1A1A1A),
+                        const Color(0xFF1E1A10),
+                        const Color(0xFF201810),
+                        const Color(0xFF251E0E),
+                      ]
+                    : [
+                        const Color(0xFFFCF9F2),
+                        const Color(0xFFF6EDDA),
+                        const Color(0xFFF0E3C4),
+                        const Color(0xFFE8D6AA),
+                      ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 stops: [0.0, 0.35, 0.7, 1.0],
@@ -932,10 +955,10 @@ class _FullPlayerSheetState extends State<_FullPlayerSheet>
                               Text(
                                 song.title,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF1A1408),
+                                  color: theme.colorScheme.onSurface,
                                   height: 1.15,
                                   letterSpacing: -0.5,
                                 ),
@@ -1439,14 +1462,16 @@ class _SoftCircleBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 42, height: 42,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F0E8),
+          color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF5F0E8),
           shape: BoxShape.circle,
-          boxShadow: [
+          boxShadow: isDark ? [] : [
             const BoxShadow(
               color: Colors.white,
               blurRadius: 8,
@@ -1459,7 +1484,7 @@ class _SoftCircleBtn extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, size: 24, color: const Color(0xFFAA9560)),
+        child: Icon(icon, size: 24, color: theme.hintColor),
       ),
     );
   }
@@ -1486,15 +1511,16 @@ class _CircleBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 40, height: 40,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.50),
+          color: theme.colorScheme.surface.withOpacity(0.50),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 26, color: const Color(0xFF5C5C5C)),
+        child: Icon(icon, size: 26, color: theme.iconTheme.color),
       ),
     );
   }
@@ -1508,16 +1534,18 @@ class _GlassControlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: size + 20, height: size + 20,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.45),
+          color: isDark ? Colors.white.withOpacity(0.12) : Colors.white.withOpacity(0.45),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.7)),
+          border: Border.all(color: isDark ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.7)),
         ),
-        child: Icon(icon, size: size, color: const Color(0xFF5C5C5C)),
+        child: Icon(icon, size: size, color: theme.iconTheme.color),
       ),
     );
   }

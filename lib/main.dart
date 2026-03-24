@@ -562,9 +562,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: const Text(
           'Notifications',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -624,22 +624,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  const Text(
+                  Text(
                     'No notifications yet',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF333333),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 48),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 48),
                     child: Text(
                       'When someone reacts, comments, shares your post or reacts to your comment — you\'ll see it right here.',
                       style: TextStyle(
                         fontSize: 13.5,
-                        color: Color(0xFF888888),
+                        color: Theme.of(context).hintColor,
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
@@ -668,11 +668,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: n.read ? Colors.white : const Color(0xFFFFFBEF),
+                    color: n.read
+                        ? Theme.of(context).cardColor
+                        : const Color(0xFFD4AF37).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: n.read
-                          ? const Color(0xFFEEEEEE)
+                          ? Theme.of(context).dividerColor
                           : const Color(0xFFD4AF37).withValues(alpha: 0.4),
                       width: n.read ? 1 : 1.5,
                     ),
@@ -719,15 +721,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                       ? FontWeight.w500
                                       : FontWeight.bold,
                                   fontSize: 14,
-                                  color: const Color(0xFF1A1A1A),
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 n.body,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF555555),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                   height: 1.4,
                                 ),
                               ),
@@ -737,7 +739,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: n.read
-                                      ? const Color(0xFFBBBBBB)
+                                      ? Theme.of(context).hintColor
                                       : const Color(0xFFD4AF37),
                                   fontWeight: n.read
                                       ? FontWeight.normal
@@ -880,10 +882,10 @@ class _BottomNavBarWithNotification extends StatelessWidget {
     final userId = AuthService.instance.currentUser.value?.id;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.12),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.12),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -1021,7 +1023,7 @@ class _BottomNavBarWithNotification extends StatelessWidget {
               size: 24,
               color: isActive
                   ? const Color(0xFFD4AF37)
-                  : const Color(0xFF999999),
+                  : Theme.of(context).hintColor,
             ),
             const SizedBox(height: 3),
             Text(
@@ -1031,7 +1033,7 @@ class _BottomNavBarWithNotification extends StatelessWidget {
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                 color: isActive
                     ? const Color(0xFFD4AF37)
-                    : const Color(0xFF999999),
+                    : Theme.of(context).hintColor,
               ),
             ),
           ],
