@@ -301,4 +301,5 @@ class _TopBannerNotificationState extends State<_TopBannerNotification>
       ),
     );
   }
+
 }

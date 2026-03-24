@@ -488,6 +488,17 @@ class PostService {
     );
     await docRef.set(post.toJson());
     debugPrint('PostService: shared post created successfully');
+
+    // Notify the original post owner if someone else shared their post
+    if (originalPost.authorId != authorId) {
+      // Show notification to the original post owner
+      await NotificationService.instance.showNotification(
+        userId: originalPost.authorId,
+        title: 'Your post was shared!',
+        body: '$authorEmail shared your post.',
+        type: 'share',
+      );
+    }
   }
 
   Future<List<Comment>> _loadCommentsForPost(String postId) async {
@@ -659,6 +670,9 @@ class PostService {
       'PostService: toggling reaction $reaction on post $postId by $userId',
     );
     final docRef = _db.collection('posts').doc(postId);
+    bool reactionAdded = false;
+    String? postOwnerId;
+
     await _db.runTransaction((tx) async {
       final snap = await tx.get(docRef);
       if (!snap.exists) {
@@ -666,29 +680,50 @@ class PostService {
         return;
       }
       final data = Map<String, dynamic>.from(snap.data() ?? {});
+      postOwnerId = data['authorId'] as String?;
       final reactions =
           (data['reactions'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, List<String>.from(v as List)),
           ) ??
           {};
+      // Check whether user already has this exact reaction (toggle-off scenario)
+      final existingList = reactions[reaction];
+      final wasReacted =
+          existingList != null && (existingList as List).contains(userId);
       // Remove user from ALL other reactions first (one reaction per post)
       for (final key in reactions.keys.toList()) {
         reactions[key]?.remove(userId);
       }
-      final list = reactions[reaction] ?? <String>[];
-      if (data['reactions'] != null) {
-        final existing = (data['reactions'] as Map<String, dynamic>)[reaction];
-        final wasReacted =
-            existing != null && (existing as List).contains(userId);
-        if (!wasReacted) list.add(userId);
-        // if was already reacted, we already removed it above (toggle off)
-      } else {
+      if (!wasReacted) {
+        final list = reactions[reaction] ?? <String>[];
         list.add(userId);
+        reactions[reaction] = list;
+        reactionAdded = true;
       }
-      reactions[reaction] = list;
       tx.update(docRef, {'reactions': reactions});
     });
-    debugPrint('PostService: reaction toggled successfully');
+    debugPrint(
+      'PostService: reaction toggled successfully (added=$reactionAdded)',
+    );
+
+    // Notify post owner when someone ADDS a reaction (not on toggle-off)
+    if (reactionAdded && postOwnerId != null && postOwnerId != userId) {
+      try {
+        final userDoc = await _db.collection('users').doc(userId).get();
+        final userName =
+            (userDoc.data()?['name'] as String?)?.isNotEmpty == true
+            ? userDoc.data()!['name'] as String
+            : (userDoc.data()?['email'] as String?) ?? 'Someone';
+        await NotificationService.instance.showNotification(
+          userId: postOwnerId!,
+          title: 'Someone reacted to your post!',
+          body: '$userName reacted "$reaction" to your post.',
+          type: 'reaction',
+        );
+      } catch (e) {
+        debugPrint('PostService: reaction notification failed (non-fatal): $e');
+      }
+    }
   }
 
   Future<void> addComment(
@@ -720,6 +755,18 @@ class PostService {
       debugPrint('PostService: commentsCount increment failed (non-fatal): $e');
     }
     debugPrint('PostService: comment added successfully');
+
+    // Notify the post owner if someone else commented
+    final postSnap = await _db.collection('posts').doc(postId).get();
+    final postData = postSnap.data();
+    if (postData != null && postData['authorId'] != authorId) {
+      await NotificationService.instance.showNotification(
+        userId: postData['authorId'],
+        title: 'New comment on your post!',
+        body: '$authorEmail commented: "$text"',
+        type: 'comment',
+      );
+    }
   }
 
   Future<void> sharePost(String postId) async {

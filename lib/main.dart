@@ -40,6 +40,10 @@ import 'screens/product_detail_screen.dart';
 import 'services/marketplace_service.dart';
 import 'models/product_model.dart';
 
+// Import the notification service
+import 'services/notification_service.dart';
+import 'models/notification_model.dart';
+
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
 Widget _buildIconButton(BuildContext context, IconData icon) {
   return InkWell(
@@ -117,6 +121,8 @@ void main() async {
     await AuthService.instance.init();
 
     await PostService.instance.init();
+    // Initialize notification service (local notifications)
+    // Note: context is not available here, so we will initialize in the app widget
   }
 
   await ThemeService.instance.init();
@@ -125,6 +131,7 @@ void main() async {
 }
 
 class FaithConnectApp extends StatelessWidget {
+  /// Main app widget. Initializes notification service.
   const FaithConnectApp({super.key});
 
   static ThemeData _lightTheme() => ThemeData(
@@ -372,11 +379,8 @@ class FaithConnectApp extends StatelessWidget {
         '/forgot_password': (_) => const ForgotPasswordScreen(),
 
         '/register': (_) => const RegisterScreen(),
-
         '/profile': (_) => const ProfileScreen(),
-
         '/edit_profile': (_) => const EditProfileScreen(),
-
         '/create_post': (_) => const CreatePostScreen(),
         '/messages': (_) => const ChatListScreen(),
         '/search': (_) => const SearchScreen(),
@@ -489,6 +493,284 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+// ============================================
+// NOTIFICATION SCREEN
+// ============================================
+
+class NotificationScreen extends StatefulWidget {
+  const NotificationScreen();
+
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'reaction':
+        return Icons.thumb_up_rounded;
+      case 'comment':
+        return Icons.chat_bubble_rounded;
+      case 'share':
+        return Icons.share_rounded;
+      case 'comment_reaction':
+        return Icons.favorite_rounded;
+      case 'follow':
+        return Icons.person_add_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'reaction':
+        return const Color(0xFFD4AF37);
+      case 'comment':
+        return const Color(0xFF64B5F6);
+      case 'share':
+        return const Color(0xFF9ACD32);
+      case 'comment_reaction':
+        return const Color(0xFFE57373);
+      case 'follow':
+        return const Color(0xFF81C784);
+      default:
+        return const Color(0xFF8B9DC3);
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  Future<void> _markAllRead(String userId) async {
+    await NotificationService.instance.markAllAsRead(userId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = AuthService.instance.currentUser.value?.id;
+    if (userId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Notifications')),
+        body: const Center(child: Text('Please log in to see notifications.')),
+      );
+    }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F8F8),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Notifications',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        centerTitle: false,
+        actions: [
+          StreamBuilder<List<AppNotification>>(
+            stream: NotificationService.instance.notificationsForUser(userId),
+            builder: (context, snap) {
+              final hasUnread = (snap.data ?? []).any((n) => !n.read);
+              if (!hasUnread) return const SizedBox.shrink();
+              return TextButton.icon(
+                onPressed: () => _markAllRead(userId),
+                icon: const Icon(
+                  Icons.done_all_rounded,
+                  size: 18,
+                  color: Color(0xFFD4AF37),
+                ),
+                label: const Text(
+                  'Mark all read',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: StreamBuilder<List<AppNotification>>(
+        stream: NotificationService.instance.notificationsForUser(userId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+            );
+          }
+          final notifications = snapshot.data ?? [];
+          if (notifications.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5E6B3).withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 46,
+                      color: Color(0xFFD4AF37),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'No notifications yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 48),
+                    child: Text(
+                      'When someone reacts, comments, shares your post or reacts to your comment — you\'ll see it right here.',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: Color(0xFF888888),
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            itemCount: notifications.length,
+            itemBuilder: (context, i) {
+              final n = notifications[i];
+              final iconColor = _colorForType(n.type);
+              return GestureDetector(
+                onTap: () {
+                  if (!n.read) {
+                    NotificationService.instance.markAsRead(userId, n.id);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: n.read ? Colors.white : const Color(0xFFFFFBEF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: n.read
+                          ? const Color(0xFFEEEEEE)
+                          : const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                      width: n.read ? 1 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Icon bubble
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: iconColor.withValues(alpha: 0.14),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _iconForType(n.type),
+                            color: iconColor,
+                            size: 23,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Content
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                n.title,
+                                style: TextStyle(
+                                  fontWeight: n.read
+                                      ? FontWeight.w500
+                                      : FontWeight.bold,
+                                  fontSize: 14,
+                                  color: const Color(0xFF1A1A1A),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                n.body,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF555555),
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _timeAgo(n.timestamp.toLocal()),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: n.read
+                                      ? const Color(0xFFBBBBBB)
+                                      : const Color(0xFFD4AF37),
+                                  fontWeight: n.read
+                                      ? FontWeight.normal
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Unread dot
+                        if (!n.read)
+                          Container(
+                            width: 10,
+                            height: 10,
+                            margin: const EdgeInsets.only(top: 4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFD4AF37),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
@@ -550,20 +832,15 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _buildFeed(),
-
       const BibleScreen(),
-
-      // MarketplaceScreen: full marketplace module (Buy + Sell flows).
       const MarketplaceScreen(),
-
       const MusicScreen(),
-
+      const NotificationScreen(), // Notification screen
       const ProfileScreen(),
     ];
 
     return Scaffold(
       body: pages[_selectedIndex],
-
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -579,11 +856,186 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          BottomNavBar(
+          _BottomNavBarWithNotification(
             currentIndex: _selectedIndex,
             onTap: (i) => setState(() => _selectedIndex = i),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Custom bottom nav bar with notification badge
+class _BottomNavBarWithNotification extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  const _BottomNavBarWithNotification({
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = AuthService.instance.currentUser.value?.id;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(context, Icons.home_rounded, 'Home', 0),
+              _buildNavItem(context, Icons.auto_stories_rounded, 'Bible', 1),
+              _buildNavItem(context, Icons.storefront_rounded, 'Market', 2),
+              _buildNavItem(context, Icons.music_note_rounded, 'Music', 3),
+              // Notification icon with badge
+              _buildNotificationNavItem(context, userId),
+              _buildNavItem(context, Icons.person_rounded, 'Profile', 5),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationNavItem(BuildContext context, String? userId) {
+    final isActive = 4 == currentIndex;
+    if (userId == null) {
+      return _buildNavItem(
+        context,
+        Icons.notifications_rounded,
+        'Notification',
+        4,
+      );
+    }
+    return StreamBuilder<List<AppNotification>>(
+      stream: NotificationService.instance.notificationsForUser(userId),
+      builder: (context, snap) {
+        final unread = (snap.data ?? []).where((n) => !n.read).length;
+        return InkWell(
+          onTap: () => onTap(4),
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      Icons.notifications_rounded,
+                      size: 24,
+                      color: isActive
+                          ? const Color(0xFFD4AF37)
+                          : const Color(0xFF999999),
+                    ),
+                    if (unread > 0)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE57373),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            unread > 9 ? '9+' : '$unread',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Notification',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                    color: isActive
+                        ? const Color(0xFFD4AF37)
+                        : const Color(0xFF999999),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    int idx,
+  ) {
+    final isActive = idx == currentIndex;
+    return InkWell(
+      onTap: () => onTap(idx),
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFFD4AF37).withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: isActive
+                  ? const Color(0xFFD4AF37)
+                  : const Color(0xFF999999),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive
+                    ? const Color(0xFFD4AF37)
+                    : const Color(0xFF999999),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -901,15 +1353,15 @@ class TopAppBarSection extends StatelessWidget {
 
 // ============================================
 
-// Daily gradient themes � cycles through by day-of-week.
+// Daily gradient themes ? cycles through by day-of-week.
 const List<List<Color>> _verseGradients = [
-  [Color(0xFF8B2FC9), Color(0xFF3A1078)], // Sunday    � royal purple
-  [Color(0xFFB5451B), Color(0xFF6E2510)], // Monday    � warm terracotta
-  [Color(0xFF0F4C75), Color(0xFF1B262C)], // Tuesday   � deep ocean
-  [Color(0xFF2D6A4F), Color(0xFF1B4332)], // Wednesday � forest green
-  [Color(0xFFB98B2D), Color(0xFF7A5B10)], // Thursday  � golden amber
-  [Color(0xFF1D3461), Color(0xFF5E3384)], // Friday    � midnight violet
-  [Color(0xFF6B2D5E), Color(0xFF3A1042)], // Saturday  � deep rose
+  [Color(0xFF8B2FC9), Color(0xFF3A1078)], // Sunday    ? royal purple
+  [Color(0xFFB5451B), Color(0xFF6E2510)], // Monday    ? warm terracotta
+  [Color(0xFF0F4C75), Color(0xFF1B262C)], // Tuesday   ? deep ocean
+  [Color(0xFF2D6A4F), Color(0xFF1B4332)], // Wednesday ? forest green
+  [Color(0xFFB98B2D), Color(0xFF7A5B10)], // Thursday  ? golden amber
+  [Color(0xFF1D3461), Color(0xFF5E3384)], // Friday    ? midnight violet
+  [Color(0xFF6B2D5E), Color(0xFF3A1042)], // Saturday  ? deep rose
 ];
 
 class DailyVerseSection extends StatefulWidget {
@@ -1331,7 +1783,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                   const SizedBox(height: 6),
                   if (!_loading && _verse != null)
                     Text(
-                      '${_verse!.reference} � ${_verse!.translationLabel}',
+                      '${_verse!.reference} ? ${_verse!.translationLabel}',
                       style: const TextStyle(
                         color: Color(0xFFFFD700),
                         fontSize: 13,
@@ -1362,7 +1814,7 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                         const SizedBox(height: 6),
                         Text(
                           _loadError != null
-                              ? 'Bible database is loading�\nSwitch language to retry.'
+                              ? 'Bible database is loading?\nSwitch language to retry.'
                               : 'Verse not available.',
                           style: const TextStyle(
                             color: Colors.white54,
@@ -2007,7 +2459,7 @@ class _FeedPostsSectionState extends State<FeedPostsSection> {
                 .take(3)
                 .map((post) => PostCard(post: post, onRefresh: () {})),
 
-            // Marketplace preview � shown after first batch of posts
+            // Marketplace preview ? shown after first batch of posts
             const SizedBox(height: 16),
             const MarketplacePreviewSection(),
             const SizedBox(height: 16),
@@ -2018,7 +2470,7 @@ class _FeedPostsSectionState extends State<FeedPostsSection> {
                 .take(3)
                 .map((post) => PostCard(post: post, onRefresh: () {})),
 
-            // Music preview � shown after second batch of posts
+            // Music preview ? shown after second batch of posts
             if (posts.length > 3) ...[
               const SizedBox(height: 16),
               const MusicSection(),
@@ -2296,7 +2748,7 @@ class _PostCardState extends State<PostCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-            // ── Header ──────────────────────────────
+            // -- Header ------------------------------
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 6, 0),
 
@@ -2476,7 +2928,7 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-            // ── Content ─────────────────────────────
+            // -- Content -----------------------------
             if (widget.post.content.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -2524,7 +2976,7 @@ class _PostCardState extends State<PostCard> {
                 ),
               ),
 
-            // ── Reaction Summary ─────────────────────
+            // -- Reaction Summary ---------------------
             if (totalReactions > 0 || widget.post.commentCount > 0)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -2608,7 +3060,7 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-            // ── Reaction picker + Action row ─────────
+            // -- Reaction picker + Action row ---------
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
 
@@ -2668,7 +3120,7 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
-// ─── React Button ─────────────────────────────────────────────────────────────
+// --- React Button -------------------------------------------------------------
 
 class _ReactButton extends StatelessWidget {
   final String? myReaction;
@@ -2727,7 +3179,7 @@ class _ReactButton extends StatelessWidget {
   }
 }
 
-// ─── Generic Action Button ─────────────────────────────────────────────────────
+// --- Generic Action Button -----------------------------------------------------
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
@@ -2782,7 +3234,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ─── Reaction Picker Bubble ───────────────────────────────────────────────────
+// --- Reaction Picker Bubble ---------------------------------------------------
 
 // --- Shared Post Preview Card -------------------------------------------------
 /// Shows the embedded original post inside a share post card.
@@ -3004,7 +3456,7 @@ class _ReactionPickerBubble extends StatelessWidget {
   }
 }
 
-// ─── Comments Bottom Sheet ────────────────────────────────────────────────────
+// --- Comments Bottom Sheet ----------------------------------------------------
 
 class CommentsSheet extends StatefulWidget {
   final Post post;
@@ -3374,7 +3826,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
   }
 }
 
-// ─── Share Sheet (Facebook-style) ─────────────────────────────────────────────
+// --- Share Sheet (Facebook-style) ---------------------------------------------
 
 // --- Comment Card (with full reaction picker) ------------------------------
 
@@ -4077,7 +4529,7 @@ class ShareSheetState extends State<ShareSheet> {
 
                       Text(
                         widget.post.content.length > 100
-                            ? '${widget.post.content.substring(0, 100)}…'
+                            ? '${widget.post.content.substring(0, 100)}�'
                             : widget.post.content,
 
                         style: TextStyle(
