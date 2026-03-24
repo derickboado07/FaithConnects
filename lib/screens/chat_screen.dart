@@ -543,6 +543,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final isGroup = widget.conversation?.type == 'group';
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 0,
         title: _isSearching
             ? TextField(
                 controller: _searchCtrl,
@@ -555,103 +559,33 @@ class _ChatScreenState extends State<ChatScreen> {
                   border: InputBorder.none,
                 ),
               )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FutureBuilder<String>(
-                    future: _fetchPeerName(),
-                    builder: (context, snap) => Text(
-                      snap.data ?? 'Chat',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  // Show peer status below name (only for direct chats)
-                  if (!isGroup && widget.peerId.isNotEmpty)
-                    UserStatusText(
-                      uid: widget.peerId,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                ],
-              ),
-        leading: widget.conversation != null
-            ? StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('conversations')
-                    .doc(widget.convoId)
-                    .snapshots(),
-                builder: (context, convoSnap) {
-                  final convoData =
-                      convoSnap.data?.data() as Map<String, dynamic>?;
-                  final livePhotoUrl =
-                      convoData?['photoUrl'] as String? ??
-                      widget.conversation!.photoUrl;
-                  final liveName =
-                      convoData?['name'] as String? ??
-                      widget.conversation!.name ??
-                      '';
+            : widget.conversation != null
+                ? StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('conversations')
+                        .doc(widget.convoId)
+                        .snapshots(),
+                    builder: (context, convoSnap) {
+                      final convoData =
+                          convoSnap.data?.data() as Map<String, dynamic>?;
+                      final livePhotoUrl =
+                          convoData?['photoUrl'] as String? ??
+                          widget.conversation!.photoUrl;
+                      final liveName =
+                          convoData?['name'] as String? ??
+                          widget.conversation!.name ??
+                          '';
 
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.grey.shade200,
-                      child: ClipOval(
-                        child: (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
-                            ? Image.network(
-                                livePhotoUrl,
-                                width: 36,
-                                height: 36,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (ctx, child, progress) {
-                                  if (progress == null) return child;
-                                  return const SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (ctx, err, st) {
-                                  final initials = (liveName.isNotEmpty)
-                                      ? liveName
-                                            .trim()
-                                            .split(RegExp('\\s+'))
-                                            .where((s) => s.isNotEmpty)
-                                            .map((s) => s[0])
-                                            .take(2)
-                                            .join()
-                                            .toUpperCase()
-                                      : 'G';
-                                  return SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: Center(
-                                      child: Text(
-                                        initials,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              )
-                            : SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: Center(
-                                  child: Text(
+                      return Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.grey.shade200,
+                            backgroundImage: (livePhotoUrl != null && livePhotoUrl.isNotEmpty)
+                                ? NetworkImage(livePhotoUrl)
+                                : null,
+                            child: (livePhotoUrl == null || livePhotoUrl.isEmpty)
+                                ? Text(
                                     (liveName.isNotEmpty)
                                         ? liveName
                                               .trim()
@@ -664,16 +598,69 @@ class _ChatScreenState extends State<ChatScreen> {
                                         : 'G',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF5C5C5C),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  liveName.isNotEmpty ? liveName : 'Chat',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2C2C2C),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (!isGroup && widget.peerId.isNotEmpty)
+                                  UserStatusText(
+                                    uid: widget.peerId,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.normal,
+                                      color: Color(0xFF888888),
                                     ),
                                   ),
-                                ),
-                              ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FutureBuilder<String>(
+                        future: _fetchPeerName(),
+                        builder: (context, snap) => Text(
+                          snap.data ?? 'Chat',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2C2C2C),
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                },
-              )
-            : null,
+                      if (!isGroup && widget.peerId.isNotEmpty)
+                        UserStatusText(
+                          uid: widget.peerId,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.normal,
+                            color: Color(0xFF888888),
+                          ),
+                        ),
+                    ],
+                  ),
         actions: [
           // Voice call button
           IconButton(

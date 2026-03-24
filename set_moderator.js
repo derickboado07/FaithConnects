@@ -32,6 +32,7 @@ async function main() {
 
   await ref.update({
     role:   'moderator',
+    isModerator: true,
     status: 'active',
   });
 

@@ -24,11 +24,16 @@ class OnlineIndicator extends StatelessWidget {
       builder: (context, snap) {
         final data = snap.data;
         final isOnline = data?['isOnline'] == true;
-        final lastActive = (data?['lastActive'] ?? '') as String;
+        final rawLastActive = data?['lastActive'];
         bool showDot = isOnline;
-        if (!isOnline && lastActive.isNotEmpty) {
+        if (!isOnline && rawLastActive != null) {
           try {
-            final dt = DateTime.parse(lastActive);
+            final DateTime dt;
+            if (rawLastActive is Timestamp) {
+              dt = rawLastActive.toDate();
+            } else {
+              dt = DateTime.parse(rawLastActive.toString());
+            }
             showDot = DateTime.now().difference(dt).inSeconds < 60;
           } catch (_) {}
         }
@@ -62,7 +67,10 @@ class UserStatusText extends StatelessWidget {
       builder: (context, snap) {
         final data = snap.data;
         final isOnline = data?['isOnline'] == true;
-        final lastActive = (data?['lastActive'] ?? '') as String;
+        final rawLastActive = data?['lastActive'];
+        final lastActive = rawLastActive is Timestamp
+            ? rawLastActive.toDate().toIso8601String()
+            : (rawLastActive is String ? rawLastActive : '');
         String text;
         if (isOnline) {
           text = 'Active now';

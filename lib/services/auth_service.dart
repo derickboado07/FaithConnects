@@ -60,7 +60,7 @@ class AuthUser {
       avatarUrl: data['avatarUrl'] as String? ?? '',
       bannerUrl: data['bannerUrl'] as String? ?? '',
       verseBackground: data['verseBackground'] as String? ?? '',
-      isModerator: data['isModerator'] as bool? ?? false,
+      isModerator: (data['isModerator'] as bool? ?? false) || (data['role'] as String? ?? '') == 'moderator',
     );
   }
 

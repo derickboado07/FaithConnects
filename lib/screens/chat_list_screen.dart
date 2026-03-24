@@ -207,8 +207,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               if (!_isSearching) _buildNotesRow(myUid, peerUids),
               // ── Conversation list ──
               Expanded(
-                child: ListView.builder(
+                child: ListView.separated(
                   itemCount: convosToShow.length,
+                  separatorBuilder: (context, i) => const Divider(height: 1, indent: 72, endIndent: 16),
                   itemBuilder: (context, i) {
                     final c = convosToShow[i];
                     final peerId = c.participants.isNotEmpty
@@ -497,60 +498,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (note.isEmpty) return const SizedBox.shrink();
     return Positioned(
       top: 0,
-      left: -12,
-      right: -12,
+      left: 0,
+      right: 0,
       child: Center(
         child: GestureDetector(
           onTap: onReply,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 140),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            constraints: const BoxConstraints(maxWidth: 84),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
               border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  note,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2C2C2C),
-                    height: 1.3,
-                  ),
-                ),
-                if (onReply != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.reply, size: 11, color: Color(0xFFD4AF37)),
-                      SizedBox(width: 3),
-                      Text(
-                        'Reply',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Color(0xFFD4AF37),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+            child: Text(
+              note,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2C2C2C),
+                height: 1.2,
+              ),
             ),
           ),
         ),
@@ -614,7 +592,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 children: [
                   SizedBox(
                     width: 88,
-                    height: 88,
+                    height: 100,
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -626,6 +604,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: Container(
                             width: 76,
                             height: 76,
+                            clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: hasMyDay
@@ -656,6 +635,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       children: [
                                         Image.network(
                                           thumbUrl,
+                                          width: 70,
+                                          height: 70,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               UserAvatar(
@@ -1024,7 +1005,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 children: [
                   SizedBox(
                     width: 88,
-                    height: 88,
+                    height: 100,
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -1036,6 +1017,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: Container(
                             width: 76,
                             height: 76,
+                            clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: hasMyDay
@@ -1066,6 +1048,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       children: [
                                         Image.network(
                                           thumbUrl,
+                                          width: 70,
+                                          height: 70,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
                                               UserAvatar(
@@ -1112,17 +1096,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         // Note bubble overlay — last child so it renders on top
                         if (hasNote)
-                          _buildNoteBubble(
-                            note,
-                            onReply: () => _showNoteViewer(
-                              context,
-                              rawName,
-                              avatar,
-                              note,
-                              peerId: uid,
-                              peerName: rawName,
-                            ),
-                          ),
+                          _buildNoteBubble(note),
                       ],
                     ),
                   ),

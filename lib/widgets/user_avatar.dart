@@ -36,10 +36,10 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = (photoUrl?.isNotEmpty == true) ? photoUrl! : null;
 
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: _bg,
-      child: ClipOval(
+    return ClipOval(
+      child: CircleAvatar(
+        radius: radius,
+        backgroundColor: _bg,
         child: url != null
             ? Image.network(
                 url,
