@@ -151,6 +151,15 @@ class _MusicScreenState extends State<MusicScreen>
     );
   }
 
+  void _showSettings() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SettingsSheet(service: _svc),
+    );
+  }
+
   void _showSongDetail(Song song, int index) {
     _svc.playSong(song, index, _filteredSongs);
     showModalBottomSheet(
@@ -242,7 +251,7 @@ class _MusicScreenState extends State<MusicScreen>
             icon: Icons.tune_rounded,
             tooltip: 'Settings',
             isDark: isDark,
-            onTap: () {},
+            onTap: _showSettings,
           ),
         ],
       ),
@@ -1457,8 +1466,7 @@ class _RecordSheetState extends State<_RecordSheet>
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+        vsync: this, duration: const Duration(milliseconds: 1200));
   }
 
   @override
@@ -1469,20 +1477,27 @@ class _RecordSheetState extends State<_RecordSheet>
   }
 
   void _toggleRecording() {
-    setState(() {
-      if (_isRecording) {
+    if (_isRecording) {
+      // Stop recording
+      setState(() {
         _isRecording = false;
         _timer?.cancel();
-        // Save recording (in production, actual audio data would be saved)
-        _showSaveDialog();
-      } else {
+        _pulseCtrl.stop();
+        _pulseCtrl.reset();
+      });
+      // Show save dialog AFTER setState completes
+      _showSaveDialog();
+    } else {
+      // Start recording
+      setState(() {
         _isRecording = true;
         _seconds = 0;
+        _pulseCtrl.repeat(reverse: true);
         _timer = Timer.periodic(const Duration(seconds: 1), (_) {
           setState(() => _seconds++);
         });
-      }
-    });
+      });
+    }
   }
 
   void _showSaveDialog() async {
@@ -1917,11 +1932,30 @@ class _SongDetailSheetState extends State<_SongDetailSheet>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _ControlBtn(
-                        icon: Icons.shuffle_rounded,
-                        size: 22,
-                        isDark: isDark,
-                        onTap: () {}),
+                    // Shuffle button
+                    GestureDetector(
+                      onTap: () {
+                        _s.toggleShuffle();
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _s.isShuffling
+                              ? gold.withValues(alpha: 0.2)
+                              : isDark
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : Colors.black.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.shuffle_rounded,
+                            size: 22,
+                            color: _s.isShuffling
+                                ? gold
+                                : Theme.of(context).iconTheme.color),
+                      ),
+                    ),
                     _ControlBtn(
                         icon: Icons.skip_previous_rounded,
                         size: 32,
@@ -1957,11 +1991,39 @@ class _SongDetailSheetState extends State<_SongDetailSheet>
                         size: 32,
                         isDark: isDark,
                         onTap: _s.playNext),
-                    _ControlBtn(
-                        icon: Icons.repeat_rounded,
-                        size: 22,
-                        isDark: isDark,
-                        onTap: () {}),
+                    // Repeat button
+                    GestureDetector(
+                      onTap: () {
+                        _s.cycleRepeat();
+                        setState(() {});
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _s.repeatMode != RepeatMode.none
+                              ? gold.withValues(alpha: 0.2)
+                              : isDark
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : Colors.black.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(
+                              _s.repeatMode == RepeatMode.one
+                                  ? Icons.repeat_one_rounded
+                                  : Icons.repeat_rounded,
+                              size: 22,
+                              color: _s.repeatMode != RepeatMode.none
+                                  ? gold
+                                  : Theme.of(context).iconTheme.color,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -3115,6 +3177,285 @@ class _LyricsSheetState extends State<_LyricsSheet> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SETTINGS SHEET
+// ═══════════════════════════════════════════════════════════════════════
+class _SettingsSheet extends StatefulWidget {
+  final MusicPlayerService service;
+  const _SettingsSheet({required this.service});
+  @override
+  State<_SettingsSheet> createState() => _SettingsSheetState();
+}
+
+class _SettingsSheetState extends State<_SettingsSheet> {
+  MusicPlayerService get _s => widget.service;
+
+  @override
+  void initState() {
+    super.initState();
+    _s.addListener(_rebuild);
+  }
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _s.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final gold = const Color(0xFFD4AF37);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: theme.hintColor.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text('Music Settings',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.close_rounded,
+                        color: theme.hintColor, size: 22),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          // ── Playback section ──
+          _SettingsSectionHeader(title: 'Playback', isDark: isDark),
+          // Repeat mode
+          _SettingsTile(
+            icon: _s.repeatMode == RepeatMode.one
+                ? Icons.repeat_one_rounded
+                : Icons.repeat_rounded,
+            gold: gold,
+            isDark: isDark,
+            title: 'Repeat',
+            subtitle: switch (_s.repeatMode) {
+              RepeatMode.none => 'Off',
+              RepeatMode.all => 'Repeat All',
+              RepeatMode.one => 'Repeat One',
+            },
+            trailing: GestureDetector(
+              onTap: () {
+                _s.cycleRepeat();
+                setState(() {});
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _s.repeatMode != RepeatMode.none
+                      ? gold.withValues(alpha: 0.15)
+                      : isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  switch (_s.repeatMode) {
+                    RepeatMode.none => 'Off',
+                    RepeatMode.all => 'All',
+                    RepeatMode.one => 'One',
+                  },
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _s.repeatMode != RepeatMode.none
+                          ? gold
+                          : theme.hintColor),
+                ),
+              ),
+            ),
+          ),
+          // Shuffle
+          _SettingsTile(
+            icon: Icons.shuffle_rounded,
+            gold: gold,
+            isDark: isDark,
+            title: 'Shuffle',
+            subtitle: _s.isShuffling ? 'On' : 'Off',
+            trailing: Switch(
+              value: _s.isShuffling,
+              onChanged: (_) {
+                _s.toggleShuffle();
+                setState(() {});
+              },
+              activeTrackColor: gold,
+            ),
+          ),
+          // Playback speed
+          _SettingsTile(
+            icon: Icons.speed_rounded,
+            gold: gold,
+            isDark: isDark,
+            title: 'Playback Speed',
+            subtitle: '${_s.speed.toStringAsFixed(2)}x',
+            trailing: SizedBox(
+              width: 130,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: gold,
+                  inactiveTrackColor: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.06),
+                  thumbColor: gold,
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  trackHeight: 3,
+                  overlayShape: SliderComponentShape.noOverlay,
+                ),
+                child: Slider(
+                  min: 0.25,
+                  max: 2.0,
+                  divisions: 7,
+                  value: _s.speed,
+                  onChanged: (v) => _s.setSpeed(v),
+                ),
+              ),
+            ),
+          ),
+          // ── About section ──
+          _SettingsSectionHeader(title: 'About', isDark: isDark),
+          _SettingsTile(
+            icon: Icons.info_outline_rounded,
+            gold: gold,
+            isDark: isDark,
+            title: 'Version',
+            subtitle: 'FaithConnects 1.0.0',
+            trailing: null,
+          ),
+          const SizedBox(height: 8),
+        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  final String title;
+  final bool isDark;
+  const _SettingsSectionHeader({required this.title, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 4),
+      child: Row(
+        children: [
+          Text(title.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: theme.hintColor,
+                  letterSpacing: 1.2)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+                thickness: 1,
+                color: theme.dividerColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final Color gold;
+  final bool isDark;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+  const _SettingsTile({
+    required this.icon,
+    required this.gold,
+    required this.isDark,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: gold.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: gold, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface)),
+                  Text(subtitle,
+                      style:
+                          TextStyle(fontSize: 12, color: theme.hintColor)),
+                ],
+              ),
+            ),
+            ?trailing,
+          ],
+        ),
       ),
     );
   }

@@ -190,8 +190,27 @@ class MusicPlayerService extends ChangeNotifier {
   }
 
   void _autoPlayNext() {
-    if (_playlist.isNotEmpty && _currentIndex < _playlist.length - 1) {
+    if (_repeatMode == RepeatMode.one && _currentSong != null) {
+      // Repeat the same song
+      playSong(_currentSong!, _currentIndex, _playlist);
+      return;
+    }
+
+    if (_shuffle && _playlist.length > 1) {
+      final rng = DateTime.now().millisecondsSinceEpoch;
+      int nextIdx;
+      do {
+        nextIdx = rng % _playlist.length;
+      } while (nextIdx == _currentIndex && _playlist.length > 1);
+      playSong(_playlist[nextIdx], nextIdx, _playlist);
+      return;
+    }
+
+    if (_currentIndex < _playlist.length - 1) {
       playSong(_playlist[_currentIndex + 1], _currentIndex + 1, _playlist);
+    } else if (_repeatMode == RepeatMode.all && _playlist.isNotEmpty) {
+      // Wrap around to the beginning
+      playSong(_playlist[0], 0, _playlist);
     } else {
       _isPlaying = false;
       notifyListeners();
