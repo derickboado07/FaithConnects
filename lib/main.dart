@@ -39,9 +39,6 @@ import 'services/notification_service.dart';
 import 'screens/product_detail_screen.dart';
 import 'services/marketplace_service.dart';
 import 'models/product_model.dart';
-
-// Import the notification service
-import 'services/notification_service.dart';
 import 'models/notification_model.dart';
 
 // Top-app-bar icon helper (top-level so multiple widgets can use it)
@@ -604,6 +601,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
               child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
             );
           }
+          if (snapshot.hasError) {
+            debugPrint('NotificationScreen: stream error: ${snapshot.error}');
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Unable to load notifications.\nPlease try again later.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            );
+          }
           final notifications = snapshot.data ?? [];
           if (notifications.isEmpty) {
             return Center(
@@ -787,10 +800,17 @@ class _HomePageState extends State<HomePage> {
       AuthService.instance.setPresence(true);
       AuthService.instance.updateLastActive();
     } catch (_) {}
+    // Start listening for incoming notifications so the current user
+    // sees real-time in-app banners when someone reacts/comments/follows.
+    final userId = AuthService.instance.currentUser.value?.id;
+    if (userId != null) {
+      NotificationService.instance.startListeningForUser(userId);
+    }
   }
 
   @override
   void dispose() {
+    NotificationService.instance.stopListening();
     WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     super.dispose();
   }
@@ -923,6 +943,9 @@ class _BottomNavBarWithNotification extends StatelessWidget {
       stream: NotificationService.instance.notificationsForUser(userId),
       builder: (context, snap) {
         final unread = (snap.data ?? []).where((n) => !n.read).length;
+        if (snap.hasError) {
+          debugPrint('BottomNav: notification badge stream error: ${snap.error}');
+        }
         return InkWell(
           onTap: () => onTap(4),
           borderRadius: BorderRadius.circular(14),
