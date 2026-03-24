@@ -1,7 +1,8 @@
-import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
+enum RepeatMode { none, all, one }
 
 class Song {
   final String title;
@@ -207,5 +208,53 @@ class MusicPlayerService extends ChangeNotifier {
     if (_playlist.isNotEmpty && _currentIndex > 0) {
       playSong(_playlist[_currentIndex - 1], _currentIndex - 1, _playlist);
     }
+  }
+
+  // ── Playback speed ──
+  double _speed = 1.0;
+  double get speed => _speed;
+
+  Future<void> setSpeed(double s) async {
+    _speed = s.clamp(0.25, 2.0);
+    await _player.setPlaybackRate(_speed);
+    notifyListeners();
+  }
+
+  // ── Loop / Shuffle ──
+  RepeatMode _repeatMode = RepeatMode.none;
+  bool _shuffle = false;
+
+  RepeatMode get repeatMode => _repeatMode;
+  bool get isShuffling => _shuffle;
+
+  void cycleRepeat() {
+    switch (_repeatMode) {
+      case RepeatMode.none:
+        _repeatMode = RepeatMode.all;
+      case RepeatMode.all:
+        _repeatMode = RepeatMode.one;
+      case RepeatMode.one:
+        _repeatMode = RepeatMode.none;
+    }
+    notifyListeners();
+  }
+
+  void toggleShuffle() {
+    _shuffle = !_shuffle;
+    notifyListeners();
+  }
+
+  // ── Favorites ──
+  final Set<String> _favorites = {};
+  Set<String> get favorites => Set.unmodifiable(_favorites);
+
+  bool isFavorite(String title) => _favorites.contains(title);
+  void toggleFavorite(String title) {
+    if (_favorites.contains(title)) {
+      _favorites.remove(title);
+    } else {
+      _favorites.add(title);
+    }
+    notifyListeners();
   }
 }
