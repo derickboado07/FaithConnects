@@ -20,6 +20,7 @@ class AuthUser {
   final String note; // Short status message (Messenger-like note)
   final String role;
   final String status;
+  final String verseBackground;
 
   AuthUser({
     required this.id,
@@ -34,6 +35,7 @@ class AuthUser {
     this.note = '',
     this.role = 'user',
     this.status = 'active',
+    this.verseBackground = '',
   });
 
   bool get isModerator => role == 'moderator';
@@ -50,6 +52,7 @@ class AuthUser {
     String? note,
     String? role,
     String? status,
+    String? verseBackground,
   }) {
     return AuthUser(
       id: id,
@@ -64,6 +67,7 @@ class AuthUser {
       note: note ?? this.note,
       role: role ?? this.role,
       status: status ?? this.status,
+      verseBackground: verseBackground ?? this.verseBackground,
     );
   }
 
@@ -80,6 +84,7 @@ class AuthUser {
     'note': note,
     'role': role,
     'status': status,
+    'verseBackground': verseBackground,
   };
 
   static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
@@ -95,6 +100,7 @@ class AuthUser {
     note: j['note'] ?? '',
     role: j['role'] ?? 'user',
     status: j['status'] ?? 'active',
+    verseBackground: j['verseBackground'] ?? '',
   );
 }
 
@@ -419,6 +425,24 @@ class AuthService {
     }
   }
 
+  Future<String?> _uploadVerseBackground(String uid, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+      final ref = _storage.ref().child('verse_backgrounds').child(uid).child('current');
+      final filename = localPath.split(RegExp(r'[/\\]')).last;
+      final task = await ref.putFile(
+        file,
+        SettableMetadata(contentType: _mimeFromFilename(filename)),
+      );
+      final url = await task.ref.getDownloadURL();
+      return url;
+    } catch (e) {
+      debugPrint('AuthService: verse background upload failed: $e');
+      return null;
+    }
+  }
+
   String _mimeFromFilename(String filename) {
     final ext = filename.contains('.')
         ? filename.split('.').last.toLowerCase()
@@ -455,6 +479,19 @@ class AuthService {
     }
   }
 
+  Future<void> _tryDeleteStorageFileFromUrl(String? url) async {
+    if (url == null || url.isEmpty) return;
+    if (!url.contains('firebasestorage.googleapis.com') &&
+        !url.contains('storage.googleapis.com')) {
+      return;
+    }
+    try {
+      await _storage.refFromURL(url).delete();
+    } catch (_) {
+      // Ignore missing files or non-storage URLs.
+    }
+  }
+
   Future<bool> updateProfile({
     required String email,
     String? name,
@@ -465,6 +502,7 @@ class AuthService {
     String? avatarPath,
     Uint8List? avatarBytes,
     String? avatarFilename,
+    String? avatarUrl,
     String? bannerPath,
     Uint8List? bannerBytes,
     String? bannerFilename,
@@ -480,7 +518,7 @@ class AuthService {
       final doc = q.docs.first;
       final uid = doc.id;
 
-      String? avatarUrl = doc.data()['avatar'];
+      String? currentAvatar = doc.data()['avatar'];
       if (avatarBytes != null && avatarFilename != null) {
         // Web: upload raw bytes directly to Firebase Storage
         final uploaded = await _uploadImageBytes(
@@ -488,7 +526,7 @@ class AuthService {
           avatarBytes,
           avatarFilename,
         );
-        if (uploaded != null) avatarUrl = uploaded;
+        if (uploaded != null) currentAvatar = uploaded;
       } else if (avatarPath != null && avatarPath.isNotEmpty) {
         if (avatarPath.startsWith('/') ||
             avatarPath.contains(':\\') ||
@@ -497,9 +535,12 @@ class AuthService {
             uid,
             avatarPath.replaceFirst('file://', ''),
           );
-          if (uploaded != null) avatarUrl = uploaded;
+          if (uploaded != null) currentAvatar = uploaded;
         }
         // Blob URLs and unrecognised paths are ignored — they are not permanent.
+      } else if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        // Caller provided a direct remote URL to use as the avatar. Save it as-is.
+        currentAvatar = avatarUrl;
       }
 
       String? bannerUrl = doc.data()['banner'];
@@ -529,7 +570,7 @@ class AuthService {
       if (phone != null) updateMap['phone'] = phone;
       if (gender != null) updateMap['gender'] = gender;
       if (dob != null) updateMap['dob'] = dob;
-      if (avatarUrl != null) updateMap['avatar'] = avatarUrl;
+      if (currentAvatar != null) updateMap['avatar'] = currentAvatar;
       if (bannerUrl != null) updateMap['banner'] = bannerUrl;
       if (updateMap.isNotEmpty) {
         await _db.collection('users').doc(uid).update(updateMap);
@@ -540,6 +581,82 @@ class AuthService {
     } catch (e) {
       debugPrint('AuthService.updateProfile error: $e');
       return false;
+    }
+  }
+
+  /// Uploads (or saves) a dedicated verse background for the user and stores
+  /// the resulting URL in the user's `/users/{uid}.verseBackground` field.
+  /// File uploads replace a single stable Firebase Storage object for the user.
+  /// Returns the saved URL on success, or null on failure.
+  Future<String?> uploadAndSaveVerseBackground({
+    required String email,
+    String? localPath,
+    Uint8List? bytes,
+    String? filename,
+    String? url,
+  }) async {
+    try {
+      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
+      if (q.docs.isEmpty) return null;
+      final doc = q.docs.first;
+      final uid = doc.id;
+
+      final String? oldUrl = doc.data()['verseBackground'];
+      String? newUrl;
+      final storagePath = 'verse_backgrounds/$uid/current';
+
+      if (bytes != null && filename != null) {
+        final uploaded = await _uploadImageBytes(storagePath, bytes, filename);
+        if (uploaded != null) newUrl = uploaded;
+      } else if (localPath != null && localPath.isNotEmpty) {
+        if (localPath.startsWith('/') || localPath.contains(':\\') || localPath.startsWith('file://')) {
+          final uploaded = await _uploadVerseBackground(uid, localPath.replaceFirst('file://', ''));
+          if (uploaded != null) newUrl = uploaded;
+        }
+      } else if (url != null && url.isNotEmpty) {
+        newUrl = url;
+      }
+
+      if (newUrl != null) {
+        // File uploads overwrite a stable Storage path, so no extra delete is
+        // needed there. Delete the old storage file only when switching away
+        // from a previously uploaded Firebase Storage image.
+        final isDirectUrlUpdate = url != null && url.isNotEmpty;
+        if (isDirectUrlUpdate && oldUrl != null && oldUrl != newUrl) {
+          await _tryDeleteStorageFileFromUrl(oldUrl);
+        }
+        await _db.collection('users').doc(uid).set({'verseBackground': newUrl}, SetOptions(merge: true));
+        // Update in-memory user so the UI reflects the change immediately
+        final updatedDoc = await _db.collection('users').doc(uid).get();
+        if (updatedDoc.exists) {
+          currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
+        }
+        return newUrl;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('AuthService.uploadAndSaveVerseBackground error: $e');
+      return null;
+    }
+  }
+
+  /// Deletes the current verse background image from Storage and clears
+  /// the `verseBackground` field in the user's Firestore document.
+  Future<void> clearVerseBackground({required String email}) async {
+    try {
+      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
+      if (q.docs.isEmpty) return;
+      final doc = q.docs.first;
+      final uid = doc.id;
+      final String? oldUrl = doc.data()['verseBackground'];
+      await _tryDeleteStorageFileFromUrl(oldUrl);
+      await _db.collection('users').doc(uid).set({'verseBackground': ''}, SetOptions(merge: true));
+      final updatedDoc = await _db.collection('users').doc(uid).get();
+      if (updatedDoc.exists) {
+        currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
+      }
+    } catch (e) {
+      debugPrint('AuthService.clearVerseBackground error: $e');
     }
   }
 

@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 import 'services/auth_service.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'services/post_service.dart';
 import 'services/theme_service.dart';
@@ -919,13 +921,252 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
   BibleVerse? _verse;
   bool _loading = true;
   bool _liked = false;
+  int _heartCount = 0;
   bool _sharingToFeed = false;
+  // Verse background image support
+  bool _useBackgroundImage = false;
+  String? _backgroundImageUrl;
   String? _loadError;
+  StreamSubscription? _heartSub;
 
   @override
   void initState() {
     super.initState();
     _loadVerse();
+    _loadSavedBackground();
+    _listenHeartCount();
+    _checkUserHearted();
+  }
+
+  void _loadSavedBackground() {
+    final user = AuthService.instance.currentUser.value;
+    if (user != null && user.verseBackground.isNotEmpty) {
+      setState(() {
+        _backgroundImageUrl = user.verseBackground;
+        _useBackgroundImage = true;
+      });
+    }
+  }
+
+  void _listenHeartCount() {
+    _heartSub = BibleService.instance.dailyVerseHeartCountStream().listen((count) {
+      if (mounted) setState(() => _heartCount = count);
+    });
+  }
+
+  Future<void> _checkUserHearted() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user == null) return;
+    final hearted = await BibleService.instance.hasUserHeartedDailyVerse(user.id);
+    if (mounted) setState(() => _liked = hearted);
+  }
+
+  Future<void> _toggleHeart() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to heart this verse.')),
+      );
+      return;
+    }
+    final nowLiked = await BibleService.instance.toggleDailyVerseHeart(user.id);
+    if (mounted) setState(() => _liked = nowLiked);
+  }
+
+  @override
+  void dispose() {
+    _heartSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _clearVerseBackground() async {
+    final user = AuthService.instance.currentUser.value;
+    if (user != null) {
+      await AuthService.instance.clearVerseBackground(email: user.email);
+    }
+    if (!mounted) return;
+    setState(() {
+      _useBackgroundImage = false;
+      _backgroundImageUrl = null;
+    });
+  }
+
+  Future<void> _promptForBackgroundImage() async {
+    // Offer URL entry or device picker
+    final choice = await showModalBottomSheet<String?>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('Enter image URL'),
+              onTap: () => Navigator.of(ctx).pop('url'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Pick from gallery'),
+              onTap: () => Navigator.of(ctx).pop('gallery'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(ctx).pop('camera'),
+            ),
+            if (_useBackgroundImage)
+              ListTile(
+                leading: const Icon(Icons.delete_forever),
+                title: const Text('Clear image'),
+                onTap: () => Navigator.of(ctx).pop('clear'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.of(ctx).pop(null),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == null) return;
+    if (choice == 'url') {
+      final controller = TextEditingController(text: _backgroundImageUrl ?? '');
+      final url = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Background image URL'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'https://example.com/image.jpg'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Set'),
+            ),
+          ],
+        ),
+      );
+      if (url == null) return;
+      final user = AuthService.instance.currentUser.value;
+      if (user != null) {
+        // Save provided URL as the verse background (not avatar)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saving image as verse background...')),
+        );
+        final savedUrl = await AuthService.instance.uploadAndSaveVerseBackground(
+          email: user.email,
+          url: url,
+        );
+        if (savedUrl != null) {
+          setState(() {
+            _backgroundImageUrl = savedUrl;
+            _useBackgroundImage = _backgroundImageUrl?.isNotEmpty == true;
+          });
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image saved as verse background.')),
+          );
+        } else {
+          // fallback: keep URL locally
+          setState(() {
+            _backgroundImageUrl = url;
+            _useBackgroundImage = url.isNotEmpty;
+          });
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved locally, but failed to save to profile.')),
+          );
+        }
+      } else {
+        // Not signed in: keep the URL locally and prompt to sign in to persist.
+        setState(() {
+          if (url.isEmpty) {
+            _useBackgroundImage = false;
+            _backgroundImageUrl = null;
+          } else {
+            _backgroundImageUrl = url;
+            _useBackgroundImage = true;
+          }
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image set locally. Sign in to save to your profile.')),
+        );
+      }
+      return;
+    }
+
+    if (choice == 'clear') {
+      await _clearVerseBackground();
+      return;
+    }
+
+    // gallery or camera -> pick image and upload to user's avatar via AuthService
+    if (choice == 'gallery' || choice == 'camera') {
+      final source = choice == 'gallery' ? ImageSource.gallery : ImageSource.camera;
+      await _pickAndUploadBackgroundImage(source);
+    }
+  }
+
+  Future<void> _pickAndUploadBackgroundImage(ImageSource source) async {
+    final user = AuthService.instance.currentUser.value;
+    if (user == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to upload images.')),
+      );
+      return;
+    }
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 85);
+      if (picked == null) return;
+
+      // show an uploading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Uploading image...')),
+      );
+
+      final savedUrl = kIsWeb
+          ? await AuthService.instance.uploadAndSaveVerseBackground(
+              email: user.email,
+              bytes: await picked.readAsBytes(),
+              filename: picked.name,
+            )
+          : await AuthService.instance.uploadAndSaveVerseBackground(
+              email: user.email,
+              localPath: picked.path,
+              filename: picked.name,
+            );
+
+      if (!mounted) return;
+      if (savedUrl != null) {
+        setState(() {
+          _backgroundImageUrl = savedUrl;
+          _useBackgroundImage = _backgroundImageUrl?.isNotEmpty == true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image uploaded and saved as verse background.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload image.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   Future<void> _loadVerse() async {
@@ -1019,6 +1260,15 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
+            if (_useBackgroundImage && _backgroundImageUrl != null)
+              Positioned.fill(
+                child: Image.network(
+                  _backgroundImageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => Container(color: Colors.black12),
+                ),
+              ),
+            // decorative radial gradient
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -1033,6 +1283,9 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                 ),
               ),
             ),
+            // dark scrim when using image to keep text readable
+            if (_useBackgroundImage)
+              Positioned.fill(child: Container(color: Colors.black.withOpacity(0.38))),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
               child: Column(
@@ -1051,6 +1304,25 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                       ),
                       const Spacer(),
                       _buildLangToggle(),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _promptForBackgroundImage,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.image,
+                            color: _useBackgroundImage ? Colors.white : Colors.white70,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      if (_useBackgroundImage)
+                        _actionIcon(
+                          Icons.close,
+                          Colors.white70,
+                          () => _clearVerseBackground(),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -1098,23 +1370,53 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                       ],
                     )
                   else
-                    Text(
-                      '"${_verse!.displayText}"',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w500,
-                        height: 1.6,
-                        fontStyle: FontStyle.italic,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.52),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '"${_verse!.displayText}"',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                          height: 1.6,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      _actionIcon(
-                        _liked ? Icons.favorite : Icons.favorite_border,
-                        _liked ? Colors.redAccent : Colors.white,
-                        () => setState(() => _liked = !_liked),
+                      InkWell(
+                        onTap: _toggleHeart,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _liked ? Icons.favorite : Icons.favorite_border,
+                                color: _liked ? Colors.redAccent : Colors.white,
+                                size: 22,
+                              ),
+                              if (_heartCount > 0) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$_heartCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 14),
                       _actionIcon(

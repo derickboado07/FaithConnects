@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/bible_service.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
+import 'bible_notes_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BIBLE SCREEN  (Book list → Chapter grid → Verse reader)
@@ -17,6 +18,7 @@ class BibleScreen extends StatefulWidget {
 
 class _BibleScreenState extends State<BibleScreen> {
   String _language = 'en';
+  List<BibleVersionInfo> _versions = const [];
   bool _loading = true;
   String? _error;
   String _bookListFilter = 'all';
@@ -53,8 +55,15 @@ class _BibleScreenState extends State<BibleScreen> {
       _error = null;
     });
     try {
+      final versions = await BibleService.instance
+          .getAvailableVersions(bundle: DefaultAssetBundle.of(context));
       await BibleService.instance.init();
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _versions = versions;
+          _loading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -65,8 +74,39 @@ class _BibleScreenState extends State<BibleScreen> {
     }
   }
 
-  void _toggleLanguage() =>
-      setState(() => _language = _language == 'en' ? 'tl' : 'en');
+  void _setLanguage(String value) {
+    if (_language == value) {
+      return;
+    }
+    setState(() {
+      _language = value;
+      _loading = true;
+      _error = null;
+    });
+    _loadVersion(value);
+  }
+
+  Future<void> _loadVersion(String language) async {
+    try {
+      await BibleService.instance.ensureVersionLoaded(
+        language,
+        bundle: DefaultAssetBundle.of(context),
+      );
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to load ${language.toUpperCase()}: $e';
+        });
+      }
+    }
+    if (_searchActive && _searchCtrl.text.trim().isNotEmpty) {
+      _runSearch(_searchCtrl.text);
+    }
+  }
 
   void _openSearch() => setState(() {
     _searchActive = true;
@@ -94,6 +134,7 @@ class _BibleScreenState extends State<BibleScreen> {
       q,
       language: _language,
       testament: _testamentFilter == 'all' ? null : _testamentFilter,
+      bundle: DefaultAssetBundle.of(context),
     );
     if (mounted) {
       setState(() {
@@ -148,13 +189,33 @@ class _BibleScreenState extends State<BibleScreen> {
           const Spacer(),
           if (!_searchActive) ...[
             IconButton(
+              icon: const Icon(Icons.note_outlined, color: Colors.white70),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BibleNotesScreen()),
+              ),
+              tooltip: 'Notes',
+            ),
+            IconButton(
+              icon: const Icon(Icons.highlight_outlined, color: Colors.white70),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => _HighlightedVersesScreen(language: _language)),
+              ),
+              tooltip: 'Highlights',
+            ),
+            IconButton(
               icon: const Icon(Icons.search, color: Colors.white70),
               onPressed: _loading ? null : _openSearch,
               tooltip: 'Search verses',
             ),
             const SizedBox(width: 4),
           ],
-          _LangToggle(current: _language, onToggle: _toggleLanguage),
+          _VersionPicker(
+            current: _language,
+            versions: _versions,
+            onChanged: _setLanguage,
+          ),
         ],
       ),
     );
@@ -172,7 +233,7 @@ class _BibleScreenState extends State<BibleScreen> {
             autofocus: true,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: _language == 'tl'
+                hintText: BibleService.isTagalogVersion(_language)
                   ? 'Hanapin ang talata o salita…'
                   : 'Search verses or keywords…',
               hintStyle: const TextStyle(color: Colors.white38),
@@ -464,9 +525,7 @@ class _BookListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final names = language == 'tl'
-        ? BibleService.tagalogBookNames
-        : BibleService.bookNames;
+    final names = BibleService.bookNamesFor(language);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
@@ -650,13 +709,23 @@ class BibleChaptersScreen extends StatefulWidget {
 
 class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
   late String _language;
+  List<BibleVersionInfo> _versions = const [];
   int? _chapterCount;
 
   @override
   void initState() {
     super.initState();
     _language = widget.language;
+    _loadVersions();
     _loadChapterCount();
+  }
+
+  Future<void> _loadVersions() async {
+    final versions = await BibleService.instance.getAvailableVersions();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _versions = versions);
   }
 
   Future<void> _loadChapterCount() async {
@@ -667,23 +736,40 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
     if (mounted) setState(() => _chapterCount = c);
   }
 
-  void _toggleLanguage() {
+  void _setLanguage(String value) {
+    if (_language == value) {
+      return;
+    }
     setState(() {
-      _language = _language == 'en' ? 'tl' : 'en';
+      _language = value;
       _chapterCount = null;
     });
-    _loadChapterCount();
+    _loadChapterCountForLanguage(value);
+  }
+
+  Future<void> _loadChapterCountForLanguage(String language) async {
+    try {
+      await BibleService.instance.ensureVersionLoaded(language);
+      final c = await BibleService.instance.getChapterCount(
+        widget.bookNum,
+        language: language,
+      );
+      if (mounted) setState(() => _chapterCount = c);
+    } catch (_) {
+      if (mounted) setState(() => _chapterCount = 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentBookName = BibleService.bookNamesFor(_language)[widget.bookNum - 1];
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A2E),
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          widget.bookName,
+          currentBookName,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -692,7 +778,11 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: _LangToggle(current: _language, onToggle: _toggleLanguage),
+            child: _VersionPicker(
+              current: _language,
+              versions: _versions,
+              onChanged: _setLanguage,
+            ),
           ),
         ],
       ),
@@ -706,7 +796,7 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _language == 'tl'
+                    BibleService.isTagalogVersion(_language)
                         ? 'Pumili ng Kabanata'
                         : 'Select a Chapter',
                     style: const TextStyle(
@@ -799,7 +889,9 @@ class BibleVersesScreen extends StatefulWidget {
 class _BibleVersesScreenState extends State<BibleVersesScreen> {
   late String _language;
   late int _chapter;
+  List<BibleVersionInfo> _versions = const [];
   List<BibleVerse>? _verses;
+  Map<int, String> _highlights = {};
   bool _loading = true;
   final ScrollController _scroll = ScrollController();
 
@@ -808,7 +900,16 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
     super.initState();
     _language = widget.language;
     _chapter = widget.chapter;
+    _loadVersions();
     _loadVerses();
+  }
+
+  Future<void> _loadVersions() async {
+    final versions = await BibleService.instance.getAvailableVersions();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _versions = versions);
   }
 
   @override
@@ -827,9 +928,15 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
       _chapter,
       language: _language,
     );
+    final hl = await BibleService.instance.getChapterHighlights(
+      widget.bookNum,
+      _chapter,
+      language: _language,
+    );
     if (mounted) {
       setState(() {
         _verses = v;
+        _highlights = hl;
         _loading = false;
       });
     }
@@ -839,8 +946,11 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
     });
   }
 
-  void _toggleLanguage() {
-    setState(() => _language = _language == 'en' ? 'tl' : 'en');
+  void _setLanguage(String value) {
+    if (_language == value) {
+      return;
+    }
+    setState(() => _language = value);
     _loadVerses();
   }
 
@@ -858,9 +968,7 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bookName = _language == 'tl'
-        ? BibleService.tagalogBookNames[widget.bookNum - 1]
-        : BibleService.bookNames[widget.bookNum - 1];
+    final bookName = BibleService.bookNamesFor(_language)[widget.bookNum - 1];
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
@@ -875,7 +983,11 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
           ),
         ),
         actions: [
-          _LangToggle(current: _language, onToggle: _toggleLanguage),
+          _VersionPicker(
+            current: _language,
+            versions: _versions,
+            onChanged: _setLanguage,
+          ),
           const SizedBox(width: 12),
         ],
         bottom: PreferredSize(
@@ -894,7 +1006,7 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
                 Expanded(
                   child: Center(
                     child: Text(
-                      '${_language == 'tl' ? 'Kabanata' : 'Chapter'} $_chapter / ${widget.totalChapters}',
+                      '${BibleService.isTagalogVersion(_language) ? 'Kabanata' : 'Chapter'} $_chapter / ${widget.totalChapters}',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -955,34 +1067,75 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
           );
         }
         final v = verses[index - 1];
-        return _VerseTile(verse: v);
+        final highlightHex = _highlights[v.verse];
+        return _VerseTile(
+          verse: v,
+          highlightColorHex: highlightHex,
+          onHighlightChanged: () => _refreshHighlights(),
+        );
       },
     );
+  }
+
+  Future<void> _refreshHighlights() async {
+    final hl = await BibleService.instance.getChapterHighlights(
+      widget.bookNum,
+      _chapter,
+      language: _language,
+    );
+    if (mounted) setState(() => _highlights = hl);
   }
 }
 
 class _VerseTile extends StatelessWidget {
   final BibleVerse verse;
-  const _VerseTile({required this.verse});
+  final String? highlightColorHex;
+  final VoidCallback? onHighlightChanged;
+
+  const _VerseTile({
+    required this.verse,
+    this.highlightColorHex,
+    this.onHighlightChanged,
+  });
+
+  Color? _parseColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final h = hex.replaceAll('#', '');
+    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
+    if (h.length == 8) return Color(int.parse(h, radix: 16));
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hlColor = _parseColor(highlightColorHex);
     return GestureDetector(
-      onLongPress: () => _showVerseActions(context, verse),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+      onLongPress: () => _showVerseActions(
+        context,
+        verse,
+        currentHighlight: highlightColorHex,
+        onHighlightChanged: onHighlightChanged,
+      ),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 2),
+        padding: EdgeInsets.symmetric(vertical: 5, horizontal: hlColor != null ? 8 : 0),
+        decoration: hlColor != null
+            ? BoxDecoration(
+                color: hlColor.withValues(alpha: 0.20),
+                borderRadius: BorderRadius.circular(6),
+                border: Border(
+                  left: BorderSide(color: hlColor, width: 3),
+                ),
+              )
+            : null,
         child: RichText(
           text: TextSpan(
             children: [
-              // Verse number badge
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
                 child: Container(
                   margin: const EdgeInsets.only(right: 10, top: 2),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
@@ -999,11 +1152,12 @@ class _VerseTile extends StatelessWidget {
               ),
               TextSpan(
                 text: verse.displayText,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,
                   height: 1.65,
                   letterSpacing: 0.2,
+                  backgroundColor: hlColor?.withValues(alpha: 0.10),
                 ),
               ),
             ],
@@ -1134,20 +1288,36 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
 // Verse actions bottom sheet (shown on long-press)
 // ─────────────────────────────────────────────────────────────────────────────
 
-void _showVerseActions(BuildContext context, BibleVerse verse) {
+void _showVerseActions(
+  BuildContext context,
+  BibleVerse verse, {
+  String? currentHighlight,
+  VoidCallback? onHighlightChanged,
+}) {
   showModalBottomSheet(
     context: context,
     backgroundColor: const Color(0xFF16213E),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _VerseActionsSheet(verse: verse),
+    builder: (_) => _VerseActionsSheet(
+      verse: verse,
+      currentHighlight: currentHighlight,
+      onHighlightChanged: onHighlightChanged,
+    ),
   );
 }
 
 class _VerseActionsSheet extends StatefulWidget {
   final BibleVerse verse;
-  const _VerseActionsSheet({required this.verse});
+  final String? currentHighlight;
+  final VoidCallback? onHighlightChanged;
+
+  const _VerseActionsSheet({
+    required this.verse,
+    this.currentHighlight,
+    this.onHighlightChanged,
+  });
 
   @override
   State<_VerseActionsSheet> createState() => _VerseActionsSheetState();
@@ -1270,6 +1440,25 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
     }
   }
 
+  Future<void> _openVerseNoteEditor() async {
+    final folders = await BibleService.instance.getNoteFolders();
+    if (!mounted) {
+      return;
+    }
+    Navigator.pop(context);
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BibleNoteEditorScreen(
+          folders: folders,
+          initialFolder: folders.first,
+          initialTitle: 'Note on ${widget.verse.reference}',
+          initialVerseRef: widget.verse.reference,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -1328,6 +1517,22 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
               icon: _sharing ? Icons.hourglass_top : Icons.send_outlined,
               label: _sharing ? 'Sharing…' : 'Share to Newsfeed',
               onTap: _sharing ? null : _shareToFeed,
+            ),
+            const Divider(color: Color(0xFF2D2D44)),
+            // ── Highlight with color picker ──
+            _HighlightColorRow(
+              verse: widget.verse,
+              currentHighlight: widget.currentHighlight,
+              onChanged: () {
+                widget.onHighlightChanged?.call();
+                Navigator.pop(context);
+              },
+            ),
+            // ── Add note for this verse ──
+            _ActionRow(
+              icon: Icons.note_add_outlined,
+              label: 'Add note for this verse',
+              onTap: _openVerseNoteEditor,
             ),
           ],
         ),
@@ -1788,6 +1993,428 @@ class _SavedVerseTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Highlight color row (used inside verse actions sheet)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HighlightColorRow extends StatelessWidget {
+  final BibleVerse verse;
+  final String? currentHighlight;
+  final VoidCallback onChanged;
+
+  const _HighlightColorRow({
+    required this.verse,
+    required this.currentHighlight,
+    required this.onChanged,
+  });
+
+  static const List<_HLColor> _colors = [
+    _HLColor('Yellow', 'FFD700'),
+    _HLColor('Green', '4CAF50'),
+    _HLColor('Blue', '42A5F5'),
+    _HLColor('Pink', 'E91E63'),
+    _HLColor('Orange', 'FF9800'),
+    _HLColor('Purple', '9C27B0'),
+    _HLColor('Red', 'F44336'),
+    _HLColor('Teal', '009688'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final hasHighlight = currentHighlight != null && currentHighlight!.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.highlight,
+                color: hasHighlight ? const Color(0xFFD4AF37) : Colors.white70,
+                size: 22,
+              ),
+              const SizedBox(width: 16),
+              const Text(
+                'Highlight',
+                style: TextStyle(color: Colors.white, fontSize: 15),
+              ),
+              const Spacer(),
+              if (hasHighlight)
+                GestureDetector(
+                  onTap: () async {
+                    await BibleService.instance.removeHighlight(
+                      verse.book,
+                      verse.chapter,
+                      verse.verse,
+                      language: verse.language,
+                    );
+                    onChanged();
+                  },
+                  child: const Text(
+                    'Remove',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: _colors.map((c) {
+              final isSelected =
+                  currentHighlight?.replaceAll('#', '').toUpperCase() ==
+                      c.hex.toUpperCase();
+              return GestureDetector(
+                onTap: () async {
+                  await BibleService.instance.highlightVerse(
+                    verse.book,
+                    verse.chapter,
+                    verse.verse,
+                    c.hex,
+                    language: verse.language,
+                  );
+                  onChanged();
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Color(int.parse('FF${c.hex}', radix: 16)),
+                    shape: BoxShape.circle,
+                    border: isSelected
+                        ? Border.all(color: Colors.white, width: 2.5)
+                        : null,
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: Color(int.parse('FF${c.hex}', radix: 16))
+                              .withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                    ],
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                      : null,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HLColor {
+  final String name;
+  final String hex;
+  const _HLColor(this.name, this.hex);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quick verse note editor (from long-press action)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _QuickVerseNoteEditor extends StatefulWidget {
+  final BibleVerse verse;
+  const _QuickVerseNoteEditor({required this.verse});
+
+  @override
+  State<_QuickVerseNoteEditor> createState() => _QuickVerseNoteEditorState();
+}
+
+class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
+  final _titleCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
+  List<String> _folders = ['General'];
+  String _folder = 'General';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl.text = 'Note on ${widget.verse.reference}';
+    _loadFolders();
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _contentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFolders() async {
+    final folders = await BibleService.instance.getNoteFolders();
+    if (mounted) setState(() => _folders = folders);
+  }
+
+  Future<void> _save() async {
+    if (_contentCtrl.text.trim().isEmpty) return;
+    setState(() => _saving = true);
+    await BibleService.instance.addNote(
+      title: _titleCtrl.text.trim().isEmpty
+          ? 'Note on ${widget.verse.reference}'
+          : _titleCtrl.text.trim(),
+      content: _contentCtrl.text.trim(),
+      folder: _folder,
+      verseRef: widget.verse.reference,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Note saved', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(0xFF16213E),
+        ),
+      );
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1A2E),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Verse Note',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFD4AF37),
+                    ),
+                  )
+                : const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: Color(0xFFD4AF37),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Verse reference card
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16213E),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.verse.reference,
+                    style: const TextStyle(
+                      color: Color(0xFFD4AF37),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '"${widget.verse.displayText}"',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _titleCtrl,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Title',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: InputBorder.none,
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.folder_outlined, size: 16, color: Colors.white38),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _folder,
+                  dropdownColor: const Color(0xFF16213E),
+                  underline: const SizedBox(),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  items: _folders
+                      .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _folder = v);
+                  },
+                ),
+              ],
+            ),
+            const Divider(color: Color(0xFF2D2D44)),
+            Expanded(
+              child: TextField(
+                controller: _contentCtrl,
+                maxLines: null,
+                expands: true,
+                autofocus: true,
+                textAlignVertical: TextAlignVertical.top,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  height: 1.6,
+                ),
+                decoration: const InputDecoration(
+                  hintText: 'Write your thoughts about this verse...',
+                  hintStyle: TextStyle(color: Colors.white24),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Highlighted Verses Screen (view all highlighted verses)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HighlightedVersesScreen extends StatefulWidget {
+  final String language;
+  const _HighlightedVersesScreen({required this.language});
+
+  @override
+  State<_HighlightedVersesScreen> createState() =>
+      _HighlightedVersesScreenState();
+}
+
+class _HighlightedVersesScreenState extends State<_HighlightedVersesScreen> {
+  List<Map<String, dynamic>>? _items;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final items =
+        await BibleService.instance.getAllHighlights(language: widget.language);
+    if (mounted)
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+  }
+
+  Color _parseColor(String hex) {
+    final h = hex.replaceAll('#', '');
+    if (h.length == 6) return Color(int.parse('FF$h', radix: 16));
+    if (h.length == 8) return Color(int.parse(h, radix: 16));
+    return const Color(0xFFD4AF37);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1A2E),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Highlighted Verses',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
+            )
+          : (_items == null || _items!.isEmpty)
+              ? const Center(
+                  child: Text(
+                    'No highlighted verses yet.\nLong-press a verse to highlight it.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 32),
+                  itemCount: _items!.length,
+                  itemBuilder: (ctx, i) {
+                    final item = _items![i];
+                    final verse = item['verse'] as BibleVerse;
+                    final color = _parseColor(item['color'] as String);
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16213E),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border(
+                          left: BorderSide(color: color, width: 4),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            verse.reference,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            verse.displayText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              height: 1.55,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Filter chip
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1828,55 +2455,59 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _LangToggle extends StatelessWidget {
+class _VersionPicker extends StatelessWidget {
+  const _VersionPicker({
+    required this.current,
+    required this.versions,
+    required this.onChanged,
+  });
+
   final String current;
-  final VoidCallback onToggle;
-
-  const _LangToggle({required this.current, required this.onToggle});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2D2D44),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _LangChip(label: 'EN', active: current == 'en'),
-            const SizedBox(width: 2),
-            _LangChip(label: 'TL', active: current == 'tl'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LangChip extends StatelessWidget {
-  final String label;
-  final bool active;
-  const _LangChip({required this.label, required this.active});
+  final List<BibleVersionInfo> versions;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+    final items = versions.isEmpty
+        ? const [
+            DropdownMenuItem<String>(
+              value: 'en',
+              child: Text('ASV', style: TextStyle(color: Colors.white)),
+            ),
+            DropdownMenuItem<String>(
+              value: 'tl',
+              child: Text('Ang Biblia', style: TextStyle(color: Colors.white)),
+            ),
+          ]
+        : versions
+            .map(
+              (version) => DropdownMenuItem<String>(
+                value: version.id,
+                child: Text(version.label, style: const TextStyle(color: Colors.white)),
+              ),
+            )
+            .toList();
+
+    final currentValue = items.any((item) => item.value == current) ? current : items.first.value!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: active ? const Color(0xFFD4AF37) : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF2D2D44),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? Colors.black : Colors.white54,
-          fontSize: 12,
-          fontWeight: active ? FontWeight.bold : FontWeight.normal,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: currentValue,
+          dropdownColor: const Color(0xFF16213E),
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          items: items,
+          onChanged: (value) {
+            if (value != null) {
+              onChanged(value);
+            }
+          },
         ),
       ),
     );
