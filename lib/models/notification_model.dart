@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Model for user notifications
 class AppNotification {
   final String id;
@@ -25,18 +27,29 @@ class AppNotification {
     'userId': userId,
     'title': title,
     'body': body,
-    'timestamp': timestamp.toIso8601String(),
+    'timestamp': Timestamp.fromDate(timestamp),
     'read': read,
     'type': type,
   };
 
-  static AppNotification fromJson(Map<String, dynamic> j) => AppNotification(
-    id: j['id'],
-    userId: j['userId'],
-    title: j['title'],
-    body: j['body'],
-    timestamp: DateTime.parse(j['timestamp']),
-    read: j['read'] ?? false,
-    type: j['type'] ?? 'general',
-  );
+  static AppNotification fromJson(Map<String, dynamic> j) {
+    DateTime ts;
+    final raw = j['timestamp'];
+    if (raw is Timestamp) {
+      ts = raw.toDate();
+    } else if (raw is String) {
+      ts = DateTime.tryParse(raw) ?? DateTime.now();
+    } else {
+      ts = DateTime.now();
+    }
+    return AppNotification(
+      id: j['id'] ?? '',
+      userId: j['userId'] ?? '',
+      title: j['title'] ?? '',
+      body: j['body'] ?? '',
+      timestamp: ts,
+      read: j['read'] ?? false,
+      type: j['type'] ?? 'general',
+    );
+  }
 }

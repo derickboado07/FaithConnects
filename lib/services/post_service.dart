@@ -491,13 +491,16 @@ class PostService {
 
     // Notify the original post owner if someone else shared their post
     if (originalPost.authorId != authorId) {
-      // Show notification to the original post owner
-      await NotificationService.instance.showNotification(
-        userId: originalPost.authorId,
-        title: 'Your post was shared!',
-        body: '$authorEmail shared your post.',
-        type: 'share',
-      );
+      try {
+        await NotificationService.instance.showNotification(
+          userId: originalPost.authorId,
+          title: 'Your post was shared!',
+          body: '$authorEmail shared your post.',
+          type: 'share',
+        );
+      } catch (e) {
+        debugPrint('PostService: share notification failed (non-fatal): $e');
+      }
     }
   }
 
@@ -757,15 +760,19 @@ class PostService {
     debugPrint('PostService: comment added successfully');
 
     // Notify the post owner if someone else commented
-    final postSnap = await _db.collection('posts').doc(postId).get();
-    final postData = postSnap.data();
-    if (postData != null && postData['authorId'] != authorId) {
-      await NotificationService.instance.showNotification(
-        userId: postData['authorId'],
-        title: 'New comment on your post!',
-        body: '$authorEmail commented: "$text"',
-        type: 'comment',
-      );
+    try {
+      final postSnap = await _db.collection('posts').doc(postId).get();
+      final postData = postSnap.data();
+      if (postData != null && postData['authorId'] != null && postData['authorId'] != authorId) {
+        await NotificationService.instance.showNotification(
+          userId: postData['authorId'],
+          title: 'New comment on your post!',
+          body: '$authorEmail commented: "$text"',
+          type: 'comment',
+        );
+      }
+    } catch (e) {
+      debugPrint('PostService: comment notification failed (non-fatal): $e');
     }
   }
 

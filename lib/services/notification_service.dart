@@ -20,6 +20,11 @@ class NotificationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  /// Real-time listener for incoming notifications (shows banners to the
+  /// current user when someone else triggers a notification for them).
+  StreamSubscription? _incomingNotifSub;
+  bool _initialSnapshotSkipped = false;
+
   /// Call this during app startup (e.g., in main())
   Future<void> initialize(BuildContext context) async {
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -34,6 +39,55 @@ class NotificationService {
       },
     );
   }
+
+  // ── Real-time incoming notification listener ──────────────────────
+
+  /// Start listening for NEW notifications for [userId].
+  /// Shows an in-app banner whenever a new unread notification arrives.
+  void startListeningForUser(String userId) {
+    stopListening();
+    _initialSnapshotSkipped = false;
+    _incomingNotifSub = _db
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen(
+      (snap) {
+        // Skip the very first snapshot (existing docs).
+        if (!_initialSnapshotSkipped) {
+          _initialSnapshotSkipped = true;
+          return;
+        }
+        // Only react to newly added documents.
+        for (final change in snap.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            try {
+              final n = AppNotification.fromJson(change.doc.data()!);
+              if (!n.read) {
+                showInAppBanner(title: n.title, body: n.body);
+              }
+            } catch (e) {
+              debugPrint('NotificationService: banner parse error: $e');
+            }
+          }
+        }
+      },
+      onError: (e) {
+        debugPrint('NotificationService: incoming listener error: $e');
+      },
+    );
+    debugPrint('NotificationService: started listening for user $userId');
+  }
+
+  /// Stop the incoming-notification listener.
+  void stopListening() {
+    _incomingNotifSub?.cancel();
+    _incomingNotifSub = null;
+  }
+
+  // ── In-app banner ────────────────────────────────────────────────
 
   /// Show an in-app banner at the top of the screen.
   void showInAppBanner({required String title, required String body}) {
@@ -55,17 +109,17 @@ class NotificationService {
     overlay.insert(entry);
   }
 
-  /// Show a notification to the user and save it to Firestore.
-  /// [type] can be 'reaction', 'comment', 'share', 'comment_reaction', or 'general'.
+  // ── Create / write notification ──────────────────────────────────
+
+  /// Save a notification to Firestore for [userId] (the RECIPIENT).
+  /// The in-app banner is NOT shown here — the recipient's real-time
+  /// listener (`startListeningForUser`) takes care of that.
   Future<void> showNotification({
     required String userId,
     required String title,
     required String body,
     String type = 'general',
   }) async {
-    // In-app banner at the top of the screen
-    showInAppBanner(title: title, body: body);
-
     // Local notification (best-effort — may not work on all platforms)
     try {
       const AndroidNotificationDetails androidPlatformChannelSpecifics =
@@ -93,21 +147,28 @@ class NotificationService {
     }
 
     // Save to Firestore for notification list
-    final docRef = _db
-        .collection('users')
-        .doc(userId)
-        .collection('notifications')
-        .doc();
-    final notification = AppNotification(
-      id: docRef.id,
-      userId: userId,
-      title: title,
-      body: body,
-      timestamp: DateTime.now(),
-      type: type,
-    );
-    await docRef.set(notification.toJson());
+    try {
+      final docRef = _db
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc();
+      final notification = AppNotification(
+        id: docRef.id,
+        userId: userId,
+        title: title,
+        body: body,
+        timestamp: DateTime.now(),
+        type: type,
+      );
+      await docRef.set(notification.toJson());
+      debugPrint('NotificationService: saved notification to users/$userId/notifications/${docRef.id}');
+    } catch (e) {
+      debugPrint('NotificationService: Firestore write FAILED for user $userId: $e');
+    }
   }
+
+  // ── Read / update helpers ────────────────────────────────────────
 
   /// Mark a single notification as read.
   Future<void> markAsRead(String userId, String notificationId) async {
@@ -118,7 +179,9 @@ class NotificationService {
           .collection('notifications')
           .doc(notificationId)
           .update({'read': true});
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('NotificationService: markAsRead failed: $e');
+    }
   }
 
   /// Mark all notifications as read for a user.
@@ -135,10 +198,12 @@ class NotificationService {
         batch.update(doc.reference, {'read': true});
       }
       await batch.commit();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('NotificationService: markAllAsRead failed: $e');
+    }
   }
 
-  /// Stream notifications for a user (for notification screen)
+  /// Stream notifications for a user (for notification screen).
   Stream<List<AppNotification>> notificationsForUser(String userId) {
     return _db
         .collection('users')
@@ -148,7 +213,14 @@ class NotificationService {
         .snapshots()
         .map(
           (snap) =>
-              snap.docs.map((d) => AppNotification.fromJson(d.data())).toList(),
+              snap.docs.map((d) {
+                try {
+                  return AppNotification.fromJson(d.data());
+                } catch (e) {
+                  debugPrint('NotificationService: failed to parse notification ${d.id}: $e');
+                  return null;
+                }
+              }).whereType<AppNotification>().toList(),
         );
   }
 

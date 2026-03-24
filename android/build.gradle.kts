@@ -1,5 +1,15 @@
 allprojects {
+    // Add local Maven repository FIRST so cached artifacts are found before
+    // trying to resolve from dl.google.com (which may be unreachable).
+    // This covers buildscript classpath resolution for sub-projects like
+    // permission_handler_android that declare their own buildscript block.
+    buildscript {
+        repositories {
+            maven { url = uri("${rootDir}/local-repo") }
+        }
+    }
     repositories {
+        maven { url = uri("${rootDir}/local-repo") }
         google()
         mavenCentral()
     }
