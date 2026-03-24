@@ -10,8 +10,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  static const _gold = Color(0xFFD4AF37);
-  static const _goldLight = Color(0xFFF5E6B3);
+  static const _gold = Color(0xFFC9A84C);
+  static const _goldDark = Color(0xFF8B7A3A);
+  static const _scaffoldBg = Color(0xFF0D1117);
+  static const _surface = Color(0xFF161B22);
+  static const _surfaceLight = Color(0xFF1C2128);
+  static const _border = Color(0xFF30363D);
+  static const _textPrimary = Color(0xFFE6EDF3);
+  static const _textMuted = Color(0xFF8B949E);
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailCtrl = TextEditingController();
@@ -64,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen>
               children: [
                 const Text(
                   'Enter your email and we\'ll send you a link to reset your password.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                  style: TextStyle(fontSize: 13, color: _textMuted),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -213,7 +219,9 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('This is a moderator account. Please use Moderator Login.'),
+          content: const Text(
+            'This is a moderator account. Please use Moderator Login.',
+          ),
           backgroundColor: Colors.orange.shade700,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -230,22 +238,21 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   InputDecoration _inputDec(String label, IconData icon, {Widget? suffix}) {
-    final theme = Theme.of(context);
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: theme.hintColor, fontSize: 14),
+      labelStyle: const TextStyle(color: _textMuted, fontSize: 14),
       prefixIcon: Icon(icon, color: _gold, size: 20),
       suffixIcon: suffix,
       filled: true,
-      fillColor: theme.colorScheme.surfaceContainerHighest,
+      fillColor: _surfaceLight,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.dividerColor),
+        borderSide: const BorderSide(color: _border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.dividerColor),
+        borderSide: const BorderSide(color: _border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -253,11 +260,11 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.red.shade300),
+        borderSide: BorderSide(color: Colors.red.shade400),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
       ),
     );
   }
@@ -265,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: _scaffoldBg,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -280,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFD4AF37), Color(0xFFE8C95A)],
+                  colors: [Color(0xFF14191F), Color(0xFF1A2332)],
                 ),
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(36),
@@ -306,16 +313,16 @@ class _LoginScreenState extends State<LoginScreen>
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: _gold,
                         letterSpacing: 0.8,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
+                    const Text(
                       'Welcome back',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: _textMuted,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -331,22 +338,25 @@ class _LoginScreenState extends State<LoginScreen>
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: _surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Theme.of(context).dividerColor),
+                    border: Border.all(color: _border),
                   ),
                   padding: const EdgeInsets.all(4),
                   child: Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _isModeratorLogin = false),
+                          onTap: () =>
+                              setState(() => _isModeratorLogin = false),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 250),
                             curve: Curves.easeInOut,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: !_isModeratorLogin ? _gold : Colors.transparent,
+                              color: !_isModeratorLogin
+                                  ? _gold
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Center(
@@ -357,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   fontWeight: FontWeight.w700,
                                   color: !_isModeratorLogin
                                       ? Colors.white
-                                      : Theme.of(context).hintColor,
+                                      : _textMuted,
                                 ),
                               ),
                             ),
@@ -372,7 +382,9 @@ class _LoginScreenState extends State<LoginScreen>
                             curve: Curves.easeInOut,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: _isModeratorLogin ? _gold : Colors.transparent,
+                              color: _isModeratorLogin
+                                  ? _gold
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Center(
@@ -383,7 +395,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   fontWeight: FontWeight.w700,
                                   color: _isModeratorLogin
                                       ? Colors.white
-                                      : Theme.of(context).hintColor,
+                                      : _textMuted,
                                 ),
                               ),
                             ),
@@ -410,9 +422,9 @@ class _LoginScreenState extends State<LoginScreen>
                         controller: _emailCtrl,
                         decoration: _inputDec('Email', Icons.email_outlined),
                         keyboardType: TextInputType.emailAddress,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 15,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: _textPrimary,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter email' : null,
@@ -428,7 +440,7 @@ class _LoginScreenState extends State<LoginScreen>
                               _obscure
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: Theme.of(context).hintColor,
+                              color: _textMuted,
                               size: 20,
                             ),
                             onPressed: () =>
@@ -436,9 +448,9 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                         obscureText: _obscure,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 15,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: _textPrimary,
                         ),
                         validator: (v) =>
                             (v == null || v.isEmpty) ? 'Enter password' : null,
@@ -470,7 +482,7 @@ class _LoginScreenState extends State<LoginScreen>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _gold,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: _goldLight,
+                            disabledBackgroundColor: _goldDark,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -486,7 +498,9 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 )
                               : Text(
-                                  _isModeratorLogin ? 'Moderator Sign In' : 'Sign In',
+                                  _isModeratorLogin
+                                      ? 'Moderator Sign In'
+                                      : 'Sign In',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -498,22 +512,15 @@ class _LoginScreenState extends State<LoginScreen>
                       const SizedBox(height: 28),
                       Row(
                         children: [
-                          Expanded(
-                            child: Divider(color: Theme.of(context).dividerColor),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                          const Expanded(child: Divider(color: _border)),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               'or',
-                              style: TextStyle(
-                                color: Theme.of(context).hintColor,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(color: _textMuted, fontSize: 13),
                             ),
                           ),
-                          Expanded(
-                            child: Divider(color: Theme.of(context).dividerColor),
-                          ),
+                          const Expanded(child: Divider(color: _border)),
                         ],
                       ),
                       const SizedBox(height: 28),
