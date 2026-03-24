@@ -41,24 +41,100 @@ import 'services/marketplace_service.dart';
 import 'models/product_model.dart';
 import 'models/notification_model.dart';
 
-// Top-app-bar icon helper (top-level so multiple widgets can use it)
-Widget _buildIconButton(BuildContext context, IconData icon) {
-  return InkWell(
-    onTap: () {
-      if (icon == Icons.chat_bubble_outline) {
-        Navigator.pushNamed(context, '/messages');
-        return;
-      }
+// ── Top-app-bar icon helpers ──────────────────────────────────────────
 
-      if (icon == Icons.search) {
-        Navigator.pushNamed(context, '/search');
-        return;
-      }
-    },
-    borderRadius: BorderRadius.circular(12),
-    child: Padding(
-      padding: const EdgeInsets.all(6),
-      child: Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+/// Stylish mini search-bar button.
+Widget _buildSearchButton(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () => Navigator.pushNamed(context, '/search'),
+      borderRadius: BorderRadius.circular(20),
+      splashColor: const Color(0xFFD4AF37).withValues(alpha: 0.25),
+      highlightColor: const Color(0xFFD4AF37).withValues(alpha: 0.10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.black.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? const Color(0xFFD4AF37).withValues(alpha: 0.45)
+                : const Color(0xFFD4AF37).withValues(alpha: 0.35),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFFD4AF37), Color(0xFFF5D576)],
+              ).createShader(bounds),
+              blendMode: BlendMode.srcIn,
+              child: const Icon(Icons.search_rounded, size: 18),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Search',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.7)
+                    : Colors.black.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Unique gradient messaging button.
+Widget _buildMessageButton(BuildContext context) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () => Navigator.pushNamed(context, '/messages'),
+      borderRadius: BorderRadius.circular(14),
+      splashColor: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+      highlightColor: const Color(0xFFD4AF37).withValues(alpha: 0.12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFFD4AF37), const Color(0xFFB8962E)]
+                : [const Color(0xFF3A3A5C), const Color(0xFF23233A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? const Color(0xFFD4AF37).withValues(alpha: 0.35)
+                  : const Color(0xFF3A3A5C).withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.forum_rounded,
+          size: 18,
+          color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+        ),
+      ),
     ),
   );
 }
@@ -1287,22 +1363,61 @@ class TopAppBarSection extends StatelessWidget {
 
           const Spacer(),
 
-          // Dark / light mode toggle
+          // Dark / light mode toggle – animated pill with sun/moon
           ValueListenableBuilder<ThemeMode>(
             valueListenable: ThemeService.instance.themeMode,
             builder: (context, mode, _) {
               final isDark = mode == ThemeMode.dark;
-              return InkWell(
-                onTap: ThemeService.instance.toggle,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(
-                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    size: 22,
-                    color: isDark
-                        ? const Color(0xFFD4AF37)
-                        : const Color(0xFF333333),
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: ThemeService.instance.toggle,
+                  borderRadius: BorderRadius.circular(16),
+                  splashColor: (isDark
+                          ? const Color(0xFFF5D576)
+                          : const Color(0xFF6C63FF))
+                      .withValues(alpha: 0.25),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFFD4AF37), const Color(0xFFF5D576)]
+                            : [const Color(0xFF2D2B55), const Color(0xFF6C63FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark
+                              ? const Color(0xFFD4AF37).withValues(alpha: 0.4)
+                              : const Color(0xFF6C63FF).withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 350),
+                      transitionBuilder: (child, anim) => RotationTransition(
+                        turns: Tween(begin: 0.75, end: 1.0).animate(anim),
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
+                      child: Icon(
+                        isDark
+                            ? Icons.wb_sunny_rounded
+                            : Icons.nightlight_round,
+                        key: ValueKey(isDark),
+                        size: 18,
+                        color: isDark
+                            ? const Color(0xFF1A1A2E)
+                            : Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -1362,10 +1477,10 @@ class TopAppBarSection extends StatelessWidget {
             },
           ),
 
-          // Icons
-          _buildIconButton(context, Icons.search),
-
-          _buildIconButton(context, Icons.chat_bubble_outline),
+          // Search & Messaging
+          _buildSearchButton(context),
+          const SizedBox(width: 4),
+          _buildMessageButton(context),
         ],
       ),
     );
@@ -1870,47 +1985,112 @@ class _DailyVerseSectionState extends State<DailyVerseSection> {
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      InkWell(
-                        onTap: _toggleHeart,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _liked ? Icons.favorite : Icons.favorite_border,
-                                color: _liked ? Colors.redAccent : Colors.white,
-                                size: 22,
+                      // Heart button with animated scale
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _toggleHeart,
+                          borderRadius: BorderRadius.circular(20),
+                          splashColor: Colors.redAccent.withValues(alpha: 0.25),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOutCubic,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: _liked
+                                  ? Colors.redAccent.withValues(alpha: 0.18)
+                                  : Colors.white.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _liked
+                                    ? Colors.redAccent.withValues(alpha: 0.5)
+                                    : Colors.white.withValues(alpha: 0.25),
+                                width: 1,
                               ),
-                              if (_heartCount > 0) ...[
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$_heartCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (child, anim) =>
+                                      ScaleTransition(scale: anim, child: child),
+                                  child: Icon(
+                                    _liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                    key: ValueKey(_liked),
+                                    color: _liked ? Colors.redAccent : Colors.white,
+                                    size: 20,
                                   ),
                                 ),
+                                if (_heartCount > 0) ...[                              
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$_heartCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      _actionIcon(
-                        Icons.chat_bubble_outline,
-                        Colors.white,
-                        () {},
+                      const SizedBox(width: 10),
+                      // Comment button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {},
+                          borderRadius: BorderRadius.circular(20),
+                          splashColor: const Color(0xFF64B5F6).withValues(alpha: 0.25),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.mode_comment_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 14),
-                      _actionIcon(
-                        _sharingToFeed
-                            ? Icons.hourglass_top
-                            : Icons.share_outlined,
-                        Colors.white,
-                        _shareDailyVerseToFeed,
+                      const SizedBox(width: 10),
+                      // Share button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _shareDailyVerseToFeed,
+                          borderRadius: BorderRadius.circular(20),
+                          splashColor: const Color(0xFF81C784).withValues(alpha: 0.25),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              _sharingToFeed
+                                  ? Icons.hourglass_top_rounded
+                                  : Icons.reply_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                       ),
                       const Spacer(),
                       _actionTextBtn('More', Icons.more_horiz, () => _showVerseOptions(context)),
@@ -3156,48 +3336,67 @@ class _ReactButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final active = myReaction != null
         ? _reactions.firstWhere(
             (r) => r.key == myReaction,
-
             orElse: () => _reactions[0],
           )
         : null;
 
-    return InkWell(
-      onTap: onTap,
+    final defaultColor = isDark
+        ? Colors.white.withValues(alpha: 0.65)
+        : Colors.black.withValues(alpha: 0.50);
+    final iconColor = active?.color ?? defaultColor;
+    final hasReaction = active != null;
 
-      borderRadius: BorderRadius.circular(8),
-
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-
-          children: [
-            Icon(
-              active?.icon ?? Icons.thumb_up_outlined,
-
-              size: 19,
-
-              color: active?.color ?? const Color(0xFF888888),
-            ),
-
-            const SizedBox(width: 5),
-
-            Text(
-              active?.label ?? 'React',
-
-              style: TextStyle(
-                fontSize: 13,
-
-                fontWeight: active != null ? FontWeight.w600 : FontWeight.w500,
-
-                color: active?.color ?? const Color(0xFF888888),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: (active?.color ?? const Color(0xFFD4AF37)).withValues(alpha: 0.18),
+        highlightColor: (active?.color ?? const Color(0xFFD4AF37)).withValues(alpha: 0.08),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: hasReaction
+                ? iconColor.withValues(alpha: isDark ? 0.15 : 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: hasReaction
+                ? Border.all(color: iconColor.withValues(alpha: 0.3), width: 1)
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => ScaleTransition(
+                  scale: anim,
+                  child: child,
+                ),
+                child: Icon(
+                  active?.icon ?? Icons.favorite_border_rounded,
+                  key: ValueKey(active?.key ?? 'default'),
+                  size: 19,
+                  color: iconColor,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                active?.label ?? 'React',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: hasReaction ? FontWeight.w600 : FontWeight.w500,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3223,36 +3422,54 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isComment = label == 'Comment';
+    final isShare = label == 'Share';
 
-    return InkWell(
-      onTap: onTap,
+    // Unique accent per button type
+    final Color accent;
+    final IconData displayIcon;
+    if (isComment) {
+      accent = isDark ? const Color(0xFF64B5F6) : const Color(0xFF1976D2);
+      displayIcon = Icons.mode_comment_outlined;
+    } else if (isShare) {
+      accent = isDark ? const Color(0xFF81C784) : const Color(0xFF388E3C);
+      displayIcon = Icons.reply_rounded;
+    } else {
+      accent = isDark
+          ? Colors.white.withValues(alpha: 0.6)
+          : Colors.black.withValues(alpha: 0.5);
+      displayIcon = icon;
+    }
 
-      borderRadius: BorderRadius.circular(8),
-
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-
-          children: [
-            Icon(icon, size: 19, color: c),
-
-            const SizedBox(width: 5),
-
-            Text(
-              label,
-
-              style: TextStyle(
-                fontSize: 13,
-
-                color: c,
-
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: accent.withValues(alpha: 0.18),
+        highlightColor: accent.withValues(alpha: 0.08),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                displayIcon,
+                size: 19,
+                color: accent,
               ),
-            ),
-          ],
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: accent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -136,10 +136,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 ],
                 const SizedBox(height: 12),
                 Row(children: [
-                  IconButton(onPressed: _showReactionPicker, icon: const Icon(Icons.emoji_emotions_outlined)),
+                  Builder(builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return IconButton(
+                      onPressed: _showReactionPicker,
+                      splashRadius: 22,
+                      icon: Icon(
+                        Icons.emoji_emotions_outlined,
+                        color: isDark ? const Color(0xFFD4AF37) : const Color(0xFF6C63FF),
+                      ),
+                    );
+                  }),
                   Text('$_totalReactions'),
                   const SizedBox(width: 12),
-                  IconButton(onPressed: () async { /* share - optional */ }, icon: const Icon(Icons.share_outlined)),
+                  Builder(builder: (context) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    return IconButton(
+                      onPressed: () async { /* share - optional */ },
+                      splashRadius: 22,
+                      icon: Icon(
+                        Icons.reply_rounded,
+                        color: isDark ? const Color(0xFF81C784) : const Color(0xFF388E3C),
+                      ),
+                    );
+                  }),
                 ]),
                 const Divider(),
                 const SizedBox(height: 6),

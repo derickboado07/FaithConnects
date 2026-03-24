@@ -32,9 +32,36 @@ class _BibleScreenState extends State<BibleScreen> {
   bool _searching = false;
 
   static const _gold = Color(0xFFD4AF37);
-  static const _bg = Color(0xFF1A1A2E);
-  static const _card = Color(0xFF16213E);
-  static const _border = Color(0xFF2D2D44);
+
+  // Theme-aware colors — resolved in build()
+  static Color _bg(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+  }
+  static Color _card(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF16213E) : Colors.white;
+  }
+  static Color _border(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF2D2D44) : const Color(0xFFE0E0E0);
+  }
+  static Color _onBg(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? Colors.white : const Color(0xFF1A1A2E);
+  }
+  static Color _onBgSub(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? Colors.white70 : const Color(0xFF555555);
+  }
+  static Color _onBgHint(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? Colors.white38 : const Color(0xFF999999);
+  }
+  static Color _chevron(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? const Color(0xFF5A5A7A) : const Color(0xFFBBBBBB);
+  }
 
   @override
   void initState() {
@@ -147,7 +174,7 @@ class _BibleScreenState extends State<BibleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _bg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -163,24 +190,24 @@ class _BibleScreenState extends State<BibleScreen> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: _bg,
-        border: Border(bottom: BorderSide(color: _border, width: 1)),
+      decoration: BoxDecoration(
+        color: _bg(context),
+        border: Border(bottom: BorderSide(color: _border(context), width: 1)),
       ),
       child: Row(
         children: [
           if (_searchActive)
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: _onBg(context)),
               onPressed: _closeSearch,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             )
           else
-            const Text(
+            Text(
               'Bible',
               style: TextStyle(
-                color: Colors.white,
+                color: _onBg(context),
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -189,7 +216,7 @@ class _BibleScreenState extends State<BibleScreen> {
           const Spacer(),
           if (!_searchActive) ...[
             IconButton(
-              icon: const Icon(Icons.note_outlined, color: Colors.white70),
+              icon: Icon(Icons.note_outlined, color: _onBgSub(context)),
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const BibleNotesScreen()),
@@ -197,7 +224,7 @@ class _BibleScreenState extends State<BibleScreen> {
               tooltip: 'Notes',
             ),
             IconButton(
-              icon: const Icon(Icons.highlight_outlined, color: Colors.white70),
+              icon: Icon(Icons.highlight_outlined, color: _onBgSub(context)),
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => _HighlightedVersesScreen(language: _language)),
@@ -205,7 +232,7 @@ class _BibleScreenState extends State<BibleScreen> {
               tooltip: 'Highlights',
             ),
             IconButton(
-              icon: const Icon(Icons.search, color: Colors.white70),
+              icon: Icon(Icons.search, color: _onBgSub(context)),
               onPressed: _loading ? null : _openSearch,
               tooltip: 'Search verses',
             ),
@@ -223,7 +250,7 @@ class _BibleScreenState extends State<BibleScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      color: _card,
+      color: _card(context),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,22 +258,22 @@ class _BibleScreenState extends State<BibleScreen> {
           TextField(
             controller: _searchCtrl,
             autofocus: true,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: _onBg(context)),
             decoration: InputDecoration(
                 hintText: BibleService.isTagalogVersion(_language)
                   ? 'Hanapin ang talata o salita…'
                   : 'Search verses or keywords…',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(
+              hintStyle: TextStyle(color: _onBgHint(context)),
+              prefixIcon: Icon(
                 Icons.search,
-                color: Colors.white38,
+                color: _onBgHint(context),
                 size: 20,
               ),
               suffixIcon: _searchCtrl.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
-                        color: Colors.white38,
+                        color: _onBgHint(context),
                         size: 18,
                       ),
                       onPressed: () {
@@ -256,7 +283,7 @@ class _BibleScreenState extends State<BibleScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: _bg,
+              fillColor: _bg(context),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 10,
@@ -326,7 +353,7 @@ class _BibleScreenState extends State<BibleScreen> {
                   : _language == 'tl'
                   ? 'Nilo-load ang Biblia…\n(Unang beses lang ito)'
                   : 'Building Bible database…\n(First launch only)',
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: _onBgSub(context), fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -346,10 +373,10 @@ class _BibleScreenState extends State<BibleScreen> {
                 size: 52,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Failed to load Bible',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: _onBg(context),
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
@@ -357,7 +384,7 @@ class _BibleScreenState extends State<BibleScreen> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: _onBgHint(context), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -396,7 +423,7 @@ class _BibleScreenState extends State<BibleScreen> {
             _language == 'tl'
                 ? 'I-type ang salita o talata upang hanapin.'
                 : 'Type a word or verse reference to search.',
-            style: const TextStyle(color: Colors.white38, fontSize: 14),
+            style: TextStyle(color: _onBgHint(context), fontSize: 14),
             textAlign: TextAlign.center,
           ),
         );
@@ -405,7 +432,7 @@ class _BibleScreenState extends State<BibleScreen> {
         return Center(
           child: Text(
             _language == 'tl' ? 'Walang nahanap.' : 'No results found.',
-            style: const TextStyle(color: Colors.white54, fontSize: 14),
+            style: TextStyle(color: _onBgSub(context), fontSize: 14),
           ),
         );
       }
@@ -461,14 +488,20 @@ class _SearchVerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final onCard = isDark ? Colors.white : const Color(0xFF1A1A2E);
     return GestureDetector(
       onLongPress: () => _showVerseActions(context, verse),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: isDark ? null : [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2)),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,8 +524,8 @@ class _SearchVerseTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               verse.displayText,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onCard,
                 fontSize: 14,
                 height: 1.6,
               ),
@@ -630,6 +663,9 @@ class _BookTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final onCard = isDark ? Colors.white : const Color(0xFF1A1A2E);
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -645,8 +681,11 @@ class _BookTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: isDark ? null : [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
         ),
         child: Row(
           children: [
@@ -654,7 +693,7 @@ class _BookTile extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.12),
+                color: const Color(0xFFD4AF37).withValues(alpha: isDark ? 0.12 : 0.10),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -672,14 +711,14 @@ class _BookTile extends StatelessWidget {
             Expanded(
               child: Text(
                 bookName,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onCard,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF5A5A7A), size: 20),
+            Icon(Icons.chevron_right, color: isDark ? const Color(0xFF5A5A7A) : const Color(0xFFBBBBBB), size: 20),
           ],
         ),
       ),
@@ -762,16 +801,22 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+    final onBg = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final onBgSub = isDark ? Colors.white70 : const Color(0xFF555555);
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2D2D44) : const Color(0xFFE0E0E0);
     final currentBookName = BibleService.bookNamesFor(_language)[widget.bookNum - 1];
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: bg,
+        iconTheme: IconThemeData(color: onBg),
         title: Text(
           currentBookName,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: onBg,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -799,8 +844,8 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
                     BibleService.isTagalogVersion(_language)
                         ? 'Pumili ng Kabanata'
                         : 'Select a Chapter',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: onBgSub,
                       fontSize: 13,
                       letterSpacing: 0.5,
                     ),
@@ -834,17 +879,17 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16213E),
+                              color: cardColor,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: const Color(0xFF2D2D44),
+                                color: borderColor,
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 '$chap',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: onBg,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -968,17 +1013,22 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+    final onBg = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final onBgSub = isDark ? Colors.white70 : const Color(0xFF555555);
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
     final bookName = BibleService.bookNamesFor(_language)[widget.bookNum - 1];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: bg,
+        iconTheme: IconThemeData(color: onBg),
         title: Text(
           '$bookName $_chapter',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: onBg,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -993,7 +1043,7 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(44),
           child: Container(
-            color: const Color(0xFF16213E),
+            color: cardColor,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
@@ -1007,8 +1057,8 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
                   child: Center(
                     child: Text(
                       '${BibleService.isTagalogVersion(_language) ? 'Kabanata' : 'Chapter'} $_chapter / ${widget.totalChapters}',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: onBgSub,
                         fontSize: 12,
                       ),
                     ),
@@ -1037,12 +1087,13 @@ class _BibleVersesScreenState extends State<BibleVersesScreen> {
   }
 
   Widget _buildVerseList(String bookName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final verses = _verses ?? [];
     if (verses.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No verses found.',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF999999)),
         ),
       );
     }
@@ -1108,6 +1159,8 @@ class _VerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF222222);
     final hlColor = _parseColor(highlightColorHex);
     return GestureDetector(
       onLongPress: () => _showVerseActions(
@@ -1153,7 +1206,7 @@ class _VerseTile extends StatelessWidget {
               TextSpan(
                 text: verse.displayText,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textColor,
                   fontSize: 15,
                   height: 1.65,
                   letterSpacing: 0.2,
@@ -1242,11 +1295,13 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final subtleIcon = isDark ? Colors.white54 : const Color(0xFF999999);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          icon: const Icon(Icons.copy, size: 18, color: Colors.white54),
+          icon: Icon(Icons.copy, size: 18, color: subtleIcon),
           onPressed: _copyVerse,
           tooltip: 'Copy',
           padding: EdgeInsets.zero,
@@ -1272,7 +1327,7 @@ class _VerseActionButtonsState extends State<_VerseActionButtons> {
             icon: Icon(
               _saved ? Icons.bookmark : Icons.bookmark_border,
               size: 18,
-              color: _saved ? const Color(0xFFD4AF37) : Colors.white54,
+              color: _saved ? const Color(0xFFD4AF37) : subtleIcon,
             ),
             onPressed: _toggleSave,
             tooltip: _saved ? 'Remove from saved' : 'Save verse',
@@ -1294,9 +1349,10 @@ void _showVerseActions(
   String? currentHighlight,
   VoidCallback? onHighlightChanged,
 }) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   showModalBottomSheet(
     context: context,
-    backgroundColor: const Color(0xFF16213E),
+    backgroundColor: isDark ? const Color(0xFF16213E) : Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -1461,6 +1517,11 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final handleColor = isDark ? const Color(0xFF5A5A7A) : const Color(0xFFCCCCCC);
+    final onSheet = isDark ? Colors.white : const Color(0xFF222222);
+    final onSheetSub = isDark ? Colors.white70 : const Color(0xFF555555);
+    final divColor = isDark ? const Color(0xFF2D2D44) : const Color(0xFFE0E0E0);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -1474,7 +1535,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5A5A7A),
+                  color: handleColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1490,8 +1551,8 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
             const SizedBox(height: 6),
             Text(
               '"${widget.verse.displayText}"',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: onSheetSub,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -1499,7 +1560,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 20),
-            const Divider(color: Color(0xFF2D2D44)),
+            Divider(color: divColor),
             _ActionRow(
               icon: Icons.copy,
               label: 'Copy verse',
@@ -1518,7 +1579,7 @@ class _VerseActionsSheetState extends State<_VerseActionsSheet> {
               label: _sharing ? 'Sharing…' : 'Share to Newsfeed',
               onTap: _sharing ? null : _shareToFeed,
             ),
-            const Divider(color: Color(0xFF2D2D44)),
+            Divider(color: divColor),
             // ── Highlight with color picker ──
             _HighlightColorRow(
               verse: widget.verse,
@@ -1556,6 +1617,10 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultIcon = isDark ? Colors.white70 : const Color(0xFF555555);
+    final textColor = isDark ? Colors.white : const Color(0xFF222222);
+    final disabledText = isDark ? Colors.white38 : const Color(0xFFAAAAAA);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1563,12 +1628,12 @@ class _ActionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Row(
           children: [
-            Icon(icon, color: iconColor ?? Colors.white70, size: 22),
+            Icon(icon, color: iconColor ?? defaultIcon, size: 22),
             const SizedBox(width: 16),
             Text(
               label,
               style: TextStyle(
-                color: onTap == null ? Colors.white38 : Colors.white,
+                color: onTap == null ? disabledText : textColor,
                 fontSize: 15,
               ),
             ),
@@ -1686,12 +1751,16 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final onCard = isDark ? Colors.white : const Color(0xFF222222);
+    final subtleIcon = isDark ? Colors.white54 : const Color(0xFF999999);
     if (_loading) {
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -1711,11 +1780,14 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
         ),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1751,8 +1823,8 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
           const SizedBox(height: 10),
           Text(
             '"${_verse!.displayText}"',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onCard,
               fontSize: 15,
               height: 1.6,
               fontStyle: FontStyle.italic,
@@ -1771,12 +1843,12 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
                     vertical: 6,
                   ),
                   child: Row(
-                    children: const [
-                      Icon(Icons.copy, size: 14, color: Colors.white54),
-                      SizedBox(width: 4),
+                    children: [
+                      Icon(Icons.copy, size: 14, color: subtleIcon),
+                      const SizedBox(width: 4),
                       Text(
                         'Copy',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        style: TextStyle(color: subtleIcon, fontSize: 12),
                       ),
                     ],
                   ),
@@ -1872,14 +1944,17 @@ class _SavedVersesScreenState extends State<SavedVersesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+    final onBg = isDark ? Colors.white : const Color(0xFF1A1A2E);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        backgroundColor: bg,
+        iconTheme: IconThemeData(color: onBg),
+        title: Text(
           'Saved Verses',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: onBg, fontWeight: FontWeight.bold),
         ),
       ),
       body: _loading
@@ -1887,11 +1962,11 @@ class _SavedVersesScreenState extends State<SavedVersesScreen> {
               child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
             )
           : (_verses == null || _verses!.isEmpty)
-          ? const Center(
+          ? Center(
               child: Text(
                 'No saved verses yet.\nLong-press any verse to save it.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 14),
+                style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF999999), fontSize: 14),
               ),
             )
           : ListView.builder(
@@ -1936,12 +2011,19 @@ class _SavedVerseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final onCard = isDark ? Colors.white : const Color(0xFF222222);
+    final subtleIcon = isDark ? Colors.white54 : const Color(0xFF999999);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 1)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1959,7 +2041,7 @@ class _SavedVerseTile extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.copy, size: 18, color: Colors.white54),
+                icon: Icon(Icons.copy, size: 18, color: subtleIcon),
                 onPressed: () => _copy(context),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 30),
@@ -1980,8 +2062,8 @@ class _SavedVerseTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             verse.displayText,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: onCard,
               fontSize: 14,
               height: 1.55,
             ),
@@ -2020,6 +2102,9 @@ class _HighlightColorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSheet = isDark ? Colors.white : const Color(0xFF222222);
+    final defaultIcon = isDark ? Colors.white70 : const Color(0xFF555555);
     final hasHighlight = currentHighlight != null && currentHighlight!.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -2030,13 +2115,13 @@ class _HighlightColorRow extends StatelessWidget {
             children: [
               Icon(
                 Icons.highlight,
-                color: hasHighlight ? const Color(0xFFD4AF37) : Colors.white70,
+                color: hasHighlight ? const Color(0xFFD4AF37) : defaultIcon,
                 size: 22,
               ),
               const SizedBox(width: 16),
-              const Text(
+              Text(
                 'Highlight',
-                style: TextStyle(color: Colors.white, fontSize: 15),
+                style: TextStyle(color: onSheet, fontSize: 15),
               ),
               const Spacer(),
               if (hasHighlight)
@@ -2175,14 +2260,22 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+    final onBg = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
+    final hintColor = isDark ? Colors.white38 : const Color(0xFF999999);
+    final subtleHint = isDark ? Colors.white24 : const Color(0xFFBBBBBB);
+    final onBgSub = isDark ? Colors.white70 : const Color(0xFF555555);
+    final borderColor = isDark ? const Color(0xFF2D2D44) : const Color(0xFFE0E0E0);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        backgroundColor: bg,
+        iconTheme: IconThemeData(color: onBg),
+        title: Text(
           'Verse Note',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: onBg, fontWeight: FontWeight.bold),
         ),
         actions: [
           TextButton(
@@ -2214,7 +2307,7 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF16213E),
+                color: cardColor,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
@@ -2234,8 +2327,8 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
                   const SizedBox(height: 4),
                   Text(
                     '"${widget.verse.displayText}"',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: onBgSub,
                       fontSize: 13,
                       fontStyle: FontStyle.italic,
                     ),
@@ -2248,26 +2341,26 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
             const SizedBox(height: 16),
             TextField(
               controller: _titleCtrl,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: onBg,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Title',
-                hintStyle: TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: hintColor),
                 border: InputBorder.none,
               ),
             ),
             Row(
               children: [
-                const Icon(Icons.folder_outlined, size: 16, color: Colors.white38),
+                Icon(Icons.folder_outlined, size: 16, color: hintColor),
                 const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: _folder,
-                  dropdownColor: const Color(0xFF16213E),
+                  dropdownColor: cardColor,
                   underline: const SizedBox(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(color: onBgSub, fontSize: 13),
                   items: _folders
                       .map((f) => DropdownMenuItem(value: f, child: Text(f)))
                       .toList(),
@@ -2277,7 +2370,7 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
                 ),
               ],
             ),
-            const Divider(color: Color(0xFF2D2D44)),
+            const Divider(color: Color(0xFFE0E0E0)),
             Expanded(
               child: TextField(
                 controller: _contentCtrl,
@@ -2285,14 +2378,14 @@ class _QuickVerseNoteEditorState extends State<_QuickVerseNoteEditor> {
                 expands: true,
                 autofocus: true,
                 textAlignVertical: TextAlignVertical.top,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: onBg,
                   fontSize: 15,
                   height: 1.6,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Write your thoughts about this verse...',
-                  hintStyle: TextStyle(color: Colors.white24),
+                  hintStyle: TextStyle(color: subtleHint),
                   border: InputBorder.none,
                 ),
               ),
@@ -2346,14 +2439,18 @@ class _HighlightedVersesScreenState extends State<_HighlightedVersesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+    final onBg = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final cardColor = isDark ? const Color(0xFF16213E) : Colors.white;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1A2E),
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
+        backgroundColor: bg,
+        iconTheme: IconThemeData(color: onBg),
+        title: Text(
           'Highlighted Verses',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: onBg, fontWeight: FontWeight.bold),
         ),
       ),
       body: _loading
@@ -2361,11 +2458,11 @@ class _HighlightedVersesScreenState extends State<_HighlightedVersesScreen> {
               child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
             )
           : (_items == null || _items!.isEmpty)
-              ? const Center(
+              ? Center(
                   child: Text(
                     'No highlighted verses yet.\nLong-press a verse to highlight it.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF999999), fontSize: 14),
                   ),
                 )
               : ListView.builder(
@@ -2379,7 +2476,7 @@ class _HighlightedVersesScreenState extends State<_HighlightedVersesScreen> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16213E),
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border(
                           left: BorderSide(color: color, width: 4),
@@ -2399,8 +2496,8 @@ class _HighlightedVersesScreenState extends State<_HighlightedVersesScreen> {
                           const SizedBox(height: 6),
                           Text(
                             verse.displayText,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: onBg,
                               fontSize: 14,
                               height: 1.55,
                             ),
@@ -2430,22 +2527,26 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedBg = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF0F0F5);
+    final unselectedBorder = isDark ? const Color(0xFF2D2D44) : const Color(0xFFDDDDDD);
+    final unselectedText = isDark ? Colors.white70 : const Color(0xFF555555);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFD4AF37) : const Color(0xFF1A1A2E),
+          color: selected ? const Color(0xFFD4AF37) : unselectedBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? const Color(0xFFD4AF37) : const Color(0xFF2D2D44),
+            color: selected ? const Color(0xFFD4AF37) : unselectedBorder,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.black : Colors.white70,
+            color: selected ? Colors.black : unselectedText,
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -2468,22 +2569,27 @@ class _VersionPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pillBg = isDark ? const Color(0xFF2D2D44) : const Color(0xFFEEEEF2);
+    final textColor = isDark ? Colors.white : const Color(0xFF222222);
+    final dropdownBg = isDark ? const Color(0xFF16213E) : Colors.white;
+    final arrowColor = isDark ? Colors.white70 : const Color(0xFF666666);
     final items = versions.isEmpty
-        ? const [
+        ? [
             DropdownMenuItem<String>(
               value: 'en',
-              child: Text('ASV', style: TextStyle(color: Colors.white)),
+              child: Text('ASV', style: TextStyle(color: textColor)),
             ),
             DropdownMenuItem<String>(
               value: 'tl',
-              child: Text('Ang Biblia', style: TextStyle(color: Colors.white)),
+              child: Text('Ang Biblia', style: TextStyle(color: textColor)),
             ),
           ]
         : versions
             .map(
               (version) => DropdownMenuItem<String>(
                 value: version.id,
-                child: Text(version.label, style: const TextStyle(color: Colors.white)),
+                child: Text(version.label, style: TextStyle(color: textColor)),
               ),
             )
             .toList();
@@ -2493,15 +2599,15 @@ class _VersionPicker extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D44),
+        color: pillBg,
         borderRadius: BorderRadius.circular(20),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: currentValue,
-          dropdownColor: const Color(0xFF16213E),
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          dropdownColor: dropdownBg,
+          icon: Icon(Icons.keyboard_arrow_down, color: arrowColor),
+          style: TextStyle(color: textColor, fontSize: 12),
           items: items,
           onChanged: (value) {
             if (value != null) {

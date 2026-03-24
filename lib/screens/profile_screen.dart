@@ -1312,26 +1312,52 @@ class _ProfileActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFF888888);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: c),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: c,
-                fontWeight: FontWeight.w500,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isComment = label == 'Comment';
+    final isShare = label == 'Share';
+
+    final Color accent;
+    final IconData displayIcon;
+    if (color != null) {
+      accent = color!;
+      displayIcon = icon;
+    } else if (isComment) {
+      accent = isDark ? const Color(0xFF64B5F6) : const Color(0xFF1976D2);
+      displayIcon = Icons.mode_comment_outlined;
+    } else if (isShare) {
+      accent = isDark ? const Color(0xFF81C784) : const Color(0xFF388E3C);
+      displayIcon = Icons.reply_rounded;
+    } else {
+      accent = isDark
+          ? Colors.white.withValues(alpha: 0.6)
+          : Colors.black.withValues(alpha: 0.5);
+      displayIcon = icon;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: accent.withValues(alpha: 0.18),
+        highlightColor: accent.withValues(alpha: 0.08),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(displayIcon, size: 18, color: accent),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: accent,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

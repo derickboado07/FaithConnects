@@ -2,6 +2,25 @@ import 'package:flutter/material.dart';
 
 import '../services/bible_service.dart';
 
+const _gold = Color(0xFFD4AF37);
+
+Color _bg(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F5FA);
+Color _card(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? const Color(0xFF16213E) : Colors.white;
+Color _border(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? const Color(0xFF2D2D44) : const Color(0xFFE0E0E0);
+Color _onBg(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? Colors.white : const Color(0xFF1A1A2E);
+Color _onBgSub(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? Colors.white70 : const Color(0xFF555555);
+Color _onBgHint(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF777777);
+Color _onBgMuted(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? Colors.white38 : const Color(0xFF999999);
+Color _onBgFaint(BuildContext c) =>
+    Theme.of(c).brightness == Brightness.dark ? Colors.white24 : const Color(0xFFBDBDBD);
+
 class BibleNotesScreen extends StatefulWidget {
   const BibleNotesScreen({super.key});
 
@@ -10,10 +29,6 @@ class BibleNotesScreen extends StatefulWidget {
 }
 
 class _BibleNotesScreenState extends State<BibleNotesScreen> {
-  static const _gold = Color(0xFFD4AF37);
-  static const _bg = Color(0xFF1A1A2E);
-  static const _card = Color(0xFF16213E);
-  static const _border = Color(0xFF2D2D44);
 
   List<Map<String, dynamic>> _notes = [];
   List<String> _folders = ['General'];
@@ -55,22 +70,22 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: _card,
-        title: const Text(
+        backgroundColor: _card(context),
+        title: Text(
           'New Folder',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: _onBg(context)),
         ),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: _onBg(context)),
+          decoration: InputDecoration(
             hintText: 'Folder name',
-            hintStyle: TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: _onBgMuted(context)),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white24),
+              borderSide: BorderSide(color: _onBgFaint(context)),
             ),
-            focusedBorder: UnderlineInputBorder(
+            focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: _gold),
             ),
           ),
@@ -78,7 +93,7 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: _onBgHint(context))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
@@ -101,19 +116,19 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: _card,
-        title: const Text(
+        backgroundColor: _card(context),
+        title: Text(
           'Delete Folder',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: _onBg(context)),
         ),
         content: Text(
           'Delete "$folder"? Notes in this folder will be moved to General.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: _onBgSub(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: _onBgHint(context))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -170,10 +185,10 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: _bg(context),
         appBar: AppBar(
-          backgroundColor: _bg,
-          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: _bg(context),
+          iconTheme: IconThemeData(color: _onBg(context)),
           leading: _activeFolder != null
               ? IconButton(
                   icon: const Icon(Icons.arrow_back),
@@ -182,7 +197,7 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
               : null,
           title: Text(
             _activeFolder == null ? 'Bible Notes' : _activeFolder!,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: _onBg(context), fontWeight: FontWeight.bold),
           ),
           actions: [
             IconButton(
@@ -209,10 +224,10 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
-        const Text(
+        Text(
           'Folders',
           style: TextStyle(
-            color: Colors.white,
+            color: _onBg(context),
             fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
@@ -241,10 +256,10 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
         const SizedBox(height: 24),
         Row(
           children: [
-            const Text(
+            Text(
               'Recent Notes',
               style: TextStyle(
-                color: Colors.white,
+                color: _onBg(context),
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
@@ -252,7 +267,7 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
             const Spacer(),
             Text(
               '${_notes.length}',
-              style: const TextStyle(color: Colors.white38),
+              style: TextStyle(color: _onBgMuted(context)),
             ),
           ],
         ),
@@ -261,18 +276,18 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: _card,
+              color: _card(context),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: _border),
+              border: Border.all(color: _border(context)),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.note_alt_outlined, color: Colors.white24, size: 48),
-                SizedBox(height: 10),
+                Icon(Icons.note_alt_outlined, color: _onBgFaint(context), size: 48),
+                const SizedBox(height: 10),
                 Text(
                   'No notes yet. Tap + to create one.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 14),
+                  style: TextStyle(color: _onBgHint(context), fontSize: 14),
                 ),
               ],
             ),
@@ -301,9 +316,9 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _card,
+            color: _card(context),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _border),
+            border: Border.all(color: _border(context)),
           ),
           child: Row(
             children: [
@@ -323,22 +338,22 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
                   children: [
                     Text(
                       _activeFolder!,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _onBg(context),
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
                       '${notes.length} note${notes.length == 1 ? '' : 's'}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(color: _onBgHint(context), fontSize: 12),
                     ),
                   ],
                 ),
               ),
               if (_activeFolder != 'General')
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.white54),
+                  icon: Icon(Icons.delete_outline, color: _onBgHint(context)),
                   onPressed: () => _deleteFolder(_activeFolder!),
                 ),
             ],
@@ -352,17 +367,17 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.folder_copy_outlined, color: Colors.white24, size: 56),
+                        Icon(Icons.folder_copy_outlined, color: _onBgFaint(context), size: 56),
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           'No notes in this folder.',
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                          style: TextStyle(color: _onBgSub(context), fontSize: 16),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Open a folder from the main notes view or tap + to add one here.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white38, fontSize: 13),
+                          style: TextStyle(color: _onBgMuted(context), fontSize: 13),
                         ),
                       ],
                     ),
@@ -409,9 +424,9 @@ class _FolderCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Ink(
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: _card(context),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF2D2D44)),
+          border: Border.all(color: _border(context)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -424,25 +439,25 @@ class _FolderCard extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                      color: _gold.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.folder, color: Color(0xFFD4AF37)),
+                    child: const Icon(Icons.folder, color: _gold),
                   ),
                   const Spacer(),
                   if (onDelete != null)
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_horiz, color: Colors.white38),
-                      color: const Color(0xFF16213E),
+                      icon: Icon(Icons.more_horiz, color: _onBgMuted(context)),
+                      color: _card(context),
                       onSelected: (value) {
                         if (value == 'delete') {
                           onDelete!.call();
                         }
                       },
-                      itemBuilder: (context) => const [
+                      itemBuilder: (context) => [
                         PopupMenuItem<String>(
                           value: 'delete',
-                          child: Text('Delete folder', style: TextStyle(color: Colors.white)),
+                          child: Text('Delete folder', style: TextStyle(color: _onBg(context))),
                         ),
                       ],
                     ),
@@ -453,8 +468,8 @@ class _FolderCard extends StatelessWidget {
                 folder,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: _onBg(context),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -462,7 +477,7 @@ class _FolderCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '$count note${count == 1 ? '' : 's'}',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: _onBgHint(context), fontSize: 12),
               ),
             ],
           ),
@@ -503,9 +518,9 @@ class _NoteTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       child: Ink(
         decoration: BoxDecoration(
-          color: const Color(0xFF16213E),
+          color: _card(context),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF2D2D44)),
+          border: Border.all(color: _border(context)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -519,8 +534,8 @@ class _NoteTile extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _onBg(context),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -528,7 +543,7 @@ class _NoteTile extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, color: Colors.white38, size: 20),
+                    icon: Icon(Icons.delete_outline, color: _onBgMuted(context), size: 20),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
@@ -554,12 +569,12 @@ class _NoteTile extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.folder_outlined, size: 14, color: Colors.white38),
+                  Icon(Icons.folder_outlined, size: 14, color: _onBgMuted(context)),
                   const SizedBox(width: 4),
-                  Text(folder, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  Text(folder, style: TextStyle(color: _onBgMuted(context), fontSize: 12)),
                   const Spacer(),
                   if (dateLabel.isNotEmpty)
-                    Text(dateLabel, style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                    Text(dateLabel, style: TextStyle(color: _onBgFaint(context), fontSize: 11)),
                 ],
               ),
             ],
@@ -591,10 +606,6 @@ class BibleNoteEditorScreen extends StatefulWidget {
 }
 
 class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
-  static const _gold = Color(0xFFD4AF37);
-  static const _bg = Color(0xFF1A1A2E);
-  static const _card = Color(0xFF16213E);
-  static const _border = Color(0xFF2D2D44);
 
   late final TextEditingController _titleCtrl;
   late final TextEditingController _contentCtrl;
@@ -703,7 +714,7 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
     };
     final hex = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: _card(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -724,7 +735,7 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
                       decoration: BoxDecoration(
                         color: entry.value,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24),
+                        border: Border.all(color: _onBgFaint(context)),
                       ),
                     ),
                   ),
@@ -744,13 +755,13 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
   Widget build(BuildContext context) {
     final verseRef = widget.note?['verseRef'] as String? ?? widget.initialVerseRef ?? '';
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: _bg(context),
       appBar: AppBar(
-        backgroundColor: _bg,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: _bg(context),
+        iconTheme: IconThemeData(color: _onBg(context)),
         title: Text(
           _isEditing ? 'Edit Note' : 'New Note',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: _onBg(context), fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -777,7 +788,7 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _card,
+                color: _card(context),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: _gold.withValues(alpha: 0.3)),
               ),
@@ -804,22 +815,22 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: _card,
+                    color: _card(context),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: _border),
+                    border: Border.all(color: _border(context)),
                   ),
                   child: TextField(
                     controller: _titleCtrl,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: _onBg(context),
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'The title of this note is about...',
-                      hintStyle: TextStyle(color: Colors.white38),
+                      hintStyle: TextStyle(color: _onBgMuted(context)),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                     ),
                   ),
                 ),
@@ -828,23 +839,23 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _card,
+                    color: _card(context),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _border),
+                    border: Border.all(color: _border(context)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.folder_outlined, size: 16, color: Colors.white38),
+                      Icon(Icons.folder_outlined, size: 16, color: _onBgMuted(context)),
                       const SizedBox(width: 8),
                       DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _folder,
-                          dropdownColor: _card,
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          dropdownColor: _card(context),
+                          style: TextStyle(color: _onBgSub(context), fontSize: 13),
                           items: widget.folders
                               .map((folder) => DropdownMenuItem<String>(
                                     value: folder,
-                                    child: Text(folder, style: const TextStyle(color: Colors.white)),
+                                    child: Text(folder, style: TextStyle(color: _onBg(context))),
                                   ))
                               .toList(),
                           onChanged: (value) {
@@ -877,7 +888,7 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: _card(context),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: _gold.withValues(alpha: 0.45)),
                 ),
@@ -894,16 +905,16 @@ class _BibleNoteEditorScreenState extends State<BibleNoteEditorScreen> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: _onBg(context),
                           fontSize: 15,
                           height: 1.7,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Write your note here. Use the toolbar for H1/H2/H3, color, bullets, and numbering.',
-                          hintStyle: TextStyle(color: Colors.white30),
+                          hintStyle: TextStyle(color: _onBgFaint(context)),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(20),
+                          contentPadding: const EdgeInsets.all(20),
                         ),
                       ),
               ),
@@ -981,16 +992,16 @@ class _ToolbarButton extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF16213E),
+            color: _card(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF2D2D44)),
+            border: Border.all(color: _border(context)),
           ),
           child: icon != null
-              ? Icon(icon, color: Colors.white70, size: 18)
+              ? Icon(icon, color: _onBgSub(context), size: 18)
               : Text(
                   label!,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _onBg(context),
                     fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
                     fontStyle: italic ? FontStyle.italic : FontStyle.normal,
                   ),
@@ -1017,13 +1028,13 @@ class _NotePreview extends StatelessWidget {
     if (text.trim().isEmpty) {
       return Text(
         emptyLabel,
-        style: const TextStyle(color: Colors.white30, fontSize: 14),
+        style: TextStyle(color: _onBgFaint(context), fontSize: 14),
       );
     }
     final lines = text.split('\n');
     final children = <Widget>[];
     for (final line in lines) {
-      children.add(_buildLine(line));
+      children.add(_buildLine(line, context));
       children.add(const SizedBox(height: 6));
     }
     final content = Column(
@@ -1040,7 +1051,7 @@ class _NotePreview extends StatelessWidget {
     );
   }
 
-  Widget _buildLine(String rawLine) {
+  Widget _buildLine(String rawLine, BuildContext context) {
     final line = rawLine.trimRight();
     double fontSize = 14;
     FontWeight fontWeight = FontWeight.w400;
@@ -1072,16 +1083,16 @@ class _NotePreview extends StatelessWidget {
       text: TextSpan(
         children: [
           if (bulletPrefix.isNotEmpty)
-            const TextSpan(
+            TextSpan(
               text: '• ',
-              style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w700),
+              style: TextStyle(color: _onBgSub(context), fontSize: 14, fontWeight: FontWeight.w700),
             ),
           if (numberMatch != null)
             TextSpan(
               text: '${numberMatch.group(1)}. ',
-              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w700),
+              style: TextStyle(color: _onBgSub(context), fontSize: 14, fontWeight: FontWeight.w700),
             ),
-          ..._inlineSpans(content, fontSize: fontSize, fontWeight: fontWeight),
+          ..._inlineSpans(content, context: context, fontSize: fontSize, fontWeight: fontWeight),
         ],
       ),
     );
@@ -1089,6 +1100,7 @@ class _NotePreview extends StatelessWidget {
 
   List<InlineSpan> _inlineSpans(
     String text, {
+    required BuildContext context,
     required double fontSize,
     required FontWeight fontWeight,
   }) {
@@ -1104,20 +1116,20 @@ class _NotePreview extends StatelessWidget {
           .toList()
         ..sort();
       if (candidates.isEmpty) {
-        spans.add(_plainSpan(text.substring(index), fontSize, fontWeight));
+        spans.add(_plainSpan(text.substring(index), context, fontSize, fontWeight));
         break;
       }
 
       final next = candidates.first;
       if (next > index) {
-        spans.add(_plainSpan(text.substring(index, next), fontSize, fontWeight));
+        spans.add(_plainSpan(text.substring(index, next), context, fontSize, fontWeight));
       }
 
       if (next == colorStart) {
         final tagEnd = text.indexOf(']', colorStart);
         final closeTag = text.indexOf('[/color]', tagEnd + 1);
         if (tagEnd < 0 || closeTag < 0) {
-          spans.add(_plainSpan(text.substring(colorStart), fontSize, fontWeight));
+          spans.add(_plainSpan(text.substring(colorStart), context, fontSize, fontWeight));
           break;
         }
         final hex = text.substring(colorStart + 8, tagEnd);
@@ -1140,7 +1152,7 @@ class _NotePreview extends StatelessWidget {
       if (next == boldStart) {
         final close = text.indexOf('**', boldStart + 2);
         if (close < 0) {
-          spans.add(_plainSpan(text.substring(boldStart), fontSize, fontWeight));
+          spans.add(_plainSpan(text.substring(boldStart), context, fontSize, fontWeight));
           break;
         }
         final inner = text.substring(boldStart + 2, close);
@@ -1148,7 +1160,7 @@ class _NotePreview extends StatelessWidget {
           TextSpan(
             text: inner,
             style: TextStyle(
-              color: Colors.white,
+              color: _onBg(context),
               fontSize: fontSize,
               fontWeight: FontWeight.w800,
               height: 1.6,
@@ -1161,7 +1173,7 @@ class _NotePreview extends StatelessWidget {
 
       final close = text.indexOf('*', italicStart + 1);
       if (close < 0) {
-        spans.add(_plainSpan(text.substring(italicStart), fontSize, fontWeight));
+        spans.add(_plainSpan(text.substring(italicStart), context, fontSize, fontWeight));
         break;
       }
       final inner = text.substring(italicStart + 1, close);
@@ -1169,7 +1181,7 @@ class _NotePreview extends StatelessWidget {
         TextSpan(
           text: inner,
           style: TextStyle(
-            color: Colors.white,
+            color: _onBg(context),
             fontSize: fontSize,
             fontWeight: fontWeight,
             fontStyle: FontStyle.italic,
@@ -1182,11 +1194,11 @@ class _NotePreview extends StatelessWidget {
     return spans;
   }
 
-  TextSpan _plainSpan(String text, double fontSize, FontWeight fontWeight) {
+  TextSpan _plainSpan(String text, BuildContext context, double fontSize, FontWeight fontWeight) {
     return TextSpan(
       text: text,
       style: TextStyle(
-        color: Colors.white70,
+        color: _onBgSub(context),
         fontSize: fontSize,
         fontWeight: fontWeight,
         height: 1.6,
