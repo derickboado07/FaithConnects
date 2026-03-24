@@ -1,11 +1,25 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH SERVICE — Handles authentication, user profile management,
+// and social graph (follow/unfollow) operations.
+//
+// Firestore collections:
+//   - users/{uid}                    — User profile documents
+//   - users/{uid}/followers/{fid}    — Follower sub-documents
+//   - users/{uid}/following/{fid}    — Following sub-documents
+//
+// Firebase Storage: users/{uid}/avatar, users/{uid}/banner
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'notification_service.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODEL — AuthUser
+// ─────────────────────────────────────────────────────────────────────────────
 
 class AuthUser {
   final String id;
@@ -14,283 +28,106 @@ class AuthUser {
   final String bio;
   final String phone;
   final String gender;
-  final String? dob; // ISO date string (YYYY-MM-DD)
+  final String? dob;
   final String avatarUrl;
   final String bannerUrl;
-  final String note; // Short status message (Messenger-like note)
-  final String role;
-  final String status;
   final String verseBackground;
+  final bool isModerator;
 
   AuthUser({
     required this.id,
     required this.email,
-    required this.name,
+    this.name = '',
     this.bio = '',
     this.phone = '',
     this.gender = '',
     this.dob,
     this.avatarUrl = '',
     this.bannerUrl = '',
-    this.note = '',
-    this.role = 'user',
-    this.status = 'active',
     this.verseBackground = '',
+    this.isModerator = false,
   });
 
-  bool get isModerator => role == 'moderator';
-  bool get isBanned => status == 'banned';
-
-  AuthUser copyWith({
-    String? name,
-    String? bio,
-    String? phone,
-    String? gender,
-    String? dob,
-    String? avatarUrl,
-    String? bannerUrl,
-    String? note,
-    String? role,
-    String? status,
-    String? verseBackground,
-  }) {
+  factory AuthUser.fromFirestore(String uid, Map<String, dynamic> data) {
     return AuthUser(
-      id: id,
-      email: email,
-      name: name ?? this.name,
-      bio: bio ?? this.bio,
-      phone: phone ?? this.phone,
-      gender: gender ?? this.gender,
-      dob: dob ?? this.dob,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      bannerUrl: bannerUrl ?? this.bannerUrl,
-      note: note ?? this.note,
-      role: role ?? this.role,
-      status: status ?? this.status,
-      verseBackground: verseBackground ?? this.verseBackground,
+      id: uid,
+      email: data['email'] as String? ?? '',
+      name: data['name'] as String? ?? '',
+      bio: data['bio'] as String? ?? '',
+      phone: data['phone'] as String? ?? '',
+      gender: data['gender'] as String? ?? '',
+      dob: data['dob'] as String?,
+      avatarUrl: data['avatarUrl'] as String? ?? '',
+      bannerUrl: data['bannerUrl'] as String? ?? '',
+      verseBackground: data['verseBackground'] as String? ?? '',
+      isModerator: data['isModerator'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'email': email,
-    'name': name,
-    'bio': bio,
-    'phone': phone,
-    'gender': gender,
-    'dob': dob,
-    'avatar': avatarUrl,
-    'banner': bannerUrl,
-    'note': note,
-    'role': role,
-    'status': status,
-    'verseBackground': verseBackground,
-  };
-
-  static AuthUser fromJson(Map<String, dynamic> j) => AuthUser(
-    id: j['id'] ?? '',
-    email: j['email'] ?? '',
-    name: j['name'] ?? '',
-    bio: j['bio'] ?? '',
-    phone: j['phone'] ?? '',
-    gender: j['gender'] ?? '',
-    dob: j['dob'],
-    avatarUrl: j['avatar'] ?? '',
-    bannerUrl: j['banner'] ?? '',
-    note: j['note'] ?? '',
-    role: j['role'] ?? 'user',
-    status: j['status'] ?? 'active',
-    verseBackground: j['verseBackground'] ?? '',
-  );
+        'email': email,
+        'name': name,
+        'bio': bio,
+        'phone': phone,
+        'gender': gender,
+        'dob': dob,
+        'avatarUrl': avatarUrl,
+        'bannerUrl': bannerUrl,
+        'verseBackground': verseBackground,
+        'isModerator': isModerator,
+      };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH SERVICE — Singleton
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AuthService {
-  AuthService._internal();
-  static final AuthService instance = AuthService._internal();
+  AuthService._();
+  static final AuthService instance = AuthService._();
 
-  final ValueNotifier<AuthUser?> currentUser = ValueNotifier<AuthUser?>(null);
-
-  final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSub;
-  StreamSubscription<fb_auth.User?>? _authStateSub;
 
-  Future<void> _bindCurrentUserDoc(String uid) async {
-    await _userDocSub?.cancel();
-    _userDocSub = _db.collection('users').doc(uid).snapshots().listen((doc) async {
-      if (!doc.exists) {
-        currentUser.value = null;
-        await _auth.signOut();
-        return;
-      }
+  /// Reactive holder for the currently signed-in user profile.
+  final ValueNotifier<AuthUser?> currentUser = ValueNotifier(null);
 
-      final loadedUser = AuthUser.fromJson(doc.data()!);
-      if (loadedUser.isBanned) {
-        debugPrint('AuthService: User $uid has been banned. Signing out.');
-        currentUser.value = null;
-        try {
-          await _auth.signOut();
-        } catch (e) {
-          debugPrint('AuthService: Error signing out banned user: $e');
-        }
-        return;
-      }
+  StreamSubscription<DocumentSnapshot>? _userSub;
 
-      currentUser.value = loadedUser;
-    }, onError: (e) {
-      debugPrint('AuthService: Error in user doc subscription: $e');
-    });
-  }
-
-  /// Sets up the Firebase auth state listener. Safe to call multiple times —
-  /// cancels any previous subscription before creating a new one.
-  Future<void> _setupAuthStateListener() async {
-    await _authStateSub?.cancel();
-    _authStateSub = _auth.authStateChanges().listen((fbUser) async {
-      if (fbUser == null) {
-        await _userDocSub?.cancel();
-        _userDocSub = null;
-        currentUser.value = null;
-        return;
-      }
-      final doc = await _db.collection('users').doc(fbUser.uid).get();
-      if (doc.exists) {
-        final loadedUser = AuthUser.fromJson(doc.data()!);
-        if (loadedUser.isBanned) {
-          currentUser.value = null;
-          await _auth.signOut();
-          return;
-        }
-        currentUser.value = loadedUser;
-        await _bindCurrentUserDoc(fbUser.uid);
-      } else {
-        // Create minimal user doc if missing
-        final u = AuthUser(
-          id: fbUser.uid,
-          email: fbUser.email ?? '',
-          name: fbUser.displayName ?? '',
-        );
-        await _db.collection('users').doc(fbUser.uid).set(u.toJson());
-        currentUser.value = u;
-        await _bindCurrentUserDoc(fbUser.uid);
-      }
-    });
-  }
-
+  /// Initialises the service: restores session if a user is already signed in.
   Future<void> init() async {
-    await _setupAuthStateListener();
-    // If already signed in, trigger loading
-    final cur = _auth.currentUser;
-    if (cur != null) {
-      final doc = await _db.collection('users').doc(cur.uid).get();
-      if (doc.exists) {
-        final loadedUser = AuthUser.fromJson(doc.data()!);
-        if (loadedUser.isBanned) {
-          currentUser.value = null;
-          await _auth.signOut();
-        } else {
-          currentUser.value = loadedUser;
-          await _bindCurrentUserDoc(cur.uid);
-        }
-      }
-    }
-    // mark active if already signed in
-    if (_auth.currentUser != null) {
-      try {
-        await setPresence(true);
-        await updateLastActive();
-      } catch (_) {}
+    final fbUser = _auth.currentUser;
+    if (fbUser != null) {
+      await _loadUser(fbUser.uid);
     }
   }
 
-  // Returns `null` on success, or an error message on failure.
-  Future<String?> register({
-    required String email,
-    required String password,
-    required String name,
-    required String phone,
-    required String gender,
-    String? dob,
-  }) async {
-    try {
-      final cred = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      final uid = cred.user!.uid;
-      final userDoc = AuthUser(
-        id: uid,
-        email: email,
-        name: name,
-        phone: phone,
-        gender: gender,
-        dob: dob,
-      );
-      try {
-        await _db.collection('users').doc(uid).set(userDoc.toJson());
-        currentUser.value = userDoc;
-        return null;
-      } on FirebaseException catch (fe) {
-        // If Firestore write failed (e.g. permission-denied), roll back the
-        // created Authentication user to avoid leaving a dangling auth-only
-        // account.
-        try {
-          await cred.user?.delete();
-        } catch (_) {
-          // ignore failures when deleting the user
-        }
-        final code = fe.code;
-        if (code == 'permission-denied' ||
-            (fe.message != null &&
-                fe.message!.toLowerCase().contains('permission'))) {
-          final msg =
-              '[permission-denied] Missing or insufficient permissions.\n'
-              'Ensure Firestore rules allow authenticated users to create their own /users/{uid} document.\n'
-              'See Firebase Console → Firestore → Rules.';
-          debugPrint('AuthService.register FirestoreException: $msg');
-          return msg;
-        }
-        final msg = fe.message ?? fe.toString();
-        debugPrint('AuthService.register FirestoreException: $msg');
-        return msg;
-      }
-    } on fb_auth.FirebaseAuthException catch (e, st) {
-      final code = e.code;
-      String friendly;
-      if (code == 'configuration-not-found' ||
-          (e.message != null &&
-              e.message!.toLowerCase().contains('configuration'))) {
-        friendly =
-            'Firebase Authentication is not enabled.\n\n'
-            'Please enable it in Firebase Console:\n'
-            '1. Visit https://console.firebase.google.com/\n'
-            '2. Select project: faith-connects-c7a7e\n'
-            '3. Go to Authentication → Get Started\n'
-            '4. Enable Email/Password sign-in method\n'
-            '5. Rebuild and run this app';
-      } else if (code == 'email-already-in-use') {
-        friendly = 'The email address is already in use.';
-      } else if (code == 'invalid-email') {
-        friendly = 'The email address is invalid.';
-      } else if (code == 'weak-password') {
-        friendly = 'The password is too weak. Use at least 6 characters.';
-      } else {
-        friendly = e.message ?? 'Registration failed.';
-      }
-      final msg = '[$code] $friendly';
-      debugPrint('AuthService.register FirebaseAuthException: $msg');
-      debugPrintStack(label: 'AuthService.register stack', stackTrace: st);
-      return msg;
-    } catch (e, st) {
-      final msg = e.toString();
-      debugPrint('AuthService.register unexpected error: $msg');
-      debugPrintStack(label: 'AuthService.register stack', stackTrace: st);
-      return msg;
-    }
+  // ── Presence ────────────────────────────────────────────────────────────
+
+  /// Sets the current user's online/offline presence in Firestore.
+  void setPresence(bool online) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    _db.collection('users').doc(uid).set(
+      {'isOnline': online},
+      SetOptions(merge: true),
+    );
   }
 
-  // Returns null on success, or an error message string on failure.
+  /// Updates the current user's last-active timestamp in Firestore.
+  void updateLastActive() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    _db.collection('users').doc(uid).set(
+      {'lastActive': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  // ── Authentication ──────────────────────────────────────────────────────
+
+  /// Logs in with email & password. Returns error string on failure, null on success.
   Future<String?> login({
     required String email,
     required String password,
@@ -300,210 +137,79 @@ class AuthService {
         email: email,
         password: password,
       );
-      final uid = cred.user!.uid;
-      final doc = await _db.collection('users').doc(uid).get();
-      if (doc.exists) {
-        final loadedUser = AuthUser.fromJson(doc.data()!);
-        if (loadedUser.isBanned) {
-          await _auth.signOut();
-          currentUser.value = null;
-          return 'This account has been banned.';
-        }
-        currentUser.value = loadedUser;
-        await _bindCurrentUserDoc(uid);
-      } else {
-        // User exists in Auth but not in Firestore — create the doc.
-        final u = AuthUser(
-          id: uid,
-          email: email,
-          name: cred.user?.displayName ?? '',
-        );
-        try {
-          await _db.collection('users').doc(uid).set(u.toJson());
-        } catch (_) {}
-        currentUser.value = u;
-        await _bindCurrentUserDoc(uid);
-      }
-      // Re-establish auth state listener (cancelled during logout)
-      await _setupAuthStateListener();
+      final uid = cred.user?.uid;
+      if (uid == null) return 'Login failed.';
+      await _loadUser(uid);
       return null;
-    } on fb_auth.FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'user-not-found':
-          return 'No account found for that email.';
-        case 'wrong-password':
-        case 'invalid-credential':
-          return 'Incorrect password. Please try again.';
-        case 'invalid-email':
-          return 'The email address is invalid.';
-        case 'user-disabled':
-          return 'This account has been disabled.';
-        case 'too-many-requests':
-          return 'Too many failed attempts. Please try again later.';
-        default:
-          return e.message ?? 'Login failed.';
-      }
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'Login failed.';
     } catch (e) {
       return e.toString();
     }
   }
 
+  /// Registers a new account. Returns error string on failure, null on success.
+  Future<String?> register({
+    required String email,
+    required String password,
+    required String name,
+    String? phone,
+    String? gender,
+    String? dob,
+  }) async {
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final uid = cred.user?.uid;
+      if (uid == null) return 'Registration failed.';
+      await _db.collection('users').doc(uid).set({
+        'email': email,
+        'name': name,
+        'bio': '',
+        'phone': phone ?? '',
+        'gender': gender ?? '',
+        'dob': dob,
+        'avatarUrl': '',
+        'bannerUrl': '',
+        'isModerator': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      // Sign out after registration so user logs in explicitly
+      await _auth.signOut();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'Registration failed.';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Signs out the current user.
   Future<void> logout() async {
-    try {
-      await setPresence(false);
-    } catch (_) {}
-    await _userDocSub?.cancel();
-    _userDocSub = null;
-    await _authStateSub?.cancel();
-    _authStateSub = null;
-    NotificationService.instance.stopListening();
-    await _auth.signOut();
+    _userSub?.cancel();
+    _userSub = null;
     currentUser.value = null;
+    await _auth.signOut();
   }
 
-  /// Sends a password-reset email. Returns null on success or an error message.
+  /// Sends a password-reset email. Returns error string on failure, null on success.
   Future<String?> sendPasswordReset(String email) async {
-    final trimmed = email.trim();
-    if (trimmed.isEmpty) return 'Please enter your email address.';
     try {
-      await _auth.sendPasswordResetEmail(email: trimmed);
+      await _auth.sendPasswordResetEmail(email: email);
       return null;
-    } on fb_auth.FirebaseAuthException catch (e) {
-      switch (e.code) {
-        case 'user-not-found':
-          return 'No account found for that email.';
-        case 'invalid-email':
-          return 'The email address is invalid.';
-        default:
-          return e.message ?? 'Failed to send reset email.';
-      }
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'Failed to send reset email.';
     } catch (e) {
       return e.toString();
     }
   }
 
-  /// Marks the current user as online/offline in their /users/{uid} document.
-  Future<void> setPresence(bool online) async {
-    final cur = _auth.currentUser;
-    if (cur == null) return;
-    try {
-      await _db.collection('users').doc(cur.uid).set({
-        'isOnline': online,
-        'lastActive': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('setPresence failed: $e');
-    }
-  }
+  // ── Profile ─────────────────────────────────────────────────────────────
 
-  /// Update the user's lastActive timestamp without changing isOnline flag.
-  Future<void> updateLastActive() async {
-    final cur = _auth.currentUser;
-    if (cur == null) return;
-    try {
-      await _db.collection('users').doc(cur.uid).set({
-        'lastActive': DateTime.now().toIso8601String(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('updateLastActive failed: $e');
-    }
-  }
-
-  Future<String?> _uploadAvatar(String uid, String localPath) async {
-    try {
-      final file = File(localPath);
-      if (!await file.exists()) return null;
-      final ref = _storage.ref().child('avatars').child('$uid.jpg');
-      final task = await ref.putFile(file);
-      final url = await task.ref.getDownloadURL();
-      return url;
-    } catch (e) {
-      debugPrint('AuthService: avatar upload failed: $e');
-      return null;
-    }
-  }
-
-  Future<String?> _uploadBanner(String uid, String localPath) async {
-    try {
-      final file = File(localPath);
-      if (!await file.exists()) return null;
-      final ref = _storage.ref().child('banners').child('$uid.jpg');
-      final task = await ref.putFile(file);
-      final url = await task.ref.getDownloadURL();
-      return url;
-    } catch (e) {
-      debugPrint('AuthService: banner upload failed: $e');
-      return null;
-    }
-  }
-
-  Future<String?> _uploadVerseBackground(String uid, String localPath) async {
-    try {
-      final file = File(localPath);
-      if (!await file.exists()) return null;
-      final ref = _storage.ref().child('verse_backgrounds').child(uid).child('current');
-      final filename = localPath.split(RegExp(r'[/\\]')).last;
-      final task = await ref.putFile(
-        file,
-        SettableMetadata(contentType: _mimeFromFilename(filename)),
-      );
-      final url = await task.ref.getDownloadURL();
-      return url;
-    } catch (e) {
-      debugPrint('AuthService: verse background upload failed: $e');
-      return null;
-    }
-  }
-
-  String _mimeFromFilename(String filename) {
-    final ext = filename.contains('.')
-        ? filename.split('.').last.toLowerCase()
-        : '';
-    switch (ext) {
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'jpg':
-      default:
-        return 'image/jpeg';
-    }
-  }
-
-  Future<String?> _uploadImageBytes(
-    String storagePath,
-    Uint8List bytes,
-    String filename,
-  ) async {
-    try {
-      final mime = _mimeFromFilename(filename);
-      final ref = _storage.ref().child(storagePath);
-      final task = await ref.putData(
-        bytes,
-        SettableMetadata(contentType: mime),
-      );
-      return await task.ref.getDownloadURL();
-    } catch (e) {
-      debugPrint('AuthService: image bytes upload failed: $e');
-      return null;
-    }
-  }
-
-  Future<void> _tryDeleteStorageFileFromUrl(String? url) async {
-    if (url == null || url.isEmpty) return;
-    if (!url.contains('firebasestorage.googleapis.com') &&
-        !url.contains('storage.googleapis.com')) {
-      return;
-    }
-    try {
-      await _storage.refFromURL(url).delete();
-    } catch (_) {
-      // Ignore missing files or non-storage URLs.
-    }
-  }
-
+  /// Updates the current user's profile. Supports text fields and media uploads.
+  /// Returns true on success.
   Future<bool> updateProfile({
     required String email,
     String? name,
@@ -514,330 +220,251 @@ class AuthService {
     String? avatarPath,
     Uint8List? avatarBytes,
     String? avatarFilename,
-    String? avatarUrl,
     String? bannerPath,
     Uint8List? bannerBytes,
     String? bannerFilename,
   }) async {
     try {
-      // find user doc by email (emails are unique in FirebaseAuth)
-      final q = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (q.docs.isEmpty) return false;
-      final doc = q.docs.first;
-      final uid = doc.id;
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return false;
 
-      String? currentAvatar = doc.data()['avatar'];
+      final updates = <String, dynamic>{};
+
+      if (name != null) updates['name'] = name;
+      if (bio != null) updates['bio'] = bio;
+      if (phone != null) updates['phone'] = phone;
+      if (gender != null) updates['gender'] = gender;
+      if (dob != null) updates['dob'] = dob;
+
+      // Avatar upload
       if (avatarBytes != null && avatarFilename != null) {
-        // Web: upload raw bytes directly to Firebase Storage
-        final uploaded = await _uploadImageBytes(
-          'avatars/$uid/$avatarFilename',
-          avatarBytes,
-          avatarFilename,
-        );
-        if (uploaded != null) currentAvatar = uploaded;
-      } else if (avatarPath != null && avatarPath.isNotEmpty) {
-        if (avatarPath.startsWith('/') ||
-            avatarPath.contains(':\\') ||
-            avatarPath.startsWith('file://')) {
-          final uploaded = await _uploadAvatar(
-            uid,
-            avatarPath.replaceFirst('file://', ''),
-          );
-          if (uploaded != null) currentAvatar = uploaded;
+        final ref = _storage.ref().child('users/$uid/avatar');
+        await ref.putData(avatarBytes);
+        updates['avatarUrl'] = await ref.getDownloadURL();
+      } else if (avatarPath != null && avatarPath.isNotEmpty && !avatarPath.startsWith('http')) {
+        final ref = _storage.ref().child('users/$uid/avatar');
+        if (kIsWeb) {
+          // On web, avatarPath isn't a local file — skip
+        } else {
+          await ref.putFile(File(avatarPath));
+          updates['avatarUrl'] = await ref.getDownloadURL();
         }
-        // Blob URLs and unrecognised paths are ignored — they are not permanent.
-      } else if (avatarUrl != null && avatarUrl.isNotEmpty) {
-        // Caller provided a direct remote URL to use as the avatar. Save it as-is.
-        currentAvatar = avatarUrl;
       }
 
-      String? bannerUrl = doc.data()['banner'];
+      // Banner upload
       if (bannerBytes != null && bannerFilename != null) {
-        final uploaded = await _uploadImageBytes(
-          'banners/$uid/$bannerFilename',
-          bannerBytes,
-          bannerFilename,
-        );
-        if (uploaded != null) bannerUrl = uploaded;
-      } else if (bannerPath != null && bannerPath.isNotEmpty) {
-        if (bannerPath.startsWith('/') ||
-            bannerPath.contains(':\\') ||
-            bannerPath.startsWith('file://')) {
-          final uploaded = await _uploadBanner(
-            uid,
-            bannerPath.replaceFirst('file://', ''),
-          );
-          if (uploaded != null) bannerUrl = uploaded;
+        final ref = _storage.ref().child('users/$uid/banner');
+        await ref.putData(bannerBytes);
+        updates['bannerUrl'] = await ref.getDownloadURL();
+      } else if (bannerPath != null && bannerPath.isNotEmpty && !bannerPath.startsWith('http')) {
+        final ref = _storage.ref().child('users/$uid/banner');
+        if (kIsWeb) {
+          // On web, bannerPath isn't a local file — skip
+        } else {
+          await ref.putFile(File(bannerPath));
+          updates['bannerUrl'] = await ref.getDownloadURL();
         }
-        // Blob URLs are ignored.
       }
 
-      final updateMap = <String, dynamic>{};
-      if (name != null) updateMap['name'] = name;
-      if (bio != null) updateMap['bio'] = bio;
-      if (phone != null) updateMap['phone'] = phone;
-      if (gender != null) updateMap['gender'] = gender;
-      if (dob != null) updateMap['dob'] = dob;
-      if (currentAvatar != null) updateMap['avatar'] = currentAvatar;
-      if (bannerUrl != null) updateMap['banner'] = bannerUrl;
-      if (updateMap.isNotEmpty) {
-        await _db.collection('users').doc(uid).update(updateMap);
+      if (updates.isNotEmpty) {
+        await _db.collection('users').doc(uid).set(updates, SetOptions(merge: true));
       }
-      final updatedDoc = await _db.collection('users').doc(uid).get();
-      currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
       return true;
     } catch (e) {
-      debugPrint('AuthService.updateProfile error: $e');
+      debugPrint('updateProfile error: $e');
       return false;
     }
   }
 
-  /// Uploads (or saves) a dedicated verse background for the user and stores
-  /// the resulting URL in the user's `/users/{uid}.verseBackground` field.
-  /// File uploads replace a single stable Firebase Storage object for the user.
-  /// Returns the saved URL on success, or null on failure.
+  // ── User lookup ─────────────────────────────────────────────────────────
+
+  /// Real-time stream of a user profile by UID.
+  Stream<AuthUser?> streamUser(String userId) {
+    return _db.collection('users').doc(userId).snapshots().map((snap) {
+      if (!snap.exists || snap.data() == null) return null;
+      return AuthUser.fromFirestore(snap.id, snap.data()!);
+    });
+  }
+
+  /// Searches users by name or email. Returns up to [limit] results.
+  Future<List<AuthUser>> searchUsers(String query, {int limit = 20}) async {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return [];
+
+    // Search by name prefix
+    final nameSnap = await _db
+        .collection('users')
+        .orderBy('name')
+        .startAt([q])
+        .endAt(['$q\uf8ff'])
+        .limit(limit)
+        .get();
+
+    // Search by email prefix
+    final emailSnap = await _db
+        .collection('users')
+        .orderBy('email')
+        .startAt([q])
+        .endAt(['$q\uf8ff'])
+        .limit(limit)
+        .get();
+
+    final Map<String, AuthUser> merged = {};
+    for (final doc in nameSnap.docs) {
+      merged[doc.id] = AuthUser.fromFirestore(doc.id, doc.data());
+    }
+    for (final doc in emailSnap.docs) {
+      merged.putIfAbsent(doc.id, () => AuthUser.fromFirestore(doc.id, doc.data()));
+    }
+    return merged.values.take(limit).toList();
+  }
+
+  // ── Follow / Social graph ──────────────────────────────────────────────
+
+  /// Checks whether the current user follows [targetUid].
+  Future<bool> isFollowingById(String targetUid) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return false;
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('following')
+        .doc(targetUid)
+        .get();
+    return doc.exists;
+  }
+
+  /// Toggles follow/unfollow for [targetUid].
+  /// Returns the new state: true = now following, false = now unfollowed.
+  Future<bool> toggleFollowById(String targetUid) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return false;
+    final myFollowingRef =
+        _db.collection('users').doc(uid).collection('following').doc(targetUid);
+    final theirFollowersRef =
+        _db.collection('users').doc(targetUid).collection('followers').doc(uid);
+
+    final snap = await myFollowingRef.get();
+    if (snap.exists) {
+      // Unfollow
+      await myFollowingRef.delete();
+      await theirFollowersRef.delete();
+      return false;
+    } else {
+      // Follow
+      final now = DateTime.now().toIso8601String();
+      await myFollowingRef.set({'ts': now});
+      await theirFollowersRef.set({'ts': now});
+      return true;
+    }
+  }
+
+  /// Real-time follower count for [userId].
+  Stream<int> streamFollowersCount(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('followers')
+        .snapshots()
+        .map((snap) => snap.docs.length);
+  }
+
+  /// Real-time following count for [userId].
+  Stream<int> streamFollowingCount(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('following')
+        .snapshots()
+        .map((snap) => snap.docs.length);
+  }
+
+  // ── Verse background ───────────────────────────────────────────────────
+
+  /// Uploads an image (from bytes, local path, or URL) and saves it as the
+  /// verse background for the current user. Returns the download URL on
+  /// success, or null on failure.
   Future<String?> uploadAndSaveVerseBackground({
     required String email,
-    String? localPath,
     Uint8List? bytes,
+    String? localPath,
     String? filename,
     String? url,
   }) async {
     try {
-      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
-      if (q.docs.isEmpty) return null;
-      final doc = q.docs.first;
-      final uid = doc.id;
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return null;
 
-      final String? oldUrl = doc.data()['verseBackground'];
-      String? newUrl;
-      final storagePath = 'verse_backgrounds/$uid/current';
+      String? downloadUrl;
 
-      if (bytes != null && filename != null) {
-        final uploaded = await _uploadImageBytes(storagePath, bytes, filename);
-        if (uploaded != null) newUrl = uploaded;
+      if (url != null && url.isNotEmpty) {
+        // URL provided directly — store it as-is
+        downloadUrl = url;
+      } else if (bytes != null) {
+        final ref = _storage.ref().child('users/$uid/verse_bg');
+        await ref.putData(bytes);
+        downloadUrl = await ref.getDownloadURL();
       } else if (localPath != null && localPath.isNotEmpty) {
-        if (localPath.startsWith('/') || localPath.contains(':\\') || localPath.startsWith('file://')) {
-          final uploaded = await _uploadVerseBackground(uid, localPath.replaceFirst('file://', ''));
-          if (uploaded != null) newUrl = uploaded;
+        final ref = _storage.ref().child('users/$uid/verse_bg');
+        if (!kIsWeb) {
+          await ref.putFile(File(localPath));
+          downloadUrl = await ref.getDownloadURL();
         }
-      } else if (url != null && url.isNotEmpty) {
-        newUrl = url;
       }
 
-      if (newUrl != null) {
-        // File uploads overwrite a stable Storage path, so no extra delete is
-        // needed there. Delete the old storage file only when switching away
-        // from a previously uploaded Firebase Storage image.
-        final isDirectUrlUpdate = url != null && url.isNotEmpty;
-        if (isDirectUrlUpdate && oldUrl != null && oldUrl != newUrl) {
-          await _tryDeleteStorageFileFromUrl(oldUrl);
-        }
-        await _db.collection('users').doc(uid).set({'verseBackground': newUrl}, SetOptions(merge: true));
-        // Update in-memory user so the UI reflects the change immediately
-        final updatedDoc = await _db.collection('users').doc(uid).get();
-        if (updatedDoc.exists) {
-          currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
-        }
-        return newUrl;
+      if (downloadUrl != null) {
+        await _db.collection('users').doc(uid).set(
+          {'verseBackground': downloadUrl},
+          SetOptions(merge: true),
+        );
       }
-      return null;
+      return downloadUrl;
     } catch (e) {
-      debugPrint('AuthService.uploadAndSaveVerseBackground error: $e');
+      debugPrint('uploadAndSaveVerseBackground error: $e');
       return null;
     }
   }
 
-  /// Deletes the current verse background image from Storage and clears
-  /// the `verseBackground` field in the user's Firestore document.
+  /// Clears the verse background for the current user.
   Future<void> clearVerseBackground({required String email}) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    await _db.collection('users').doc(uid).set(
+      {'verseBackground': ''},
+      SetOptions(merge: true),
+    );
+  }
+
+  // ── One-shot user lookup ────────────────────────────────────────────────
+
+  /// Fetches a single user profile by UID (one-shot, no stream).
+  Future<AuthUser?> getUserById(String userId) async {
     try {
-      final q = await _db.collection('users').where('email', isEqualTo: email).limit(1).get();
-      if (q.docs.isEmpty) return;
-      final doc = q.docs.first;
-      final uid = doc.id;
-      final String? oldUrl = doc.data()['verseBackground'];
-      await _tryDeleteStorageFileFromUrl(oldUrl);
-      await _db.collection('users').doc(uid).set({'verseBackground': ''}, SetOptions(merge: true));
-      final updatedDoc = await _db.collection('users').doc(uid).get();
-      if (updatedDoc.exists) {
-        currentUser.value = AuthUser.fromJson(updatedDoc.data()!);
-      }
+      final snap = await _db.collection('users').doc(userId).get();
+      if (!snap.exists || snap.data() == null) return null;
+      return AuthUser.fromFirestore(snap.id, snap.data()!);
     } catch (e) {
-      debugPrint('AuthService.clearVerseBackground error: $e');
-    }
-  }
-
-  Future<bool> toggleFollow(String email) async {
-    try {
-      final cur = _auth.currentUser;
-      if (cur == null) return false;
-      final q = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (q.docs.isEmpty) return false;
-      final targetUid = q.docs.first.id;
-      return await toggleFollowById(targetUid);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Toggle follow/unfollow by UID. Maintains both `following` and `followers`
-  /// subcollections for real-time count streaming.
-  Future<bool> toggleFollowById(String targetUid) async {
-    try {
-      final cur = _auth.currentUser;
-      if (cur == null) return false;
-      final myFollowingRef = _db
-          .collection('users')
-          .doc(cur.uid)
-          .collection('following')
-          .doc(targetUid);
-      final theirFollowersRef = _db
-          .collection('users')
-          .doc(targetUid)
-          .collection('followers')
-          .doc(cur.uid);
-      final snap = await myFollowingRef.get();
-      if (snap.exists) {
-        final batch = _db.batch();
-        batch.delete(myFollowingRef);
-        batch.delete(theirFollowersRef);
-        await batch.commit();
-        return false; // now unfollowed
-      } else {
-        final since = {'since': DateTime.now().toIso8601String()};
-        final batch = _db.batch();
-        batch.set(myFollowingRef, since);
-        batch.set(theirFollowersRef, since);
-        await batch.commit();
-
-        // Notify the target user that someone followed them
-        try {
-          final myDoc = await _db.collection('users').doc(cur.uid).get();
-          final myName = (myDoc.data()?['name'] as String?)?.isNotEmpty == true
-              ? myDoc.data()!['name'] as String
-              : (myDoc.data()?['email'] as String?) ?? 'Someone';
-          await NotificationService.instance.showNotification(
-            userId: targetUid,
-            title: 'New follower!',
-            body: '$myName started following you.',
-            type: 'follow',
-          );
-        } catch (e) {
-          debugPrint('AuthService: follow notification failed (non-fatal): $e');
-        }
-
-        return true; // now following
-      }
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Check if the current user follows [targetUid].
-  Future<bool> isFollowingById(String targetUid) async {
-    try {
-      final cur = _auth.currentUser;
-      if (cur == null) return false;
-      final snap = await _db
-          .collection('users')
-          .doc(cur.uid)
-          .collection('following')
-          .doc(targetUid)
-          .get();
-      return snap.exists;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// Real-time stream of how many people follow [uid].
-  Stream<int> streamFollowersCount(String uid) {
-    return _db
-        .collection('users')
-        .doc(uid)
-        .collection('followers')
-        .snapshots()
-        .map((s) => s.docs.length);
-  }
-
-  /// Real-time stream of how many people [uid] is following.
-  Stream<int> streamFollowingCount(String uid) {
-    return _db
-        .collection('users')
-        .doc(uid)
-        .collection('following')
-        .snapshots()
-        .map((s) => s.docs.length);
-  }
-
-  /// Real-time stream of a user document.
-  Stream<AuthUser?> streamUser(String uid) {
-    return _db.collection('users').doc(uid).snapshots().map((snap) {
-      if (!snap.exists) return null;
-      return AuthUser.fromJson(snap.data()!);
-    });
-  }
-
-  /// Fetch a user document by UID.
-  Future<AuthUser?> getUserById(String uid) async {
-    try {
-      final doc = await _db.collection('users').doc(uid).get();
-      if (!doc.exists) return null;
-      return AuthUser.fromJson(doc.data()!);
-    } catch (_) {
+      debugPrint('getUserById error: $e');
       return null;
     }
   }
 
-  /// Search users by display name (case-insensitive prefix match).
-  /// Returns up to [limit] results.
-  Future<List<AuthUser>> searchUsers(String query, {int limit = 20}) async {
-    if (query.trim().isEmpty) return [];
-    try {
-      final lower = query.trim().toLowerCase();
-      // Firestore doesn't support full-text search; fetch a reasonable batch
-      // and filter client-side by lowercased name or email.
-      final snap = await _db.collection('users').limit(200).get();
-      final cur = _auth.currentUser;
-      final results = snap.docs
-          .map((d) => AuthUser.fromJson(d.data()))
-          .where(
-            (u) =>
-                u.id != (cur?.uid ?? '') &&
-                (u.name.toLowerCase().contains(lower) ||
-                    u.email.toLowerCase().contains(lower)),
-          )
-          .take(limit)
-          .toList();
-      return results;
-    } catch (_) {
-      return [];
-    }
-  }
+  // ── Internal helpers ────────────────────────────────────────────────────
 
-  Future<bool> isFollowing(String email) async {
-    try {
-      final cur = _auth.currentUser;
-      if (cur == null) return false;
-      final q = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-      if (q.docs.isEmpty) return false;
-      final targetUid = q.docs.first.id;
-      return await isFollowingById(targetUid);
-    } catch (_) {
-      return false;
+  /// Loads the user profile from Firestore and starts listening for changes.
+  Future<void> _loadUser(String uid) async {
+    _userSub?.cancel();
+    _userSub = _db.collection('users').doc(uid).snapshots().listen((snap) {
+      if (snap.exists && snap.data() != null) {
+        currentUser.value = AuthUser.fromFirestore(snap.id, snap.data()!);
+      } else {
+        currentUser.value = null;
+      }
+    });
+    // Wait for the first value to be loaded
+    final snap = await _db.collection('users').doc(uid).get();
+    if (snap.exists && snap.data() != null) {
+      currentUser.value = AuthUser.fromFirestore(snap.id, snap.data()!);
     }
   }
 }

@@ -1,3 +1,23 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// MESSAGE SERVICE — Ang service na ito ang nag-ha-handle ng lahat ng
+// messaging-related operations sa app tulad ng:
+//   • Direct messages (1-on-1 na usapan)
+//   • Group conversations (group chat)
+//   • Pag-send ng text, image, at forwarded messages
+//   • Reactions sa messages
+//   • Group management (create, rename, add/remove members, etc.)
+//   • Message deletion (for me / for everyone)
+//   • MyDay story replies
+//
+// Mga Firestore collections na ginagamit:
+//   - conversations/{convoId}                    — Conversation metadata
+//   - conversations/{convoId}/messages/{msgId}   — Messages
+//
+// Firebase Storage paths:
+//   - group_avatars/{convoId}/{filename}         — Group avatars
+//   - messages/{convoId}/{msgId}_{filename}      — Image messages
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,19 +27,24 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODEL — Conversation
+// Nagre-represent ng isang conversation (direct o group chat).
+// Nag-ho-hold ng participants, admins, last message, at iba pa.
+// ─────────────────────────────────────────────────────────────────────────────
 class Conversation {
-  final String id;
-  final String type; // 'direct' or 'group'
-  final String? name; // group name
-  final String? photoUrl; // group avatar
-  final String? createdBy;
-  final String createdAt;
-  final List<String> participants; // members for group or two uids for direct
-  final List<String> admins; // group admins
-  final String? lastMessage;
-  final String? lastSenderId;
-  final String updatedAt;
-  final Map<String, String> lastRead;
+  final String id;                          // Unique ID ng conversation
+  final String type;                        // 'direct' o 'group'
+  final String? name;                       // Group name (null kung direct)
+  final String? photoUrl;                   // Group avatar URL
+  final String? createdBy;                  // UID ng gumawa ng group
+  final String createdAt;                   // Kailan ginawa (ISO 8601)
+  final List<String> participants;          // Mga members (o dalawang UIDs kung direct)
+  final List<String> admins;                // Mga group admins
+  final String? lastMessage;                // Huling message na na-send
+  final String? lastSenderId;               // Sino ang nag-send ng huling message
+  final String updatedAt;                   // Huling na-update (para sa sorting)
+  final Map<String, String> lastRead;       // Kelan huling binasa ng bawat user
 
   Conversation({
     required this.id,
@@ -37,6 +62,7 @@ class Conversation {
   }) : admins = admins ?? [],
        lastRead = lastRead ?? {};
 
+  /// Ginagawa ang Conversation object mula sa Firestore DocumentSnapshot.
   factory Conversation.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     final lr = <String, String>{};
@@ -62,20 +88,26 @@ class Conversation {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODEL — MessageItem
+// Nagre-represent ng isang individual na message sa conversation.
+// May support para sa text, images, reactions, deletions, system messages,
+// MyDay replies, at note replies.
+// ─────────────────────────────────────────────────────────────────────────────
 class MessageItem {
-  final String id;
-  final String senderId;
-  final String? senderName;
-  final String text;
-  final String ts;
-  final String? imageUrl;
-  final Map<String, List<String>> reactions;
-  final Map<String, bool> deletedFor;
-  final bool isSystemMessage;
-  final String? mydayMediaUrl;
-  final String? mydayOwnerName;
-  final String? repliedToNote;
-  final String? repliedToNoteOwnerName;
+  final String id;                              // Unique message ID
+  final String senderId;                        // UID ng nag-send
+  final String? senderName;                     // Display name ng sender
+  final String text;                            // Message text content
+  final String ts;                              // Timestamp (ISO 8601)
+  final String? imageUrl;                       // URL ng attached image (kung meron)
+  final Map<String, List<String>> reactions;     // emoji → list ng user IDs na nag-react
+  final Map<String, bool> deletedFor;           // uid → true kung deleted for that user
+  final bool isSystemMessage;                   // True kung system message (e.g., "User joined")
+  final String? mydayMediaUrl;                  // URL ng MyDay story (kung story reply)
+  final String? mydayOwnerName;                 // Name ng MyDay owner
+  final String? repliedToNote;                  // Content ng note na nireplyan
+  final String? repliedToNoteOwnerName;         // Name ng note owner
 
   MessageItem({
     required this.id,
@@ -94,6 +126,7 @@ class MessageItem {
   }) : reactions = reactions ?? {},
        deletedFor = deletedFor ?? {};
 
+  /// Ginagawa ang MessageItem object mula sa Firestore DocumentSnapshot.
   factory MessageItem.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return MessageItem(
@@ -127,26 +160,40 @@ class MessageItem {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MESSAGE SERVICE CLASS
+// Singleton service para sa lahat ng messaging operations.
+// Nag-ha-handle ng conversations, messages, groups, at reactions.
+// ─────────────────────────────────────────────────────────────────────────────
 class MessageService {
+  // Private constructor at singleton instance.
   MessageService._internal();
   static final MessageService instance = MessageService._internal();
 
+  // Firebase instances para sa database, auth, at storage.
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  // Kinukuha ang UID ng kasalukuyang naka-login na user.
   String get _myUid => _auth.currentUser?.uid ?? '';
 
-  // Set this to your deployed functions base URL, for example:
-  // https://us-central1-<your-project-id>.cloudfunctions.net
-  // Leave empty to attempt direct client delete (may fail if security rules block it).
+  // Base URL para sa Cloud Functions. Kung may value ito,
+  // gagamitin ang server-side functions para sa operations
+  // (mas secure kasi may server-side validation).
+  // Kung walang value, client-side operations ang gagamitin.
   static const String _functionsBaseUrl = '';
 
+  /// Helper na gumagawa ng deterministic conversation ID para sa
+  /// direct (1-on-1) chats. Ini-sort ang dalawang UIDs para lagi
+  /// pareho ang resulting ID kahit sino ang nag-initiate.
   String _convoId(String a, String b) {
     final parts = [a, b]..sort();
     return parts.join('_');
   }
 
+  /// Real-time stream ng lahat ng conversations kung saan kasama
+  /// ang current user. Naka-sort by updatedAt (pinakabago muna).
   Stream<List<Conversation>> conversationsStreamForCurrentUser() {
     final uid = _myUid;
     if (uid.isEmpty) return Stream.value([]);
@@ -169,6 +216,8 @@ class MessageService {
         });
   }
 
+  /// Real-time stream ng lahat ng messages sa isang conversation,
+  /// naka-order by timestamp (pinakaluma muna para chat-like ang dating).
   Stream<List<MessageItem>> messagesStream(String convoId) {
     return _db
         .collection('conversations')
@@ -179,6 +228,9 @@ class MessageService {
         .map((snap) => snap.docs.map((d) => MessageItem.fromDoc(d)).toList());
   }
 
+  /// Sine-ensure na merong conversation document sa Firestore para sa
+  /// direct chat between two users. Kung wala pa, gagawa ng bago.
+  /// Returns ang conversation ID.
   Future<String> ensureConversationWith(String otherUid) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
@@ -204,7 +256,8 @@ class MessageService {
     return id;
   }
 
-  /// Create a group conversation. Returns the new conversation id.
+  /// Gumagawa ng group conversation. Returns ang bagong conversation ID.
+  /// Pwedeng mag-upload ng group avatar (optional).
   Future<String> createGroup({
     required String name,
     required List<String> memberUids,
@@ -261,6 +314,8 @@ class MessageService {
     return convoId;
   }
 
+  /// Nagda-dagdag ng member sa group. Kung may Cloud Function URL,
+  /// gagamitin ang server-side function para sa server-side validation.
   Future<void> addMember(String convoId, String uidToAdd) async {
     if (_functionsBaseUrl.isNotEmpty) {
       final user = _auth.currentUser;
@@ -290,6 +345,7 @@ class MessageService {
     });
   }
 
+  /// Tinatanggal ang member mula sa group.
   Future<void> removeMember(String convoId, String uidToRemove) async {
     if (_functionsBaseUrl.isNotEmpty) {
       final user = _auth.currentUser;
@@ -320,6 +376,9 @@ class MessageService {
     });
   }
 
+  /// Nagse-send ng text message sa isang conversation.
+  /// Kung may Cloud Function URL, gagamitin ang server para sa validation.
+  /// Kung wala, client-side write ang gagawin.
   Future<void> sendMessage(
     String convoId,
     String text, {
@@ -387,8 +446,8 @@ class MessageService {
     }
   }
 
-  /// Sends a MyDay story reply message that carries the story thumbnail and
-  /// owner name so the chat screen can render it as a story-reply bubble.
+  /// Nagse-send ng MyDay story reply message na may kasamang story thumbnail
+  /// at owner name para ma-render ng chat screen bilang story-reply bubble.
   Future<void> sendMydayReplyMessage(
     String convoId,
     String text,
@@ -418,7 +477,8 @@ class MessageService {
     }, SetOptions(merge: true));
   }
 
-  /// Update group name (admin-only; uses Cloud Function when URL is set).
+  /// Ini-update ang group name (admin-only). Ginagamit ang Cloud Function
+  /// kung may URL, otherwise client-side update.
   Future<void> updateGroupName(String convoId, String newName) async {
     if (newName.isEmpty) throw Exception('Name cannot be empty');
     if (newName.length > 60)
@@ -451,7 +511,7 @@ class MessageService {
     });
   }
 
-  /// Upload avatar bytes and save the download URL to Firestore.
+  /// Nag-a-upload ng avatar bytes at sine-save ang download URL sa Firestore.
   Future<void> updateGroupAvatar(
     String convoId,
     Uint8List bytes,
@@ -485,7 +545,7 @@ class MessageService {
     }
   }
 
-  /// Post a system message (e.g., "User X was added to the group").
+  /// Nagpo-post ng system message (e.g., "Si User X ay naidagdag sa group").
   Future<void> sendSystemMessage(String convoId, String text) async {
     final now = DateTime.now().toIso8601String();
     try {
@@ -505,7 +565,7 @@ class MessageService {
     }
   }
 
-  /// Promote a member to admin.
+  /// Nag-po-promote ng member bilang admin ng group.
   Future<void> promoteToAdmin(String convoId, String uid) async {
     if (_myUid.isEmpty) throw Exception('Not signed in');
     await _db.collection('conversations').doc(convoId).update({
@@ -513,8 +573,8 @@ class MessageService {
     });
   }
 
-  /// Leave a group. If the caller is the sole admin, automatically promotes
-  /// the next available member before leaving.
+  /// Nag-le-leave ang current user sa group. Kung siya ang sole admin,
+  /// awtomatikong mag-po-promote ng ibang member bilang admin bago umalis.
   Future<void> leaveGroup(String convoId) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
@@ -539,9 +599,9 @@ class MessageService {
     });
   }
 
-  /// Delete a group and all its messages.
-  /// Uses the deleteGroupHttp Cloud Function when _functionsBaseUrl is set;
-  /// falls back to client-side batched deletion.
+  /// Dine-delete ang group at lahat ng messages nito.
+  /// Ginagamit ang Cloud Function kung may URL; otherwise client-side
+  /// batched deletion ang gagawin.
   Future<void> deleteGroup(String convoId) async {
     if (_functionsBaseUrl.isNotEmpty) {
       final user = _auth.currentUser;
@@ -574,6 +634,7 @@ class MessageService {
     await convoRef.delete();
   }
 
+  /// Ini-mark ang conversation bilang nabasa na ng current user.
   Future<void> markConversationRead(String convoId) async {
     final uid = _myUid;
     if (uid.isEmpty) return;
@@ -583,7 +644,7 @@ class MessageService {
     }, SetOptions(merge: true));
   }
 
-  /// Send a forwarded message into an existing conversation.
+  /// Nagse-send ng forwarded message sa existing conversation.
   Future<void> sendForwardedMessage(String convoId, MessageItem m) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
@@ -610,7 +671,8 @@ class MessageService {
     }, SetOptions(merge: true));
   }
 
-  /// Mark a message as deleted for the current user (hidden locally).
+  /// Ini-mark ang message bilang deleted para sa current user (hidden locally).
+  /// Hindi nabubura ang message sa database — natatago lang sa user na 'to.
   Future<void> deleteMessageForMe(String convoId, String messageId) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
@@ -624,7 +686,8 @@ class MessageService {
     }, SetOptions(merge: true));
   }
 
-  /// Delete a message document for everyone (requires appropriate security rules).
+  /// Dine-delete ang message document para sa lahat (everyone).
+  /// Kailangan ng appropriate security rules o Cloud Function.
   Future<void> deleteMessageForEveryone(
     String convoId,
     String messageId,
@@ -661,7 +724,9 @@ class MessageService {
     await msgRef.delete();
   }
 
-  /// Uploads image bytes and sends an image message.
+  /// Nag-a-upload ng image bytes at nagse-send ng image message.
+  /// Una, ina-upload ang image sa Firebase Storage, tapos sine-send
+  /// ang message na may imageUrl.
   Future<void> sendImageMessage(
     String convoId,
     Uint8List bytes,
@@ -697,8 +762,8 @@ class MessageService {
     }
   }
 
-  /// Sends an image message using a pre-uploaded download URL.
-  /// Use this when the image has already been uploaded to Firebase Storage.
+  /// Nagse-send ng image message gamit ang pre-uploaded download URL.
+  /// Ginagamit ito kapag naka-upload na ang image sa Firebase Storage.
   Future<void> sendImageMessageWithUrl(String convoId, String imageUrl) async {
     final uid = _myUid;
     if (uid.isEmpty) throw Exception('Not signed in');
@@ -726,7 +791,9 @@ class MessageService {
     }
   }
 
-  /// Toggle reaction for a message: adds or removes current user's uid from the emoji array.
+  /// Toggle reaction sa isang message: nagda-dagdag o nagta-tanggal ng
+  /// current user's UID mula sa emoji array. Kung nag-react na siya
+  /// dati sa same emoji, tatanggalin; kung hindi pa, idadagdag.
   Future<void> toggleReaction(
     String convoId,
     String messageId,

@@ -1,17 +1,29 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// MEDIA UPLOAD SERVICE — Ang service na ito ang nag-ha-handle ng
+// pag-upload ng images para sa chat messages. Ina-upload ang files
+// sa Firebase Storage at nire-return ang download URL.
+//
+// Firebase Storage path: chat_images/{convoId}/{timestamp}_{filename}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 
-/// Handles media uploads for chat (images) to Firebase Storage.
+/// Nag-ha-handle ng media uploads para sa chat (images) sa Firebase Storage.
+/// Singleton pattern — isang instance lang sa buong app.
 class MediaUploadService {
   MediaUploadService._();
   static final MediaUploadService instance = MediaUploadService._();
 
+  // Firebase Storage at Auth instances.
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
 
-  /// Uploads an image to Firebase Storage under chat_images/{convoId}/.
-  /// Returns the download URL on success.
+  /// Nag-a-upload ng image sa Firebase Storage sa ilalim ng
+  /// chat_images/{convoId}/ folder.
+  /// Nire-return ang download URL kapag successful.
+  /// Ang content type ay awtomatikong dine-determine base sa file extension.
   Future<String> uploadChatImage({
     required String convoId,
     required Uint8List bytes,

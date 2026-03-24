@@ -1,6 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// IMAGE VIEWER SCREEN — Full-screen image preview.
+// Pinch-to-zoom gamit ang InteractiveViewer at hero animation support
+// para sa smooth transition papunta at pabalik sa image.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 
-/// Full-screen image preview with hero animation support.
+/// Full-screen image preview na may hero animation support.
 class ImageViewerScreen extends StatelessWidget {
   final String imageUrl;
   final String? heroTag;

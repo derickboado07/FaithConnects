@@ -1,6 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// FORGOT PASSWORD SCREEN — Password recovery screen.
+// Nagbibigay ng option para i-reset ang password via Firebase email reset.
+// Steps:
+//   1. I-enter ang email address
+//   2. Mag-se-send ng password reset email via Firebase Auth
+//   3. Pwede ring mag-enter ng new password manually (optional form)
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 
+/// Screen para sa password reset — nagpapadala ng Firebase reset email sa user.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({Key? key}) : super(key: key);
 
@@ -9,12 +19,12 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  String? _enteredEmail;
+  String? _enteredEmail;                              // Email na nakapasok na bago mag-proceed
   final _newPwdCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
-  bool _obscureNew = true;
-  bool _obscureConfirm = true;
+  bool _obscureNew = true;       // Visibility toggle para sa new password field
+  bool _obscureConfirm = true;   // Visibility toggle para sa confirm password field
 
   @override
   void dispose() {
@@ -23,6 +33,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _confirmCtrl.dispose();
     super.dispose();
   }
+  /// Nagva-validate ng email format, tapos nagpapadala ng Firebase password reset link.
   void _findAccount() {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {

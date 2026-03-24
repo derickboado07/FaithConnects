@@ -1,14 +1,31 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// MUSIC PLAYER SERVICE — Ang service na ito ang nag-ha-handle ng
+// music playback sa app. Mga responsibilidad:
+//   • Pag-play ng worship songs (bundled bilang assets)
+//   • Play/Pause/Next/Previous controls
+//   • Playlist management
+//   • Pag-track ng current position at duration
+//   • Auto-play next song kapag natapos ang current
+//   • Support para sa user-added songs mula sa device
+//
+// Gumagamit ng audioplayers package para sa music playback.
+// Extends ChangeNotifier para awtomatikong mag-update ang UI
+// kapag nagbago ang state (playing, position, etc.).
+// ─────────────────────────────────────────────────────────────────────────────
+
+import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 enum RepeatMode { none, all, one }
 
+/// Data model para sa isang song — may title, artist, at asset path.
 class Song {
-  final String title;
-  final String artist;
-  final String assetPath;
-  /// true when the song was picked from the device, not bundled as an asset
+  final String title;       // Pangalan ng song
+  final String artist;      // Artist/singer ng song
+  final String assetPath;   // Path sa asset file o device file
+  /// True kapag pinili ng user mula sa device niya, hindi bundled asset.
   final bool isUserAdded;
 
   const Song({
@@ -19,44 +36,55 @@ class Song {
   });
 }
 
+/// Main music player service — extends ChangeNotifier para awtomatikong
+/// mag-update ang UI kapag nagbago ang playing state, position, o duration.
+/// Singleton pattern — isang instance lang (MusicPlayerService.instance).
 class MusicPlayerService extends ChangeNotifier {
+  // Private constructor — dito naka-setup ang mga listeners sa AudioPlayer.
   MusicPlayerService._() {
+    // Kapag natapos ang current song, auto-play ang next.
     _player.onPlayerComplete.listen((_) => _autoPlayNext());
+    // Kapag nagbago ang player state (playing/paused), i-update ang UI.
     _player.onPlayerStateChanged.listen((state) {
       _isPlaying = state == PlayerState.playing;
       notifyListeners();
     });
+    // Kapag nagbago ang current position ng song, i-update ang progress bar.
     _player.onPositionChanged.listen((pos) {
       _position = pos;
       notifyListeners();
     });
+    // Kapag na-determine na ang total duration ng song.
     _player.onDurationChanged.listen((dur) {
       _duration = dur;
       notifyListeners();
     });
   }
 
-  static final instance = MusicPlayerService._();
+  static final instance = MusicPlayerService._(); // Singleton instance
 
-  final AudioPlayer _player = AudioPlayer();
-  Song? _currentSong;
-  bool _isPlaying = false;
-  int _currentIndex = 0;
-  List<Song> _playlist = const [];
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
+  final AudioPlayer _player = AudioPlayer();  // AudioPlayer instance para sa playback
+  Song? _currentSong;                          // Kasalukuyang pinapatugtog na song
+  bool _isPlaying = false;                     // True kung tumutugtog ngayon
+  int _currentIndex = 0;                       // Index ng current song sa playlist
+  List<Song> _playlist = const [];             // Kasalukuyang playlist
+  Duration _position = Duration.zero;           // Kasalukuyang position sa song
+  Duration _duration = Duration.zero;           // Total duration ng song
 
+  // Mga public getters para ma-access ng UI ang state.
   Song? get currentSong => _currentSong;
   bool get isPlaying => _isPlaying;
   int get currentIndex => _currentIndex;
   List<Song> get playlist => List.unmodifiable(_playlist);
   Duration get position => _position;
   Duration get duration => _duration;
+  // Progress value (0.0 to 1.0) para sa progress bar/slider.
   double get progress =>
       _duration.inMilliseconds > 0
           ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
           : 0.0;
 
+  // Lista ng mga bundled worship songs na kasama sa app.
   static final _songs = <Song>[
     Song(
       title: 'Amazing God',
@@ -130,18 +158,23 @@ class MusicPlayerService extends ChangeNotifier {
     ),
   ];
 
-  static List<Song> get allSongs => List.unmodifiable(_songs);
+  static List<Song> get allSongs => List.unmodifiable(_songs); // Read-only copy ng songs
 
+  /// Nagda-dagdag ng user-added song sa playlist.
   void addSong(Song song) {
     _songs.add(song);
     notifyListeners();
   }
 
+  /// Tinatanggal ang isang song mula sa playlist.
   void removeSong(Song song) {
     _songs.remove(song);
     notifyListeners();
   }
 
+  /// Nagpa-play ng specific song. Ini-set ang current song, index, at playlist.
+  /// Nag-ha-handle ng both bundled assets at user-added (device) files.
+  /// Sa web, ilo-load mula sa rootBundle bilang bytes.
   Future<void> playSong(Song song, int index, List<Song> playlist) async {
     _currentSong = song;
     _currentIndex = index;
@@ -172,6 +205,7 @@ class MusicPlayerService extends ChangeNotifier {
     }
   }
 
+  /// Toggle play/pause — kung tumutugtog, i-pause; kung naka-pause, i-resume.
   Future<void> togglePlayPause() async {
     if (_currentSong == null) return;
     try {
@@ -185,10 +219,12 @@ class MusicPlayerService extends ChangeNotifier {
     }
   }
 
+  /// Mag-seek sa specific position sa song (ginagamit ng slider/progress bar).
   Future<void> seekTo(Duration position) async {
     await _player.seek(position);
   }
 
+  /// Auto-play ng next song kapag natapos ang current. Private method.
   void _autoPlayNext() {
     if (_repeatMode == RepeatMode.one && _currentSong != null) {
       // Repeat the same song
@@ -217,12 +253,14 @@ class MusicPlayerService extends ChangeNotifier {
     }
   }
 
+  /// Mag-play ng next song sa playlist (manual skip).
   void playNext() {
     if (_playlist.isNotEmpty && _currentIndex < _playlist.length - 1) {
       playSong(_playlist[_currentIndex + 1], _currentIndex + 1, _playlist);
     }
   }
 
+  /// Mag-play ng previous song sa playlist.
   void playPrevious() {
     if (_playlist.isNotEmpty && _currentIndex > 0) {
       playSong(_playlist[_currentIndex - 1], _currentIndex - 1, _playlist);

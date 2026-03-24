@@ -1,3 +1,11 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CHECKOUT SCREEN — E-commerce checkout page ng marketplace.
+// Nagdi-display ng order summary (mga items sa cart), shipping address form,
+// payment method selection, at "Place Order" button.
+// Pagka-submit, ginagawa ang order via MarketplaceService at navi-navigate
+// sa OrderConfirmationScreen.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../services/marketplace_service.dart';
@@ -51,12 +59,12 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _addressCtrl = TextEditingController();
+  final TextEditingController _addressCtrl = TextEditingController(); // Shipping address input
 
-  // Currently selected payment method. None selected by default.
+  // Napiling payment method. Wala pa sa simula.
   String? _paymentMethod;
 
-  bool _confirming = false;
+  bool _confirming = false; // True habang nag-po-process ang order
 
   static const _paymentOptions = [
     ('Cash on Delivery', Icons.money_rounded),
@@ -72,23 +80,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   // ── Confirm Order ────────────────────────────────────────────────────────
-  // Called when the user taps the "Confirm Order" button.
+  // Tinatawag kapag nag-tap ang user ng "Confirm Order" button.
   //
   // Validation:
-  //   1. Flutter form validator checks the address field is not empty.
-  //   2. Manual check ensures a payment method has been selected.
+  //   1. Flutter form validator nag-che-check ng address field.
+  //   2. Manual check para masiguro na may napiling payment method.
   //
   // On success:
-  //   3. Calls MarketplaceService.placeOrder() to write the order to Firestore.
-  //   4. Navigates to OrderConfirmationScreen with the generated orderId.
+  //   3. Tinatawag ang MarketplaceService.placeOrder() para isulat ang order sa Firestore.
+  //   4. Nagna-navigate sa OrderConfirmationScreen na may generated orderId.
   //
   // On failure:
-  //   5. Shows a SnackBar with the error message.
+  //   5. Nagpapakita ng SnackBar na may error message.
   Future<void> _confirmOrder() async {
-    // Step 1: Validate address field via Flutter form validator.
+    // Step 1: I-validate ang address field via Flutter form validator.
     if (!_formKey.currentState!.validate()) return;
 
-    // Step 2: Ensure a payment method has been chosen.
+    // Step 2: Masiguro na may napiling payment method.
     if (_paymentMethod == null) {
       _showSnack('Please select a payment method.', isError: true);
       return;

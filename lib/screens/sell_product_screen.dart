@@ -1,3 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// SELL PRODUCT SCREEN — Form para mag-list ng bagong product sa marketplace.
+// Kinokolekta ang:
+//   • Product name at description
+//   • Price (in PHP)
+//   • Category selection
+//   • Product image (upload mula gallery o paste image URL)
+//
+// Gumagamit ng MarketplaceService.addProduct() para i-save.
+// Supports both mobile (File) at web (Uint8List) image uploads.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -49,25 +61,25 @@ class _SellProductScreenState extends State<SellProductScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Form controllers
-  final TextEditingController _nameCtrl = TextEditingController();
-  final TextEditingController _descCtrl = TextEditingController();
-  final TextEditingController _priceCtrl = TextEditingController();
+  final TextEditingController _nameCtrl = TextEditingController();   // Product name
+  final TextEditingController _descCtrl = TextEditingController();   // Description
+  final TextEditingController _priceCtrl = TextEditingController();  // Price in PHP
 
   // Category selector state
-  String? _selectedCategory;
+  String? _selectedCategory; // Napiling category ng product
 
   // Image picker state
-  XFile? _imageFile; // Picked image file (mobile / desktop)
-  Uint8List? _imageBytes; // Picked image raw bytes (web & preview)
-  bool _submitting = false;
+  XFile? _imageFile;          // Napiling image file (mobile / desktop)
+  Uint8List? _imageBytes;     // Raw bytes ng image (web preview)
+  bool _submitting = false;   // True habang nag-su-submit
 
-  // Image source mode: upload from device vs. paste a URL
+  // Image source mode: upload mula sa device vs. paste ng URL
   bool _useImageUrl = false;
-  final TextEditingController _imageUrlCtrl = TextEditingController();
+  final TextEditingController _imageUrlCtrl = TextEditingController(); // Image URL input
 
   final ImagePicker _picker = ImagePicker();
 
-  // Available product categories — must match categories on ProductListScreen.
+  // Mga available na product categories — dapat match ang ProductListScreen categories.
   static const _categories = [
     'Bibles',
     'Apparel',
@@ -88,11 +100,12 @@ class _SellProductScreenState extends State<SellProductScreen> {
   }
 
   // ── Image Picker ─────────────────────────────────────────────────────────
-  // Opens the device gallery. On web, reads bytes immediately for preview.
-  // On mobile, stores the XFile path for later upload in _submit().
-  // Maximum image size: 10 MB (same limit as create_post_screen).
+  // Binubuksan ang device gallery. Sa web, agad line-lead ang bytes para sa preview.
+  // Sa mobile, sine-store ang XFile path para sa upload sa _submit().
+  // Maximum image size: 10 MB (same limit sa create_post_screen).
   static const int _maxImageBytes = 10 * 1024 * 1024; // 10 MB
 
+  /// Pumipili ng image mula sa gallery.
   Future<void> _pickImage() async {
     try {
       final file = await _picker.pickImage(
@@ -130,6 +143,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
   //   5. Upload image to Firebase Storage → get download URL.
   //   6. Save product document to Firestore.
   //   7. Show success dialog and navigate back to MarketplaceScreen.
+  /// Nag-va-validate ng form at nag-su-submit ng bagong product sa marketplace.
   Future<void> _submit() async {
     // Step 1: Run all form field validators.
     if (!_formKey.currentState!.validate()) return;
@@ -230,6 +244,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
   // ── Success Dialog ────────────────────────────────────────────────────────
   // Shown after a product is successfully listed. Navigating back returns the
   // user to the MarketplaceScreen.
+  /// Nagpapakita ng success dialog pagkatapos mag-list ng product.
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -302,6 +317,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
     );
   }
 
+  /// Helper para magpakita ng SnackBar (error o success).
   void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

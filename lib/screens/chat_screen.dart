@@ -1,3 +1,18 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CHAT SCREEN — Ang actual messaging conversation screen.
+// Real-time messaging UI na may mga features:
+//   • Text messages with send/receive bubbles
+//   • Image upload at preview (camera o gallery)
+//   • In-chat search (i-filter messages by text)
+//   • Custom reactions (emoji) sa messages
+//   • Message suggestions (suggested replies)
+//   • Forward at delete messages
+//   • Pagination (infinite scroll pataas for older messages)
+//   • Typing indicator at presence status
+//
+// Works para sa 1-on-1 at group conversations.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -59,11 +74,11 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _ctrl = TextEditingController();
+  final TextEditingController _ctrl = TextEditingController(); // Text input controller
 
-  // Pending note reply context
-  String? _pendingNoteText;
-  String? _pendingNoteOwnerName;
+  // Pending note reply context — kapag nag-reply sa My Day note
+  String? _pendingNoteText;          // Text ng note na sini-reply
+  String? _pendingNoteOwnerName;     // Pangalan ng may-ari ng note
 
   @override
   void initState() {
@@ -72,22 +87,22 @@ class _ChatScreenState extends State<ChatScreen> {
       _ctrl.text = widget.initialText!;
       _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
     }
-    // If opened from a note reply, set pending note context
+    // Kapag binuksan mula sa note reply, i-set ang pending note context
     if (widget.initialNoteText != null && widget.initialNoteText!.isNotEmpty) {
       _pendingNoteText = widget.initialNoteText;
       _pendingNoteOwnerName = widget.initialNoteOwnerName;
     }
   }
 
-  bool _sending = false;
-  bool _uploadingImage = false;
-  final Map<String, String> _senderNames = {};
+  bool _sending = false;          // True habang nag-se-send ang message
+  bool _uploadingImage = false;   // True habang nag-u-upload ng image
+  final Map<String, String> _senderNames = {}; // Cache ng sender names by UID
 
-  // In-chat search state
-  bool _isSearching = false;
+  // In-chat search state — para mag-filter ng messages by text
+  bool _isSearching = false;           // True kapag active ang search mode
   final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  Timer? _debounce;
+  String _searchQuery = '';           // Current search query text
+  Timer? _debounce;                   // Debounce timer para sa search input
 
   // ── Image picking ────────────────────────────────────────────────────
   Future<void> _pickAndSendImage() async {
@@ -204,6 +219,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Nag-de-debounce ng search input — 300ms delay bago mag-query.
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -211,6 +227,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  /// Nag-ca-cache ng sender name by UID para hindi paulit-ulit mag-query sa Firestore.
   void _cacheSenderName(String uid) {
     if (uid.isEmpty || uid == 'system' || _senderNames.containsKey(uid)) return;
     _senderNames[uid] = uid; // placeholder to avoid duplicate fetches
@@ -242,6 +259,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return 'User';
   }
 
+  /// Nagpapakita ng reaction picker bottom sheet para sa isang message.
   void _showReactionPicker(BuildContext context, MessageItem m) {
     final myUid = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
     showModalBottomSheet(
@@ -312,6 +330,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Nagpapakita ng message options (forward, delete, copy) via bottom sheet.
   void _showMessageOptions(BuildContext context, MessageItem m) {
     final isMe = m.senderId == fb_auth.FirebaseAuth.instance.currentUser?.uid;
     showModalBottomSheet(
@@ -416,6 +435,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Nagpapakita ng conversation picker para i-forward ang message.
   void _showForwardPicker(BuildContext context, MessageItem m) {
     showModalBottomSheet(
       context: context,

@@ -1,3 +1,17 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MUSIC SCREEN — Music player at song library ng app.
+// Features:
+//   • Song library na may search functionality
+//   • Add songs mula sa device files
+//   • Playback controls (play, pause, skip, shuffle, repeat)
+//   • Full-screen player sheet na may visualizer
+//   • Playlist management (add/remove songs)
+//   • Custom audio visualizer painter
+//
+// Uses MusicPlayerService para sa audio playback.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import 'dart:ui';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -27,6 +41,7 @@ class _MusicScreenState extends State<MusicScreen>
 
   MusicPlayerService get _svc => MusicPlayerService.instance;
 
+  /// Nag-fi-filter ng songs base sa search query (title o artist).
   List<Song> get _filteredSongs {
     List<Song> songs = MusicPlayerService.allSongs;
     if (_filter == 'Favorites') {
@@ -66,6 +81,7 @@ class _MusicScreenState extends State<MusicScreen>
     final filePath = file.path;
     if (filePath == null) return;
 
+    // Kunin ang default title mula sa filename (tanggalin ang extension)
     final rawName = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
     if (!mounted) return;
     final titleCtrl = TextEditingController(text: rawName);
@@ -562,6 +578,7 @@ class _MusicScreenState extends State<MusicScreen>
     );
   }
 
+  /// Nagpapakita ng confirmation dialog bago mag-remove ng song.
   void _confirmRemoveSong(Song song) {
     showDialog(
       context: context,

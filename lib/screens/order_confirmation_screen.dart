@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ORDER CONFIRMATION SCREEN — Order success/confirmation page.
+// Nagdi-display ng:
+//   • Order ID at confirmation message
+//   • Product details (images, names, prices)
+//   • Shipping information
+//   • Navigation buttons (Continue Shopping, Go Home)
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import 'marketplace_screen.dart';
@@ -28,11 +37,12 @@ import 'product_list_screen.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Success screen na ipinapakita pagkatapos mag-place ng order.
 class OrderConfirmationScreen extends StatelessWidget {
-  final String orderId;
-  final Product product;
-  final String address;
-  final String paymentMethod;
+  final String orderId;          // Unique identifier ng order sa Firestore
+  final Product product;         // Produktong binili
+  final String address;          // Delivery address na pinili sa checkout
+  final String paymentMethod;    // Paraan ng bayad (e.g., COD, GCash)
 
   const OrderConfirmationScreen({
     super.key,
@@ -352,6 +362,7 @@ class OrderConfirmationScreen extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // _ConfirmRow — label + value row used in the order detail card.
 // ─────────────────────────────────────────────────────────────────────────────
+/// Reusable row widget para sa order summary details (icon + label + value).
 class _ConfirmRow extends StatelessWidget {
   final IconData icon;
   final String label;

@@ -1,6 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// REGISTER SCREEN — User signup/registration page.
+// Kinokolekta ang: name, email, password, phone number, date of birth, gender.
+// Gumagamit ng AuthService.register() para i-create ang account.
+// May form validation para sa required fields at email/password format.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
+/// Registration screen para sa bagong users.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -18,13 +26,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   final TextEditingController _pwCtrl = TextEditingController();
   final TextEditingController _confirmPwCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _dobCtrl = TextEditingController();
-  String _gender = '';
-  DateTime? _selectedDob;
+  final TextEditingController _dobCtrl = TextEditingController(); // Date of birth display
+  String _gender = '';              // Napiling gender ng user
+  DateTime? _selectedDob;           // Actual selected date of birth
   final TextEditingController _nameCtrl = TextEditingController();
-  bool _loading = false;
-  bool _obscurePw = true;
-  bool _obscureConfirm = true;
+  bool _loading = false;            // True habang nag-re-register
+  bool _obscurePw = true;           // True kapag naka-hide ang password
+  bool _obscureConfirm = true;      // True kapag naka-hide ang confirm password
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -52,6 +60,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  /// Nag-va-validate ng form at nag-re-register ng bagong account via AuthService.
+  /// Pagka-success, nire-redirect sa login screen.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);

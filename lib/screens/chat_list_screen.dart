@@ -1,3 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CHAT LIST SCREEN — Ang main messaging list/inbox ng app.
+// Nagdi-display ng lahat ng active conversations (1-on-1 at groups) na may:
+//   • Search bar para i-filter ang conversations
+//   • Presence indicators (online/offline status)
+//   • My Day (stories) preview strip sa taas
+//   • Latest message preview at timestamp
+//   • Unread message count badges
+//   • FAB para mag-start ng new chat o group
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -15,6 +26,7 @@ import 'new_chat_screen.dart';
 import 'create_group_screen.dart';
 import 'myday_viewer_screen.dart';
 
+/// Main messaging inbox screen.
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
 
@@ -23,13 +35,13 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  List<Conversation> _cached = [];
+  List<Conversation> _cached = [];  // Cached list ng conversations para sa fast search filtering
 
-  // Search state
-  bool _isSearching = false;
+  // Search state — para i-filter ang conversations
+  bool _isSearching = false;            // True kapag naka-open ang search mode
   final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
-  Timer? _debounce;
+  String _searchQuery = '';             // Current lowercase search query
+  Timer? _debounce;                     // Debounce timer para sa search input
 
   @override
   void dispose() {
@@ -38,6 +50,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.dispose();
   }
 
+  /// Nag-de-debounce ng search input para hindi bawat keystroke nag-re-render.
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {

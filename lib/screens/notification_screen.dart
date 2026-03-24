@@ -1,11 +1,20 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// NOTIFICATION SCREEN — Nagdi-display ng mga notifications ng user.
+// Mga tipo ng notification: reactions, comments, follows, shares, etc.
+// Bawat notification may icon at color na naka-base sa type.
+// Nagdi-display din ng relative time (e.g. "5m ago", "2h ago").
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 
+/// Screen para sa notifications ng current user.
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
 
+  /// Nire-return ang icon na angkop sa notification type.
   IconData _iconForType(String type) {
     switch (type) {
       case 'reaction':
@@ -23,6 +32,7 @@ class NotificationScreen extends StatelessWidget {
     }
   }
 
+  /// Nire-return ang color na angkop sa notification type.
   Color _colorForType(String type) {
     switch (type) {
       case 'reaction':
@@ -40,6 +50,7 @@ class NotificationScreen extends StatelessWidget {
     }
   }
 
+  /// Nag-fo-format ng relative time string (e.g. '5m ago', '2h ago', '1d ago').
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inDays > 0) return '${diff.inDays}d ago';

@@ -1,4 +1,13 @@
-﻿import 'dart:io';
+﻿// ═══════════════════════════════════════════════════════════════════════════
+// EDIT PROFILE SCREEN — Screen para i-edit ang user profile.
+// Pwede i-update ang: name, bio, phone number, date of birth, gender,
+// avatar photo, at banner/cover photo. Lahat ng changes ay sine-save
+// via AuthService.updateProfile().
+//
+// Supports both mobile (File) at web (Uint8List) image picking.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +16,7 @@ import '../services/auth_service.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Edit profile screen ng current user.
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -16,19 +26,19 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameCtrl = TextEditingController();
-  final TextEditingController _bioCtrl = TextEditingController();
-  final TextEditingController _phoneCtrl = TextEditingController();
-  final TextEditingController _dobCtrl = TextEditingController();
-  String _gender = '';
-  DateTime? _selectedDob;
-  String _avatarPath = '';
-  Uint8List? _avatarBytes;
-  String _avatarFilename = '';
-  String _bannerPath = '';
-  Uint8List? _bannerBytes;
-  String _bannerFilename = '';
-  bool _loading = false;
+  final TextEditingController _nameCtrl = TextEditingController();   // Full name
+  final TextEditingController _bioCtrl = TextEditingController();    // Bio/about
+  final TextEditingController _phoneCtrl = TextEditingController();  // Phone number
+  final TextEditingController _dobCtrl = TextEditingController();    // Date of birth display
+  String _gender = '';           // Napiling gender
+  DateTime? _selectedDob;        // Actual selected date of birth
+  String _avatarPath = '';       // Current avatar URL o local path (mobile)
+  Uint8List? _avatarBytes;       // Avatar bytes para sa web upload
+  String _avatarFilename = '';   // Avatar filename para sa web upload
+  String _bannerPath = '';       // Current banner URL o local path (mobile)
+  Uint8List? _bannerBytes;       // Banner bytes para sa web upload
+  String _bannerFilename = '';   // Banner filename para sa web upload
+  bool _loading = false;         // True habang nag-sa-save ng profile
 
   @override
   void initState() {
@@ -59,6 +69,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  /// Nagpapakita ng bottom sheet para pumili ng bagong avatar (camera o gallery).
   Future<void> _pickAvatar() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
@@ -112,6 +123,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  /// Pumipili ng bagong banner/cover photo mula sa gallery.
   Future<void> _pickBanner() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -135,6 +147,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  /// Nag-va-validate ng form at sine-save ang updated profile via AuthService.
   Future<void> _save() async {
     final user = AuthService.instance.currentUser.value;
     if (user == null) return;

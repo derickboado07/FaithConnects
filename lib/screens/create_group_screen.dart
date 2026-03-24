@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CREATE GROUP SCREEN — Screen para gumawa ng bagong group conversation.
+// Pwede mag-set ng group name, pumili ng members mula sa user list,
+// at mag-set ng custom group avatar. Pagka-create, gagawa ng group
+// conversation via MessageService.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +12,7 @@ import 'package:file_picker/file_picker.dart';
 import '../services/message_service.dart';
 import 'chat_screen.dart';
 
+/// Screen para sa paglikha ng bagong group chat — may group name, avatar, at member selection.
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
 
@@ -14,10 +22,10 @@ class CreateGroupScreen extends StatefulWidget {
 
 class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final TextEditingController _nameCtrl = TextEditingController();
-  final Set<String> _selected = {};
-  Uint8List? _avatarBytes;
+  final Set<String> _selected = {};         // UIDs ng mga napiling miyembro
+  Uint8List? _avatarBytes;                  // Raw bytes ng piniling group avatar image
   String? _avatarFilename;
-  bool _creating = false;
+  bool _creating = false;                   // True habang nagse-save sa Firestore
 
   @override
   void dispose() {
@@ -25,6 +33,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     super.dispose();
   }
 
+  /// Binubuksan ang file picker para pumili ng larawan bilang group avatar.
   Future<void> _pickAvatar() async {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -39,6 +48,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     }
   }
 
+  /// Gumagawa ng bagong group conversation sa Firestore, tapos nire-redirect sa ChatScreen.
   Future<void> _create() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty || _selected.isEmpty) return;

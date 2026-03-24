@@ -1,15 +1,24 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CALL SCREEN — Full-screen UI para sa voice at video calls.
+// Nagdi-display ng call status (ringing, active, ended), call duration timer,
+// at mga controls (mute, speaker, camera toggle, end call).
+//
+// Uses: CallService para sa signaling at call state management.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 
-/// Full-screen call UI for voice and video calls.
+/// Full-screen call UI para sa voice at video calls.
 /// Uses Firestore signaling; actual media handled by Agora/WebRTC when configured.
+/// Widget para sa full-screen call UI.
 class CallScreen extends StatefulWidget {
-  final String callId;
-  final String convoId;
-  final String peerName;
-  final String type; // 'voice' or 'video'
-  final bool isIncoming;
+  final String callId;      // ID ng call sa Firestore
+  final String convoId;     // ID ng conversation (para sa missed call message)
+  final String peerName;    // Name ng kausap
+  final String type; // 'voice' o 'video'
+  final bool isIncoming;    // True kung ang current user ay tatawagan (hindi nagtawag)
 
   const CallScreen({
     super.key,
@@ -25,14 +34,14 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
-  String _status = 'ringing'; // ringing | accepted | ended
-  bool _isMuted = false;
-  bool _isCameraOff = false;
-  bool _isSpeaker = false;
-  Timer? _durationTimer;
-  int _seconds = 0;
-  StreamSubscription? _callSub;
-  late AnimationController _pulseController;
+  String _status = 'ringing'; // ringing | accepted | ended — current call state
+  bool _isMuted = false;       // True kapag naka-mute ang microphone
+  bool _isCameraOff = false;   // True kapag naka-off ang camera (video calls)
+  bool _isSpeaker = false;     // True kapag naka-speaker mode
+  Timer? _durationTimer;       // Timer para sa call duration display
+  int _seconds = 0;            // Total seconds ng call
+  StreamSubscription? _callSub;           // Listener sa Firestore call doc
+  late AnimationController _pulseController; // Para sa ringing pulse animation
 
   @override
   void initState() {
@@ -42,7 +51,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    // Listen for call status changes
+    // Mag-listen sa call status changes sa Firestore
     _callSub = CallService.instance.callStream(widget.callId).listen((snap) {
       if (!snap.exists) {
         _handleCallEnded();
@@ -61,18 +70,21 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     });
   }
 
+  /// Nagta-track ng duration ng call in seconds.
   void _startDurationTimer() {
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _seconds++);
     });
   }
 
+  /// Format ang seconds bilang MM:SS string (e.g. "02:45").
   String _formatDuration() {
     final m = (_seconds ~/ 60).toString().padLeft(2, '0');
     final s = (_seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
+  /// Tinatapos ang call — pinapatay ang timer at nag-pop back sa previous screen.
   void _handleCallEnded() {
     _durationTimer?.cancel();
     if (mounted) {
@@ -80,12 +92,15 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     }
   }
 
+  /// Tinatanggap ang incoming call (nagbabago ng status sa Firestore).
   Future<void> _acceptCall() async {
     await CallService.instance.acceptCall(widget.callId);
   }
 
+  /// Tinatapusin ang call.
+  /// Kung naka-ringing pa at incoming — missed call message ang ipinapadala.
   Future<void> _endCall() async {
-    // If still ringing and this was incoming, it's a missed call
+    // Kung naka-ringing pa at ito ay incoming, ipadala ang missed call message
     if (_status == 'ringing' && widget.isIncoming) {
       await CallService.instance.sendMissedCallMessage(
         convoId: widget.convoId,

@@ -1,3 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MODERATOR DASHBOARD — Admin/moderator dashboard ng app.
+// Full tabbed interface na may:
+//   • Overview Tab — Stats at summary ng app (total users, posts, etc.)
+//   • Posts Tab — Post moderation (approve, delete, flag)
+//   • Comments Tab — Comment moderation
+//   • Users Tab — User management (ban, unban, view profiles)
+//   • Reports Tab — User-submitted reports at flagged content
+//
+// Para lang sa authenticated moderators — may role check.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
@@ -7,6 +19,7 @@ import '../services/moderator_service.dart';
 // MODERATOR DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Pangunahing moderator control panel — may tabs para sa posts, comments, users, reports, at logs.
 class ModeratorDashboard extends StatefulWidget {
   const ModeratorDashboard({super.key});
 
@@ -19,8 +32,8 @@ class _ModeratorDashboardState extends State<ModeratorDashboard> {
   static const _bg = Color(0xFF1A1A2E);
   static const _card = Color(0xFF16213E);
 
-  int _selectedIndex = 0;
-  bool _sidebarExpanded = true;
+  int _selectedIndex = 0;         // Index ng kasalukuyang active na tab
+  bool _sidebarExpanded = true;   // Kung naka-expand ang sidebar navigation
 
   final List<_NavItem> _navItems = const [
     _NavItem(Icons.dashboard_outlined, 'Overview'),
@@ -314,6 +327,7 @@ Widget _sectionTitle(String text) {
 // TAB 0 – OVERVIEW (Analytics)
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Overview tab — nagpapakita ng platform statistics (posts, users, reports).
 class _OverviewTab extends StatefulWidget {
   const _OverviewTab();
 
@@ -322,7 +336,7 @@ class _OverviewTab extends StatefulWidget {
 }
 
 class _OverviewTabState extends State<_OverviewTab> {
-  Map<String, int>? _stats;
+  Map<String, int>? _stats;   // Dashboard stats na galing sa ModeratorService
   bool _loading = true;
   String? _error;
 
@@ -332,6 +346,7 @@ class _OverviewTabState extends State<_OverviewTab> {
     _load();
   }
 
+  /// Kino-kuha ang stats mula sa Firestore para ipakita sa overview cards.
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -581,6 +596,7 @@ class _StatCard extends StatelessWidget {
 // TAB 1 – POSTS MANAGEMENT
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Posts tab — pina-pamahalaan ang lahat ng posts sa platform (hide/unhide).
 class _PostsTab extends StatefulWidget {
   const _PostsTab();
 
@@ -866,6 +882,7 @@ class _PostCard extends StatelessWidget {
 // TAB 2 – COMMENTS MANAGEMENT
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Comments tab — nire-review at nire-remove ang mga inappropriate na comments.
 class _CommentsTab extends StatefulWidget {
   const _CommentsTab();
 
@@ -1133,6 +1150,7 @@ class _CommentCard extends StatelessWidget {
 // TAB 3 – USERS MANAGEMENT
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Users tab — nagpapakita ng lahat ng members, may option na mag-ban/unban.
 class _UsersTab extends StatefulWidget {
   const _UsersTab();
 
@@ -1144,6 +1162,7 @@ class _UsersTabState extends State<_UsersTab> {
   String _filter = 'all'; // all | active | banned
   final TextEditingController _searchCtrl = TextEditingController();
 
+  /// Convenience method para direktang lumipat sa banned users filter.
   void _showBannedUsers() {
     if (!mounted) return;
     setState(() => _filter = 'banned');
@@ -1519,6 +1538,7 @@ class _StatusPill extends StatelessWidget {
 // TAB 4 – REPORTS MANAGEMENT
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Reports tab — nagpapakita ng mga user-submitted reports para ma-review ng moderator.
 class _ReportsTab extends StatefulWidget {
   const _ReportsTab();
 
@@ -1755,6 +1775,7 @@ class _ReportCard extends StatelessWidget {
 // TAB 5 – LOGS VIEWER
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Logs tab — nagpapakita ng history ng lahat ng moderator actions sa real-time.
 class _LogsTab extends StatelessWidget {
   const _LogsTab();
 

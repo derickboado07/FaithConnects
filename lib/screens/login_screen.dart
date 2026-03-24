@@ -1,6 +1,15 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// LOGIN SCREEN — User at moderator login screen.
+// May email/password fields at dual login mode:
+//   • Regular user login (default)
+//   • Moderator login (toggle via button)
+// Navigation options: Register at Forgot Password.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
+/// Main login screen ng FaithConnects app.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,9 +31,9 @@ class _LoginScreenState extends State<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _pwCtrl = TextEditingController();
-  bool _loading = false;
-  bool _obscure = true;
-  bool _isModeratorLogin = false; // Toggle between User and Moderator login
+  bool _loading = false;              // True habang nag-lo-login
+  bool _obscure = true;               // True kapag naka-hide ang password
+  bool _isModeratorLogin = false;     // Toggle between User at Moderator login
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -48,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  /// Nagpapakita ng forgot password dialog para mag-send ng reset email.
   Future<void> _showForgotPasswordDialog(BuildContext context) async {
     final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
     final messenger = ScaffoldMessenger.of(context);
@@ -160,6 +170,8 @@ class _LoginScreenState extends State<LoginScreen>
     emailCtrl.dispose();
   }
 
+  /// Nag-va-validate ng form at nag-lo-login via AuthService.
+  /// Kapag moderator login at hindi moderator ang account — mag-sign out at mag-error.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -185,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    // Moderator login: check role that was loaded into AuthUser by AuthService
+    // Moderator login: iche-check ang role na naka-load sa AuthUser via AuthService
     if (_isModeratorLogin) {
       final user = AuthService.instance.currentUser.value;
       if (user == null || !user.isModerator) {

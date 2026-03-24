@@ -1,9 +1,19 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// SEARCH SCREEN — Unified search across the app.
+// Sabay-sabay nagha-hanap sa users, posts, at products gamit ang
+// SearchService.searchAll(). May debounced input para hindi
+// bawat keystroke nag-que-query.
+//
+// Results ay grouped by category: Users, Posts, Products.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/search_service.dart';
 import '../screens/public_profile_screen.dart';
 import '../screens/product_detail_screen.dart';
 
+/// Main search screen ng app.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -13,9 +23,9 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _ctrl = TextEditingController();
-  Timer? _debounce;
-  bool _loading = false;
-  SearchResults _results = SearchResults();
+  Timer? _debounce;               // Debounce timer para hindi bawat keystroke nag-que-query
+  bool _loading = false;          // True habang nag-se-search
+  SearchResults _results = SearchResults(); // Current search results (users, posts, products)
 
   @override
   void dispose() {
@@ -24,11 +34,15 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  /// Tinatawag kapag nagbago ang search input.
+  /// May 350ms debounce para hindi bawat keystroke nag-trigger ng query.
   void _onChanged(String v) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () => _doSearch(v));
   }
 
+  /// Nag-e-execute ng aggregated search via SearchService.
+  /// Sabay-sabay nag-ha-hanap sa users, posts, at products.
   Future<void> _doSearch(String q) async {
     final txt = q.trim();
     if (txt.isEmpty) {

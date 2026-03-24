@@ -1,3 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GROUP SETTINGS SCREEN — Full group management screen.
+// Admin controls:
+//   • I-edit ang group name
+//   • I-change ang group avatar
+//   • Mag-add ng mga bagong members
+//   • Mag-remove ng existing members
+//   • I-leave ang group (for non-admins)
+//
+// Kung hindi admin — read-only view lang (nakikita ang info pero
+// hindi pwede mag-edit).
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -17,10 +30,11 @@ class GroupSettingsScreen extends StatefulWidget {
 }
 
 class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
-  final String _myUid = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
-  bool _uploading = false;
+  final String _myUid = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? ''; // UID ng current user
+  bool _uploading = false; // True habang nag-u-upload ng group avatar
 
-  // ── Avatar ─────────────────────────────────────────────────────────────
+  // ── Avatar ─────────────────────────────────────────────────────────
+  /// Admin-only: Pumipili ng bagong group avatar at ina-upload sa Firestore.
   Future<void> _pickAndUploadAvatar(String convoId) async {
     final picker = ImagePicker();
     XFile? picked;
@@ -71,6 +85,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Edit Name ──────────────────────────────────────────────────────────
+  /// Admin-only: Nagpapakita ng dialog para i-edit ang group name.
   Future<void> _showEditNameDialog(
     BuildContext context,
     String convoId,
@@ -125,6 +140,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Add Members Sheet ──────────────────────────────────────────────────
+  /// Admin-only: Nagpapakita ng bottom sheet para mag-add ng bagong members.
   Future<void> _showAddMemberSheet(
     BuildContext context,
     String convoId,
@@ -142,6 +158,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Remove Member ──────────────────────────────────────────────────────
+  /// Admin-only: Nag-aalis ng member mula sa group.
   Future<void> _removeMember(
     BuildContext context,
     String convoId,
@@ -193,6 +210,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Promote to Admin ───────────────────────────────────────────────────
+  /// Admin-only: Nag-po-promote ng member bilang admin.
   Future<void> _promoteToAdmin(
     BuildContext context,
     String convoId,
@@ -234,6 +252,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Leave Group ────────────────────────────────────────────────────────
+  /// Para sa regular members: nag-le-leave sa group.
+  /// Kung admin at wala nang ibang admin, hindi pwede mag-leave basta-basta.
   Future<void> _leaveGroup(
     BuildContext context,
     String convoId,
@@ -285,6 +305,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   }
 
   // ── Delete Group ───────────────────────────────────────────────────────
+  /// Admin-only: Nag-de-delete ng buong group conversation.
   Future<void> _deleteGroup(BuildContext context, String convoId) async {
     final confirmed = await showDialog<bool>(
       context: context,

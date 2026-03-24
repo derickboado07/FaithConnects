@@ -1,31 +1,49 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATION SERVICE — Ang service na ito ang nag-ha-handle ng
+// lahat ng notifications sa app. Mga responsibilidad:
+//   • Local notifications (device-level notifications)
+//   • In-app banner notifications (overlay sa taas ng screen)
+//   • Firestore-based notification storage at retrieval
+//   • Real-time listening para sa incoming notifications
+//   • Mark as read (isa-isa at lahat)
+//   • Unread count streaming para sa badge display
+//
+// Firestore collection: users/{userId}/notifications/{notifId}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
 
-/// NotificationService handles local notifications for the app.
-/// You can extend this to support push notifications (e.g., Firebase Cloud Messaging) if needed.
+/// Nag-ha-handle ng local at in-app notifications.
+/// Singleton pattern — isang instance lang sa buong app.
+/// Pwede i-extend ito para sa push notifications (Firebase Cloud Messaging).
 class NotificationService {
+  // Private constructor at singleton instance.
   NotificationService._internal();
   static final NotificationService instance = NotificationService._internal();
 
+  // Flutter Local Notifications plugin para sa device-level notifications.
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  // Firestore instance para sa pag-save at pag-read ng notifications.
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Global navigator key – set this from the MaterialApp so we can show
-  /// in-app banner notifications from anywhere.
+  /// Global navigator key — ini-set ito mula sa MaterialApp para
+  /// makapag-show ng in-app banner notifications kahit saan sa app.
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  /// Real-time listener for incoming notifications (shows banners to the
-  /// current user when someone else triggers a notification for them).
+  /// Real-time listener para sa incoming notifications.
+  /// Nagsha-show ng banners sa current user kapag may bagong notification.
   StreamSubscription? _incomingNotifSub;
-  bool _initialSnapshotSkipped = false;
+  bool _initialSnapshotSkipped = false; // Para i-skip ang existing docs sa first load
 
-  /// Call this during app startup (e.g., in main())
+  /// Tinatawag ito during app startup (sa main()) para i-initialize
+  /// ang local notifications plugin.
   Future<void> initialize(BuildContext context) async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -42,8 +60,8 @@ class NotificationService {
 
   // ── Real-time incoming notification listener ──────────────────────
 
-  /// Start listening for NEW notifications for [userId].
-  /// Shows an in-app banner whenever a new unread notification arrives.
+  /// Magsisimulang makinig sa mga BAGONG notifications para sa [userId].
+  /// Nagsha-show ng in-app banner kapag may dumating na bagong unread notification.
   void startListeningForUser(String userId) {
     stopListening();
     _initialSnapshotSkipped = false;
@@ -81,7 +99,7 @@ class NotificationService {
     debugPrint('NotificationService: started listening for user $userId');
   }
 
-  /// Stop the incoming-notification listener.
+  /// Ihihinto ang incoming-notification listener.
   void stopListening() {
     _incomingNotifSub?.cancel();
     _incomingNotifSub = null;
@@ -89,7 +107,9 @@ class NotificationService {
 
   // ── In-app banner ────────────────────────────────────────────────
 
-  /// Show an in-app banner at the top of the screen.
+  /// Nagsha-show ng in-app banner notification sa taas ng screen.
+  /// May auto-dismiss after 4 seconds, at navi-navigate sa
+  /// notifications screen kapag ni-tap.
   void showInAppBanner({required String title, required String body}) {
     final ctx = navigatorKey.currentContext;
     if (ctx == null) return;
@@ -111,9 +131,10 @@ class NotificationService {
 
   // ── Create / write notification ──────────────────────────────────
 
-  /// Save a notification to Firestore for [userId] (the RECIPIENT).
-  /// The in-app banner is NOT shown here — the recipient's real-time
-  /// listener (`startListeningForUser`) takes care of that.
+  /// Sine-save ang notification sa Firestore para sa [userId] (ang RECIPIENT).
+  /// Ang in-app banner ay HINDI sini-show dito — ang real-time listener
+  /// ng recipient (`startListeningForUser`) ang bahala doon.
+  /// Nag-a-attempt din mag-show ng local notification (device-level).
   Future<void> showNotification({
     required String userId,
     required String title,
@@ -170,7 +191,7 @@ class NotificationService {
 
   // ── Read / update helpers ────────────────────────────────────────
 
-  /// Mark a single notification as read.
+  /// Ini-mark ang isang notification bilang nabasa na (read).
   Future<void> markAsRead(String userId, String notificationId) async {
     try {
       await _db
@@ -184,7 +205,8 @@ class NotificationService {
     }
   }
 
-  /// Mark all notifications as read for a user.
+  /// Ini-mark ang LAHAT ng notifications bilang nabasa na para sa isang user.
+  /// Ginagamit ang batched write para mas efficient.
   Future<void> markAllAsRead(String userId) async {
     try {
       final snap = await _db
@@ -203,7 +225,8 @@ class NotificationService {
     }
   }
 
-  /// Stream notifications for a user (for notification screen).
+  /// Real-time stream ng notifications para sa isang user.
+  /// Ginagamit sa notification screen para ipakita ang list ng notifications.
   Stream<List<AppNotification>> notificationsForUser(String userId) {
     return _db
         .collection('users')
@@ -224,7 +247,9 @@ class NotificationService {
         );
   }
 
-  /// Stream unread notification count for badge display.
+  /// Real-time stream ng unread notification count para sa badge display.
+  /// Ginagamit sa bottom nav bar o notification icon para ipakita
+  /// kung ilan ang hindi pa nabasa.
   Stream<int> unreadCountForUser(String userId) {
     return _db
         .collection('users')

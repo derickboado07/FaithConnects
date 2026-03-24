@@ -1,3 +1,17 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MY DAY VIEWER SCREEN — Full-screen viewer para sa My Day (stories).
+// Nagdi-display ng user's My Day items (images/videos) sa full-screen
+// na may auto-advance timer at manual navigation (tap left/right).
+//
+// Features:
+//   • Image at video story display
+//   • Auto-advance pagkatapos ng timer
+//   • Manual prev/next navigation
+//   • Reactions (Christian emoji: 🙏❤️🙌 etc.)
+//   • Reply to stories
+//   • Progress bar indicator sa taas
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:video_player/video_player.dart';
@@ -28,17 +42,17 @@ class MyDayViewerScreen extends StatefulWidget {
 
 class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     with SingleTickerProviderStateMixin {
-  int _current = 0;
-  late AnimationController _progressCtrl;
-  VideoPlayerController? _videoCtrl;
+  int _current = 0;                          // Index ng kasalukuyang item na tini-tingnan
+  late AnimationController _progressCtrl;   // Animation controller para sa progress bar
+  VideoPlayerController? _videoCtrl;         // Video controller para sa video stories
 
-  // Reply / reaction state
-  late final bool _isOwner;
-  final TextEditingController _replyCtrl = TextEditingController();
+  // Reply at reaction state
+  late final bool _isOwner;                  // True kung sariling My Day ito ng current user
+  final TextEditingController _replyCtrl = TextEditingController(); // Reply input
   final FocusNode _replyFocus = FocusNode();
-  bool _isSending = false;
+  bool _isSending = false;                   // True habang nag-se-send ng reaction/reply
 
-  // Christian reactions
+  // Christian reactions na pwedeng ipadala
   static const _reactions = [
     ('\u{1F64F}', 'Amen!'),
     ('\u{1F64C}', 'Praise God!'),
@@ -73,9 +87,11 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     super.dispose();
   }
 
+  /// I-load ang My Day item sa given index.
+  /// Kapag natapos na ang lahat ng items, awtomatikong mag-po-pop back.
   void _loadItem(int index) {
     if (index >= widget.items.length) {
-      // All items viewed — close
+      // Lahat ng items ay natiningnan na — isara ang screen
       if (mounted) Navigator.pop(context);
       return;
     }
@@ -95,6 +111,7 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     }
   }
 
+  /// Naglo-load ng video para sa video-type My Day items.
   void _loadVideo(MyDayItem item, int index) {
     final ctrl = VideoPlayerController.networkUrl(Uri.parse(item.mediaUrl));
     _videoCtrl = ctrl;
@@ -113,12 +130,14 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     });
   }
 
+  /// Nagpupunta sa susunod na item (o nagsasara kung huli na).
   void _goNext() {
     _progressCtrl.stop();
     _videoCtrl?.pause();
     _loadItem(_current + 1);
   }
 
+  /// Nagpupunta sa nakaraang item (kung meron).
   void _goPrev() {
     _progressCtrl.stop();
     _videoCtrl?.pause();
@@ -129,6 +148,7 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     }
   }
 
+  /// Nagpapadala ng Christian emoji reaction sa My Day item.
   Future<void> _sendReaction(String emoji, String label) async {
     if (_isSending) return;
     setState(() => _isSending = true);
@@ -160,6 +180,7 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     }
   }
 
+  /// Nagpapadala ng text reply sa My Day owner via MessageService.
   Future<void> _sendReply() async {
     final text = _replyCtrl.text.trim();
     if (text.isEmpty || _isSending) return;
@@ -196,6 +217,7 @@ class _MyDayViewerScreenState extends State<MyDayViewerScreen>
     }
   }
 
+  /// Nagpapakita ng more options (delete My Day) para sa owner.
   void _showMoreOptions(BuildContext context) {
     final item = widget.items[_current];
     showModalBottomSheet(

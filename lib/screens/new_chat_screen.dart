@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW CHAT SCREEN — Screen para mag-start ng bagong 1-on-1 conversation.
+// Nagha-hanap ng users mula sa Firestore at pagka-select,
+// gagawa ng conversation via MessageService at pupunta sa ChatScreen.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
@@ -5,6 +11,7 @@ import '../services/message_service.dart';
 import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
 
+/// Screen para mag-start ng bagong one-on-one conversation — may user search.
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
 
@@ -13,7 +20,7 @@ class NewChatScreen extends StatefulWidget {
 }
 
 class _NewChatScreenState extends State<NewChatScreen> {
-  String _query = '';
+  String _query = '';   // Search query para i-filter ang listahan ng users
 
   @override
   Widget build(BuildContext context) {

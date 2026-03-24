@@ -1,17 +1,32 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// MY DAY SERVICE — Ang service na ito ang nag-ha-handle ng
+// "My Day" stories feature (parang Facebook/Instagram stories).
+// Mga responsibilidad:
+//   • Pag-upload ng story images o videos sa Firebase Storage
+//   • Pag-create ng story documents sa Firestore
+//   • Real-time streaming ng stories (per user at across users)
+//   • Pag-delete ng stories
+//   • Auto-expiry (24 hours) ng stories
+//
+// Firestore collection: my_day/{docId}
+// Firebase Storage path: my_day/{uid}/{timestamp}_{filename}
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:firebase_storage/firebase_storage.dart';
 
-/// Represents a single "My Day" story entry (image or short video).
+/// Nagre-represent ng isang "My Day" story entry (image o short video).
+/// May 24-hour expiry — pagkatapos ng 24 oras, ita-treat na bilang expired.
 class MyDayItem {
-  final String id;
-  final String uid;
-  final String mediaUrl;
-  final String mediaType; // 'image' or 'video'
-  final String caption;
-  final String createdAt; // ISO 8601
-  final String expiresAt; // ISO 8601 (24h after creation)
+  final String id;            // Unique ID ng story
+  final String uid;           // UID ng nag-post ng story
+  final String mediaUrl;      // Download URL ng media (image/video)
+  final String mediaType;     // 'image' o 'video'
+  final String caption;       // Optional caption ng story
+  final String createdAt;     // Kailan ginawa (ISO 8601)
+  final String expiresAt;     // Kailan mag-e-expire (ISO 8601, 24h after creation)
 
   MyDayItem({
     required this.id,
@@ -23,6 +38,7 @@ class MyDayItem {
     required this.expiresAt,
   });
 
+  /// Ginagawa ang MyDayItem object mula sa Firestore DocumentSnapshot.
   factory MyDayItem.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return MyDayItem(
@@ -36,6 +52,7 @@ class MyDayItem {
     );
   }
 
+  /// Chine-check kung expired na ba ang story (lagpas na sa 24 hours).
   bool get isExpired {
     try {
       return DateTime.now().isAfter(DateTime.parse(expiresAt));
@@ -45,29 +62,34 @@ class MyDayItem {
   }
 }
 
-/// Service for uploading, deleting, and streaming My Day stories.
+/// Service para sa pag-upload, pag-delete, at pag-stream ng My Day stories.
 ///
 /// Firestore structure:
 ///   my_day/{docId}
-///     uid: string
-///     mediaUrl: string
+///     uid: string            — Sino ang nag-post
+///     mediaUrl: string       — Download URL ng media
 ///     mediaType: 'image' | 'video'
-///     caption: string
-///     createdAt: ISO string
-///     expiresAt: ISO string (24h later)
+///     caption: string        — Optional caption
+///     createdAt: ISO string  — Kailan ginawa
+///     expiresAt: ISO string  — Kailan mag-e-expire (24h later)
 class MyDayService {
+  // Private constructor at singleton instance.
   MyDayService._internal();
   static final MyDayService instance = MyDayService._internal();
 
+  // Firebase instances.
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  // Kinukuha ang UID ng kasalukuyang naka-login na user.
   String get _myUid => _auth.currentUser?.uid ?? '';
 
-  /// Upload a My Day entry (image or video bytes).
-  /// [mediaType] should be 'image' or 'video'.
-  /// Videos must be <= 15 seconds (enforced by the caller).
+  /// Nag-a-upload ng My Day entry (image o video bytes).
+  /// [mediaType] ay dapat 'image' o 'video'.
+  /// Ang videos ay kailangang <= 15 seconds (ine-enforce ng caller).
+  /// Pagkatapos ma-upload ang media, gagawa ng Firestore document
+  /// na may 24-hour expiry.
   Future<void> uploadMyDay({
     required Uint8List bytes,
     required String filename,
@@ -111,7 +133,8 @@ class MyDayService {
     });
   }
 
-  /// Stream all non-expired My Day entries for a specific user.
+  /// Real-time stream ng lahat ng non-expired My Day entries ng specific user.
+  /// Naka-sort by createdAt (pinakabago muna).
   Stream<List<MyDayItem>> userMyDayStream(String uid) {
     return _db
         .collection('my_day')
@@ -128,8 +151,9 @@ class MyDayService {
         });
   }
 
-  /// Stream all non-expired My Day entries across a list of user IDs.
-  /// Returns a map: { uid: [MyDayItem, ...] }.
+  /// Real-time stream ng lahat ng non-expired My Day entries ng multiple users.
+  /// Returns isang map: { uid: [MyDayItem, ...] }.
+  /// Limitado sa 30 users ang Firestore 'in' query.
   Stream<Map<String, List<MyDayItem>>> myDayStreamForUsers(List<String> uids) {
     if (uids.isEmpty) return Stream.value({});
     // Firestore 'in' queries limited to 30 items
@@ -154,7 +178,7 @@ class MyDayService {
         });
   }
 
-  /// Delete a My Day entry.
+  /// Dine-delete ang isang My Day entry mula sa Firestore.
   Future<void> deleteMyDay(String docId) async {
     await _db.collection('my_day').doc(docId).delete();
   }

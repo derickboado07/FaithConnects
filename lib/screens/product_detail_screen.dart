@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT DETAIL SCREEN — Full product preview page.
+// Nagdi-display ng product image, name, description, price, at seller info.
+// May "Buy Now" button na nag-a-add sa cart at nagpupunta sa checkout.
+// Kailangan naka-login bago maka-buy.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../services/auth_service.dart';
@@ -29,6 +36,7 @@ import 'checkout_screen.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Screen para sa detalyadong view ng isang produkto — may Buy Now at product info.
 class ProductDetailScreen extends StatefulWidget {
   /// The product whose details are being displayed.
   final Product product;
@@ -40,7 +48,7 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  bool _addingToCart = false;
+  bool _addingToCart = false;   // True habang nag-ppo-process ng cart/checkout
 
   // ── Buy Now ──────────────────────────────────────────────────────────────
   // Called when the user taps the "Buy Now" button.

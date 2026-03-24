@@ -1,3 +1,11 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKETPLACE SCREEN — Landing page ng marketplace.
+// Nagdi-display ng "Browse Products" at "Sell Product" action cards,
+// category shortcuts (Electronics, Books, etc.), at navigation
+// papunta sa ProductListScreen at SellProductScreen.
+// May auth check bago mag-sell.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'product_list_screen.dart';
@@ -25,6 +33,7 @@ import 'marketplace_feed.dart';
 // Shared color tokens — match the rest of the FaithConnect design system.
 const _gold = Color(0xFFD4AF37);
 
+/// Pangunahing marketplace landing screen — nagpapakita ng categories, quick actions, at featured products.
 class MarketplaceScreen extends StatelessWidget {
   const MarketplaceScreen({super.key});
 
@@ -378,12 +387,14 @@ class _ActionCard extends StatelessWidget {
 // Tapping a category navigates to ProductListScreen with an initial category
 // filter pre-applied.
 // ─────────────────────────────────────────────────────────────────────────────
+/// Simple data model para sa isang marketplace category (label + icon).
 class _CategoryItem {
   final String label;
   final IconData icon;
   const _CategoryItem(this.label, this.icon);
 }
 
+/// Horizontal scrollable row ng marketplace categories filter chips.
 class _CategoriesRow extends StatelessWidget {
   const _CategoriesRow();
 

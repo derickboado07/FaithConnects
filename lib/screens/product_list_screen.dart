@@ -1,3 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT LIST SCREEN — Browse marketplace products.
+// Nagdi-display ng grid ng mga products na may:
+//   • Category filter chips (Electronics, Books, Clothing, etc.)
+//   • Search bar para mag-filter by name
+//   • Real-time updates via Firestore StreamBuilder
+//   • Product card na may image, name, at price
+//   • Navigation papunta sa ProductDetailScreen
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../services/marketplace_service.dart';
@@ -28,6 +38,7 @@ import 'product_detail_screen.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Screen na nagpapakita ng listahan ng mga produkto — may category filter at search.
 class ProductListScreen extends StatefulWidget {
   /// [initialCategory] pre-selects a category when navigating here from the
   /// category row on MarketplaceScreen. Defaults to 'All'.
@@ -40,9 +51,9 @@ class ProductListScreen extends StatefulWidget {
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
-  late String _selectedCategory;
+  late String _selectedCategory;                       // Kasalukuyang piniling category filter
   final TextEditingController _searchCtrl = TextEditingController();
-  String _searchQuery = '';
+  String _searchQuery = '';                            // Lowercase search query para sa client-side filter
 
   static const _categories = [
     'All',

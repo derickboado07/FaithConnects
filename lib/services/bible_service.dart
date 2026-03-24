@@ -1,19 +1,36 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// BIBLE SERVICE — Ang service na ito ang nag-ha-handle ng lahat ng
+// Bible-related operations sa app tulad ng:
+//   • Pag-load ng iba't ibang Bible translations (ASV, Ang Biblia, KJV, etc.)
+//   • Pag-search ng mga verses
+//   • Daily encouraging verse
+//   • Pag-save at pag-highlight ng mga verses
+//   • Bible notes at folders
+//   • Heart/like system para sa daily verse
+//
+// Gumagamit ito ng local assets (SQL at JSON files) para sa Bible data
+// at SharedPreferences para sa saved verses, highlights, at notes.
+// Firestore ang gamit para sa daily verse heart counts.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DATA MODEL
+// DATA MODEL — BibleVerse
+// Ito ang model class para sa isang Bible verse.
+// Nag-ho-hold ng book, chapter, verse number, at text ng verse.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BibleVerse {
-  final int id;
-  final int book;
-  final int chapter;
-  final int verse;
-  final String text;
-  final String language;
+  final int id;        // Unique ID ng verse
+  final int book;      // Book number (1-66)
+  final int chapter;   // Chapter number
+  final int verse;     // Verse number
+  final String text;   // Ang mismong text ng verse
+  final String language; // Language/version ID (e.g., 'en', 'tl', 'kjv')
 
   const BibleVerse({
     required this.id,
@@ -24,20 +41,24 @@ class BibleVerse {
     required this.language,
   });
 
+  /// Kinukuha ang pangalan ng book base sa book number at language.
   String get bookName {
     final list = BibleService.bookNamesFor(language);
     if (book >= 1 && book <= list.length) return list[book - 1];
     return 'Book $book';
   }
 
-  String get reference => '$bookName $chapter:$verse';
-  String get translationLabel => BibleService.translationLabelFor(language);
+  String get reference => '$bookName $chapter:$verse'; // Full reference (e.g., "Genesis 1:1")
+  String get translationLabel => BibleService.translationLabelFor(language); // Label ng translation
 
-  /// Strip MySQL paragraph marker.
+  /// Tinatanggal ang MySQL paragraph marker mula sa verse text
+  /// para malinis ang display sa UI.
   String get displayText =>
       text.replaceAll('\u00b6 ', '').replaceAll('\u00b6', '').trim();
 }
 
+/// Data model para sa Bible version info — nag-ho-hold ng metadata
+/// tulad ng ID, label, asset path, at kung available ba ang version.
 class BibleVersionInfo {
   const BibleVersionInfo({
     required this.id,
@@ -59,16 +80,27 @@ class BibleVersionInfo {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SERVICE  (in-memory, pure Dart, works on ALL platforms including Web)
+// BIBLE SERVICE CLASS
+// In-memory, pure Dart service na gumagana sa LAHAT ng platforms (kasama Web).
+// Singleton pattern — isang instance lang sa buong app (BibleService.instance).
+//
+// Ang Bible data ay naka-load sa memory mula sa local assets (SQL at JSON).
+// Hindi gumagamit ng external database para sa Bible text mismo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BibleService {
+  // Private constructor at singleton instance.
   BibleService._();
   static final BibleService instance = BibleService._();
 
-  List<BibleVerse>? _en;
-  List<BibleVerse>? _tl;
+  // Naka-store sa memory ang mga parsed Bible verses.
+  List<BibleVerse>? _en;  // English (ASV) translation
+  List<BibleVerse>? _tl;  // Tagalog (Ang Biblia) translation
+  // Map para sa mga extra/additional translations (KJV, NIV, etc.)
   final Map<String, List<BibleVerse>> _extraTranslations = {};
+  // Registry ng lahat ng available Bible versions. Ang key ay ang version ID
+  // (e.g., 'en', 'tl', 'kjv') at ang value ay ang BibleVersionInfo na may
+  // metadata tungkol sa version (label, asset path, etc.).
   final Map<String, BibleVersionInfo> _versionRegistry = {
     'en': const BibleVersionInfo(
       id: 'en',
@@ -296,11 +328,13 @@ class BibleService {
       isPartial: true,
     ),
   };
-  Future<void>? _initFuture;
-  Future<void>? _discoverFuture;
+  Future<void>? _initFuture;     // Cache para sa init() future — para hindi mag-load ulit
+  Future<void>? _discoverFuture;  // Cache para sa discover versions future
 
-  bool get isInitialized => _en != null || _tl != null;
+  bool get isInitialized => _en != null || _tl != null; // True kung may naka-load na translation
 
+  /// Kinukuha ang list ng book names depende sa version.
+  /// Kung Tagalog, gagamitin ang tagalogBookNames. Kung English, bookNames.
   static List<String> bookNamesFor(String versionId) {
     return versionId == 'tl' ? tagalogBookNames : bookNames;
   }
@@ -387,6 +421,7 @@ class BibleService {
     'Revelation',
   ];
 
+  // Tagalog book names (Genesis hanggang Apocalipsis)
   static const List<String> tagalogBookNames = [
     'Genesis',
     'Exodo',
@@ -457,9 +492,11 @@ class BibleService {
   ];
 
   // ── Public API ──────────────────────────────────────────────────────────────
+  // Mga methods na magagamit ng ibang parts ng app.
 
-  /// Load both translation assets into memory.
-  /// On first call this may take a few seconds; subsequent calls return instantly.
+  /// I-load ang English at Tagalog translations sa memory.
+  /// Sa unang call, matatagalan kasi binabasa ang assets.
+  /// Sa mga susunod na calls, instantly nag-re-return kasi naka-cache na.
   Future<void> init() {
     // Return cached future so concurrent callers all await the same work.
     // On error, the future is cleared so the next call retries.
@@ -470,6 +507,8 @@ class BibleService {
     return _initFuture!;
   }
 
+  /// Kinukuha ang list ng lahat ng available Bible versions na naka-discover
+  /// na sa assets. Naka-sort by priority (English at Tagalog muna).
   Future<List<BibleVersionInfo>> getAvailableVersions({AssetBundle? bundle}) async {
     await _discoverVersions(bundle: bundle);
     final versions = _versionRegistry.values
@@ -485,6 +524,8 @@ class BibleService {
     return versions;
   }
 
+  /// Sine-ensure na naka-load na ang specific Bible version sa memory.
+  /// Kung hindi pa, ilo-load mula sa assets.
   Future<void> ensureVersionLoaded(String language, {AssetBundle? bundle}) async {
     await _discoverVersions(bundle: bundle);
     if (_versesFor(language) != null) {
@@ -618,8 +659,9 @@ class BibleService {
     [43, 1, 5],   // John 1:5
   ];
 
-  /// Deterministic daily encouraging verse — changes each calendar day.
-  /// Picks from a curated list of ~110 uplifting, comforting verses.
+  /// Deterministic daily encouraging verse — nagbabago bawat araw.
+  /// Pumipili mula sa curated list ng ~110 uplifting verses.
+  /// Ang same verse ang makikita ng lahat ng users sa isang araw.
   Future<BibleVerse?> getDailyVerse({String language = 'en', AssetBundle? bundle}) async {
     await ensureVersionLoaded(language, bundle: bundle);
     final verses = _versesFor(language);
@@ -644,10 +686,11 @@ class BibleService {
     return null;
   }
 
-  /// Search verses across all books (or within a Testament filter).
+  /// Nagha-hanap ng verses sa lahat ng books (o sa Old/New Testament lang).
   /// [testament]: 'ot' = Old Testament (books 1-39),
   ///              'nt' = New Testament (books 40-66),
-  ///              null  = All books.
+  ///              null  = Lahat ng books.
+  /// Case-insensitive ang search.
   Future<List<BibleVerse>> searchVerses(
     String query, {
     String language = 'en',
@@ -672,7 +715,8 @@ class BibleService {
     return results;
   }
 
-  /// All verses in a given book / chapter, sorted by verse number.
+  /// Kinukuha ang lahat ng verses sa isang specific book at chapter,
+  /// naka-sort by verse number.
   Future<List<BibleVerse>> getChapterVerses(
     int book,
     int chapter, {
@@ -685,7 +729,7 @@ class BibleService {
     return verses.where((v) => v.book == book && v.chapter == chapter).toList();
   }
 
-  /// Number of chapters in a book.
+  /// Kinukuha kung ilan ang chapters sa isang book.
   Future<int> getChapterCount(int book, {String language = 'en', AssetBundle? bundle}) async {
     await ensureVersionLoaded(language, bundle: bundle);
     final verses = _versesFor(language);
@@ -710,11 +754,13 @@ class BibleService {
   String _verseKey(BibleVerse v) =>
       '${v.language}|${v.book}|${v.chapter}|${v.verse}';
 
+  /// Chine-check kung naka-save na ba ang isang verse.
   Future<bool> isVerseSaved(BibleVerse v) async {
     final keys = await _getSavedKeys();
     return keys.contains(_verseKey(v));
   }
 
+  /// Sine-save ang isang verse sa favorites list.
   Future<void> saveVerse(BibleVerse v) async {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getStringList(_savedPrefKey) ?? [];
@@ -725,6 +771,7 @@ class BibleService {
     }
   }
 
+  /// Tinatanggal ang isang verse mula sa favorites list.
   Future<void> unsaveVerse(BibleVerse v) async {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getStringList(_savedPrefKey) ?? [];
@@ -732,6 +779,7 @@ class BibleService {
     await prefs.setStringList(_savedPrefKey, keys);
   }
 
+  /// Kinukuha ang lahat ng saved verses para sa isang language/version.
   Future<List<BibleVerse>> getSavedVerses({String language = 'en', AssetBundle? bundle}) async {
     await ensureVersionLoaded(language, bundle: bundle);
     final keys = await _getSavedKeys();
@@ -755,7 +803,9 @@ class BibleService {
   }
 
   // ── Internals ───────────────────────────────────────────────────────────────
+  // Mga internal/private methods para sa pag-load at pag-parse ng Bible data.
 
+  /// Kinukuha ang naka-load na verses para sa isang language/version.
   List<BibleVerse>? _versesFor(String language) {
     if (language == 'tl') {
       return _tl;
@@ -766,6 +816,8 @@ class BibleService {
     return _extraTranslations[language];
   }
 
+  /// Dini-discover ang mga available Bible versions mula sa app assets.
+  /// Hinahanap ang mga JSON files na naka-match sa pattern at iri-register.
   Future<void> _discoverVersions({AssetBundle? bundle}) {
     _discoverFuture ??= _doDiscoverVersions(bundle: bundle);
     return _discoverFuture!;
@@ -807,6 +859,9 @@ class BibleService {
     }
   }
 
+  /// Ilo-load ang English (ASV) at Tagalog (Ang Biblia) translations
+  /// mula sa SQL asset files. Sabay-sabay (parallel) ang loading
+  /// para mas mabilis.
   Future<void> _doInit() async {
     // Load both translations in parallel, with individual error handling.
     final results = await Future.wait([
@@ -825,13 +880,15 @@ class BibleService {
     }
   }
 
-  /// Load a SQL dump asset and parse all INSERT rows.
-  /// Yields to the event loop every 500 lines so the UI stays responsive.
+  /// Nag-lo-load ng SQL dump asset at pine-parse ang lahat ng INSERT rows.
+  /// Nag-yi-yield sa event loop tuwing 500 lines para hindi mag-freeze ang UI.
   Future<List<BibleVerse>> _loadAsset(String assetPath, String language) async {
     final content = await rootBundle.loadString(assetPath);
     return _parseLines(content, language);
   }
 
+  /// Nag-lo-load ng JSON Bible asset at kino-convert sa list ng BibleVerse.
+  /// Ginagamit para sa mga extra translations (KJV, NIV, etc.)
   Future<List<BibleVerse>> _loadJsonAsset(
     String assetPath,
     String language, {
@@ -878,6 +935,8 @@ class BibleService {
     return result;
   }
 
+  /// Helper na nagha-hanap ng book data sa JSON gamit ang book name.
+  /// May support sa aliases (e.g., 'Psalms' -> 'Psalm', 'Song of Solomon' -> 'Song of Songs').
   dynamic _resolveJsonBook(Map<String, dynamic> decoded, String bookName) {
     final direct = decoded[bookName];
     if (direct != null) {
@@ -913,6 +972,8 @@ class BibleService {
     return null;
   }
 
+  /// Pine-parse ang SQL content line by line para i-extract ang Bible verses.
+  /// Hinahanap ang INSERT statements at kino-convert sa BibleVerse objects.
   Future<List<BibleVerse>> _parseLines(String content, String language) async {
     // Matches: VALUES ('id', 'book', 'chapter', 'verse', 'text');
     final re = RegExp(
@@ -955,7 +1016,7 @@ class BibleService {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
-  /// Stream the heart count for today's daily verse.
+  /// Real-time stream ng heart count para sa daily verse ngayong araw.
   Stream<int> dailyVerseHeartCountStream() {
     final docId = _dailyVerseDocId();
     return _firestore
@@ -965,7 +1026,7 @@ class BibleService {
         .map((snap) => (snap.data()?['hearts'] as int?) ?? 0);
   }
 
-  /// Check if the current user has already hearted today's verse.
+  /// Chine-check kung nag-heart na ba ang user sa daily verse ngayong araw.
   Future<bool> hasUserHeartedDailyVerse(String uid) async {
     final docId = _dailyVerseDocId();
     final snap =
@@ -974,7 +1035,9 @@ class BibleService {
     return users.contains(uid);
   }
 
-  /// Toggle heart for today's daily verse. Returns new hearted state.
+  /// Toggle heart para sa daily verse ngayong araw.
+  /// Kung nag-heart na, ita-tanggal. Kung hindi pa, ila-lagay.
+  /// Returns true kung nag-heart, false kung inalis.
   Future<bool> toggleDailyVerseHeart(String uid) async {
     final docId = _dailyVerseDocId();
     final ref = _firestore.collection('daily_verse_hearts').doc(docId);
@@ -1005,7 +1068,8 @@ class BibleService {
   String _highlightKey(String lang, int book, int chapter, int verse) =>
       '$_highlightPrefix${lang}_${book}_${chapter}_$verse';
 
-  /// Get all highlights for a chapter. Returns map of verseNum → colorHex.
+  /// Kinukuha ang lahat ng highlights sa isang chapter.
+  /// Returns map ng verseNum → colorHex.
   Future<Map<int, String>> getChapterHighlights(
     int book, int chapter, {String language = 'en',
   }) async {
@@ -1023,7 +1087,7 @@ class BibleService {
     return result;
   }
 
-  /// Set or update a highlight color for a verse.
+  /// Ini-set o ini-update ang highlight color ng isang verse.
   Future<void> highlightVerse(
     int book, int chapter, int verse, String colorHex, {String language = 'en',
   }) async {
@@ -1031,7 +1095,7 @@ class BibleService {
     await prefs.setString(_highlightKey(language, book, chapter, verse), colorHex);
   }
 
-  /// Remove highlight from a verse.
+  /// Tinatanggal ang highlight mula sa isang verse.
   Future<void> removeHighlight(
     int book, int chapter, int verse, {String language = 'en',
   }) async {
@@ -1039,7 +1103,7 @@ class BibleService {
     await prefs.remove(_highlightKey(language, book, chapter, verse));
   }
 
-  /// Get all highlighted verses across all chapters.
+  /// Kinukuha ang lahat ng highlighted verses sa lahat ng chapters.
   Future<List<Map<String, dynamic>>> getAllHighlights({String language = 'en', AssetBundle? bundle}) async {
     await ensureVersionLoaded(language, bundle: bundle);
     final prefs = await SharedPreferences.getInstance();
@@ -1075,6 +1139,7 @@ class BibleService {
   static const _notesPrefKey = 'bible_notes';
   static const _foldersPrefKey = 'bible_note_folders';
 
+  /// Kinukuha ang lahat ng Bible notes ng user.
   Future<List<Map<String, dynamic>>> getNotes() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_notesPrefKey);
@@ -1087,6 +1152,7 @@ class BibleService {
     await prefs.setString(_notesPrefKey, json.encode(notes));
   }
 
+  /// Nag-da-dagdag ng bagong Bible note.
   Future<void> addNote({
     required String title,
     required String content,
@@ -1105,6 +1171,7 @@ class BibleService {
     await _saveNotes(notes);
   }
 
+  /// Ini-update ang existing Bible note (title, content, o folder).
   Future<void> updateNote(String id, {String? title, String? content, String? folder}) async {
     final notes = await getNotes();
     final idx = notes.indexWhere((n) => n['id'] == id);
@@ -1115,6 +1182,7 @@ class BibleService {
     await _saveNotes(notes);
   }
 
+  /// Tinatanggal ang isang Bible note.
   Future<void> deleteNote(String id) async {
     final notes = await getNotes();
     notes.removeWhere((n) => n['id'] == id);
@@ -1122,7 +1190,9 @@ class BibleService {
   }
 
   // ── Note Folders ──────────────────────────────────────────────────────────
+  // Para sa pag-organize ng Bible notes sa mga folders.
 
+  /// Kinukuha ang lahat ng note folders. Default ay 'General'.
   Future<List<String>> getNoteFolders() async {
     final prefs = await SharedPreferences.getInstance();
     final folders = prefs.getStringList(_foldersPrefKey);
@@ -1130,6 +1200,7 @@ class BibleService {
     return folders;
   }
 
+  /// Nag-da-dagdag ng bagong note folder.
   Future<void> addNoteFolder(String name) async {
     final prefs = await SharedPreferences.getInstance();
     final folders = prefs.getStringList(_foldersPrefKey) ?? ['General'];
@@ -1139,6 +1210,8 @@ class BibleService {
     }
   }
 
+  /// Tinatanggal ang isang note folder. Ang mga notes sa deleted folder
+  /// ay imo-move sa 'General' folder. Hindi pwedeng i-delete ang 'General'.
   Future<void> deleteNoteFolder(String name) async {
     if (name == 'General') return; // can't delete default
     final prefs = await SharedPreferences.getInstance();
@@ -1153,6 +1226,8 @@ class BibleService {
     await _saveNotes(notes);
   }
 
+  /// Nire-rename ang isang note folder. Hindi pwedeng i-rename ang 'General'.
+  /// Awtomatikong inu-update ang folder name sa lahat ng notes na nandoon.
   Future<void> renameNoteFolder(String oldName, String newName) async {
     if (oldName == 'General') return;
     final prefs = await SharedPreferences.getInstance();

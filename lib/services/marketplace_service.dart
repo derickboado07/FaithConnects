@@ -1,49 +1,51 @@
+// Ini-import ang mga kailangan na packages.
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Uint8List is re-exported here
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import '../models/product_model.dart';
-import '../models/order_model.dart'; // ProductOrder
+import 'package:flutter/foundation.dart'; // Uint8List para sa raw bytes (web)
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore database
+import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storage para sa images
+import '../models/product_model.dart'; // Product data model
+import '../models/order_model.dart'; // ProductOrder data model
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARKETPLACE SERVICE
+// MARKETPLACE SERVICE — Ang service na ito ang nag-ha-handle ng lahat ng
+// Firestore read/write operations at Firebase Storage uploads para sa
+// Marketplace module ng app.
 //
-// Singleton service class that handles all Firestore read/write operations and
-// Firebase Storage uploads for the Marketplace module.
+// Mga responsibilidad:
+//   • Pagkuha ng product list mula sa Firestore (real-time stream)
+//   • Pag-upload ng product images sa Firebase Storage
+//   • Pag-save ng bagong product listings sa Firestore
+//   • Pag-manage ng user shopping cart (Firestore subcollection)
+//   • Pag-create ng order documents sa Firestore kapag nag-checkout
 //
-// Responsibilities:
-//   • Retrieving the product list from Firestore (real-time stream)
-//   • Uploading product images to Firebase Storage
-//   • Saving new product listings to Firestore
-//   • Managing the user's shopping cart (Firestore subcollection)
-//   • Creating order documents in Firestore on purchase confirmation
-//
-// Firestore collections used:
-//   - products/{productId}         — Product listings
-//   - carts/{userId}/items/{productId} — User shopping cart
-//   - orders/{orderId}             — Placed orders
+// Mga Firestore collections na ginagamit:
+//   - products/{productId}              — Mga product listings
+//   - carts/{userId}/items/{productId}  — Shopping cart ng user
+//   - orders/{orderId}                  — Mga placed orders
 //
 // Firebase Storage paths:
 //   - product_images/{userId}/{timestamp}_{filename}
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MarketplaceService {
-  // Private constructor enforces singleton usage.
+  // Private constructor at singleton instance.
+  // Isang instance lang ng MarketplaceService ang gagamitin sa buong app.
   MarketplaceService._internal();
   static final MarketplaceService instance = MarketplaceService._internal();
 
+  // Firestore at Storage instances para sa database at file operations.
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // ─── PRODUCT READ OPERATIONS ────────────────────────────────────────────
+  // ─── PRODUCT READ OPERATIONS (PAGKUHA NG PRODUCTS) ─────────────────
 
-  /// Returns a real-time stream of products from the Firestore "products"
-  /// collection, ordered by creation date (newest first).
+  /// Nire-return ang real-time stream ng products mula sa Firestore
+  /// "products" collection, naka-order by creation date (pinakabago muna).
   ///
-  /// [category] — optional filter. Pass 'All' or null to fetch all products.
+  /// [category] — optional filter. I-pass ang 'All' o null para lahat ng products.
   ///
-  /// The stream automatically emits updates whenever a product is added,
-  /// updated, or removed in Firestore.
+  /// Awtomatikong nagba-broadcast ng updates kapag may na-add, na-update,
+  /// o na-remove na product sa Firestore.
   Stream<List<Product>> getProductsStream({String? category}) {
     Query<Map<String, dynamic>> query = _db
         .collection('products')
@@ -59,8 +61,8 @@ class MarketplaceService {
     );
   }
 
-  /// Paged fetch for products (newest first). [startAfter] is the DateTime of
-  /// the last product from the previous page to continue pagination.
+  /// Paged fetch para sa products (pinakabago muna). [startAfter] ay ang
+  /// DateTime ng last product mula sa previous page para sa pagination.
   Future<List<Product>> getProductsPage({int limit = 20, DateTime? startAfter, String? category}) async {
     Query<Map<String, dynamic>> query = _db.collection('products').orderBy('createdAt', descending: true);
     if (startAfter != null) {
@@ -75,14 +77,15 @@ class MarketplaceService {
     return snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
   }
 
-  /// Fetches a single product document by ID. Returns null if not found.
+  /// Kinukuha ang isang product document by ID. Returns null kung hindi nahanap.
   Future<Product?> getProduct(String productId) async {
     final doc = await _db.collection('products').doc(productId).get();
     if (!doc.exists) return null;
     return Product.fromFirestore(doc);
   }
 
-  /// Basic product search by name or description (prefix match).
+  /// Basic product search by name o description (prefix match).
+  /// Hinahanap sa parehong productName at description fields.
   Future<List<Product>> searchProducts(String query, {int limit = 20}) async {
     final q = query.trim();
     if (q.isEmpty) return [];
@@ -110,15 +113,15 @@ class MarketplaceService {
     return products;
   }
 
-  // ─── IMAGE UPLOAD TO FIREBASE STORAGE ───────────────────────────────────
+  // ─── IMAGE UPLOAD SA FIREBASE STORAGE ────────────────────────────
 
-  /// Uploads a product image to Firebase Storage.
+  /// Nag-a-upload ng product image sa Firebase Storage.
   ///
-  /// Handles both web (imageBytes) and mobile/desktop (imagePath) platforms.
-  /// Images are stored at: product_images/{userId}/{timestamp}_{filename}
+  /// Nag-ha-handle ng parehong web (imageBytes) at mobile/desktop (imagePath).
+  /// Naka-store ang images sa: product_images/{userId}/{timestamp}_{filename}
   ///
-  /// Returns the public download URL of the uploaded image, which is then
-  /// stored in the Firestore product document as [imageUrl].
+  /// Nire-return ang public download URL ng uploaded image, na pagkatapos
+  /// ay ise-store sa Firestore product document bilang [imageUrl].
   Future<String> uploadProductImage({
     String? imagePath, // Mobile/desktop: local file path
     Uint8List? imageBytes, // Web: raw image bytes
@@ -154,15 +157,15 @@ class MarketplaceService {
     return await snapshot.ref.getDownloadURL();
   }
 
-  // ─── PRODUCT WRITE OPERATIONS ───────────────────────────────────────────
+  // ─── PRODUCT WRITE OPERATIONS (PAG-SAVE NG PRODUCTS) ──────────────
 
-  /// Saves a new product listing to the Firestore "products" collection.
+  /// Sine-save ang bagong product listing sa Firestore "products" collection.
   ///
-  /// Called by SellProductScreen after image upload succeeds.
-  /// The [imageUrl] must be the Firebase Storage download URL returned by
+  /// Tinatawag mula sa SellProductScreen pagkatapos successful ang image upload.
+  /// Ang [imageUrl] ay kailangang Firebase Storage download URL na galing sa
   /// [uploadProductImage].
   ///
-  /// Returns the auto-generated Firestore document ID (productId).
+  /// Nire-return ang auto-generated Firestore document ID (productId).
   Future<String> addProduct({
     required String productName,
     required String description,
@@ -195,14 +198,14 @@ class MarketplaceService {
     return docRef.id;
   }
 
-  // ─── CART OPERATIONS ────────────────────────────────────────────────────
+  // ─── CART OPERATIONS (SHOPPING CART) ─────────────────────────────
 
-  /// Adds a product to the user's cart, or increments its quantity if the
-  /// product is already in the cart.
+  /// Nagda-dagdag ng product sa shopping cart ng user, o dina-dagdagan ang
+  /// quantity kung nasa cart na ang product.
   ///
   /// Cart Firestore path: /carts/{userId}/items/{productId}
   ///
-  /// Called from ProductDetailScreen when the user taps "Buy Now".
+  /// Tinatawag mula sa ProductDetailScreen kapag ni-tap ng user ang "Buy Now".
   Future<void> addToCart({
     required String userId,
     required Product product,
@@ -234,18 +237,18 @@ class MarketplaceService {
     }
   }
 
-  // ─── ORDER WRITE OPERATIONS ─────────────────────────────────────────────
+  // ─── ORDER WRITE OPERATIONS (PAG-PLACE NG ORDER) ─────────────────
 
-  /// Creates a new order document in the Firestore "orders" collection.
+  /// Gumagawa ng bagong order document sa Firestore "orders" collection.
   ///
-  /// This is called from CheckoutScreen after the user confirms their purchase
-  /// and all form fields pass validation.
+  /// Tinatawag mula sa CheckoutScreen pagkatapos i-confirm ng user ang purchase
+  /// at lahat ng form fields ay pumasa sa validation.
   ///
-  /// After saving the order, this method removes the product from the user's
-  /// cart to keep the cart state consistent.
+  /// Pagkatapos i-save ang order, awtomatikong tinatanggal ang product
+  /// mula sa cart ng user para consistent ang cart state.
   ///
-  /// Returns the auto-generated orderId, which is passed to
-  /// OrderConfirmationScreen for display.
+  /// Nire-return ang auto-generated orderId, na ipapasa sa
+  /// OrderConfirmationScreen para i-display.
   Future<String> placeOrder({
     required String userId,
     required Product product,

@@ -1,3 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// POST DETAIL SCREEN — Full view ng isang post na may:
+//   • Post content at media (image/video)
+//   • Faith-based reactions (Amen, Pray, Worship, Love)
+//   • Comments section na may real-time updates
+//   • Comment reactions
+//   • Share at save options
+//
+// Ginagamit ang PostService para sa reactions at comments.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
 import '../services/auth_service.dart';
@@ -9,11 +20,12 @@ const List<_ReactionInfo> _postReactions = [
   _ReactionInfo('love', 'Love', Icons.favorite, Color(0xFFE57373)),
 ];
 
+/// Data model para sa isang reaction type (icon + label + color).
 class _ReactionInfo {
-  final String key;
-  final String label;
-  final IconData icon;
-  final Color color;
+  final String key;      // Reaction identifier (e.g. 'amen', 'pray')
+  final String label;    // Display label
+  final IconData icon;   // Icon para sa reaction
+  final Color color;     // Color ng reaction
   const _ReactionInfo(this.key, this.label, this.icon, this.color);
 }
 
@@ -26,8 +38,8 @@ class PostDetailScreen extends StatefulWidget {
 }
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
-  late Post _post;
-  final TextEditingController _ctrl = TextEditingController();
+  late Post _post;                              // Mutable copy ng post para sa real-time updates
+  final TextEditingController _ctrl = TextEditingController(); // Comment input
 
   @override
   void initState() {
@@ -41,6 +53,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     super.dispose();
   }
 
+  /// Kinukuha ang current user's reaction sa post (null kung wala).
   String? get _myReaction {
     final me = AuthService.instance.currentUser.value;
     if (me == null) return null;
@@ -50,12 +63,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     return null;
   }
 
+  /// Binibilang ang total reactions ng post.
   int get _totalReactions {
     var tot = 0;
     for (final v in _post.reactions.values) tot += v.length;
     return tot;
   }
 
+  /// Nagpapakita ng reaction picker modal para pumili ng faith-based reaction.
   void _showReactionPicker() {
     final me = AuthService.instance.currentUser.value;
     if (me == null) {
@@ -98,6 +113,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  /// Nagpo-post ng bagong comment sa post.
+  /// Ini-clear ang text field pagkatapos at nag-sscroll pataas sa comments.
   Future<void> _postComment() async {
     final txt = _ctrl.text.trim();
     if (txt.isEmpty) return;

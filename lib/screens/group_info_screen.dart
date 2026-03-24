@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GROUP INFO SCREEN — Thin wrapper/redirect screen.
+// Nire-redirect lang ang user sa GroupSettingsScreen.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/message_service.dart';
 import 'group_settings_screen.dart';

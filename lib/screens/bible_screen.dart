@@ -1,3 +1,20 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BIBLE SCREEN — Ang main Bible reader ng app.
+// Dito nababasa ang Bible with multiple translations, book/chapter selection,
+// verse search, at verse actions (save, share, highlight, add note).
+//
+// Sub-screens na kasama:
+//   • BibleChaptersScreen — Pag-select ng chapter
+//   • BibleVersesScreen — Pag-display ng verses sa isang chapter
+//   • SavedVersesScreen — Listahan ng mga na-save na verses
+//
+// Features:
+//   • Multi-translation support (KJV, NIV, ESV, etc.)
+//   • Verse search across translations
+//   • Save/highlight/share verses
+//   • Daily encouraging verse
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/bible_service.dart';
@@ -9,6 +26,7 @@ import 'bible_notes_screen.dart';
 // BIBLE SCREEN  (Book list → Chapter grid → Verse reader)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Pangunahing Bible reader screen — nagpapakita ng book list at search.
 class BibleScreen extends StatefulWidget {
   const BibleScreen({super.key});
 
@@ -17,15 +35,15 @@ class BibleScreen extends StatefulWidget {
 }
 
 class _BibleScreenState extends State<BibleScreen> {
-  String _language = 'en';
+  String _language = 'en';           // Kasalukuyang piniling wika ng Bible translation
   List<BibleVersionInfo> _versions = const [];
-  bool _loading = true;
+  bool _loading = true;              // True habang nilo-load ang Bible data
   String? _error;
   String _bookListFilter = 'all';
   bool _doubleCounts = false;
 
-  // Search state
-  bool _searchActive = false;
+  // Search state — para sa keyword search sa buong Biblia
+  bool _searchActive = false;        // True kapag naka-bukas ang search bar
   final TextEditingController _searchCtrl = TextEditingController();
   String _testamentFilter = 'all'; // 'all' | 'ot' | 'nt'
   List<BibleVerse>? _searchResults;
@@ -75,6 +93,7 @@ class _BibleScreenState extends State<BibleScreen> {
     super.dispose();
   }
 
+  /// Ini-initialize ang screen — nilo-load ang available Bible versions.
   Future<void> _init() async {
     if (!mounted) return;
     setState(() {
@@ -101,6 +120,7 @@ class _BibleScreenState extends State<BibleScreen> {
     }
   }
 
+  /// Pina-palitan ang Bible language/version, tapos nilo-load ang bagong version.
   void _setLanguage(String value) {
     if (_language == value) {
       return;
@@ -113,6 +133,7 @@ class _BibleScreenState extends State<BibleScreen> {
     _loadVersion(value);
   }
 
+  /// Tine-trigger ang asset loading para sa napiling language, then nag-re-run ng search kung active.
   Future<void> _loadVersion(String language) async {
     try {
       await BibleService.instance.ensureVersionLoaded(
@@ -148,6 +169,7 @@ class _BibleScreenState extends State<BibleScreen> {
     _searchCtrl.clear();
   });
 
+  /// Nagha-handle ng verse search — nino-normalize ang query bago ipadala sa BibleService.
   Future<void> _runSearch(String q) async {
     if (q.trim().isEmpty) {
       setState(() {
@@ -730,8 +752,9 @@ class _BookTile extends StatelessWidget {
 // Chapter grid
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Screen na nagpapakita ng listahan ng mga chapters sa isang Bible book.
 class BibleChaptersScreen extends StatefulWidget {
-  final int bookNum;
+  final int bookNum;    // Numero ng book (1-based index sa Bible)
   final String bookName;
   final String language;
 
@@ -911,11 +934,12 @@ class _BibleChaptersScreenState extends State<BibleChaptersScreen> {
 // Verses reader
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Screen para sa verse-by-verse na pagbabasa ng isang kabanata.
 class BibleVersesScreen extends StatefulWidget {
   final int bookNum;
   final String bookName;
-  final int chapter;
-  final int totalChapters;
+  final int chapter;         // Kasalukuyang chapter number
+  final int totalChapters;   // Kabuuang bilang ng chapters sa book
   final String language;
 
   const BibleVersesScreen({
@@ -933,10 +957,10 @@ class BibleVersesScreen extends StatefulWidget {
 
 class _BibleVersesScreenState extends State<BibleVersesScreen> {
   late String _language;
-  late int _chapter;
+  late int _chapter;                         // Current chapter na tinitingnan
   List<BibleVersionInfo> _versions = const [];
-  List<BibleVerse>? _verses;
-  Map<int, String> _highlights = {};
+  List<BibleVerse>? _verses;                 // Loaded verses para sa chapter na ito
+  Map<int, String> _highlights = {};         // Verse number → highlight color
   bool _loading = true;
   final ScrollController _scroll = ScrollController();
 
@@ -1912,6 +1936,7 @@ class _DailyVerseCardState extends State<DailyVerseCard> {
 // Saved Verses Screen  (navigate to this from a bookmark icon / profile)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Screen para sa saved/bookmarked verses ng user.
 class SavedVersesScreen extends StatefulWidget {
   final String language;
   const SavedVersesScreen({super.key, this.language = 'en'});
@@ -1921,7 +1946,7 @@ class SavedVersesScreen extends StatefulWidget {
 }
 
 class _SavedVersesScreenState extends State<SavedVersesScreen> {
-  List<BibleVerse>? _verses;
+  List<BibleVerse>? _verses;   // Listahan ng mga na-save na talata
   bool _loading = true;
 
   @override

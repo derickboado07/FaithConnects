@@ -1,3 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKETPLACE FEED — Interleaved feed na nag-mi-mix ng posts at products.
+// Ginagamit ang pagination (infinite scroll) para i-load ang mga items.
+// Ang posts at products ay sine-sort by timestamp at alternating na
+// ini-insert para varied ang feed experience.
+//
+// Key features:
+//   • Lazy loading with scroll listener
+//   • Pull-to-refresh
+//   • Post cards at product cards na magkahaluan
+//   • Navigation papunta sa post detail o product detail
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/post_service.dart';
@@ -10,10 +23,11 @@ import '../services/message_service.dart';
 import '../screens/chat_screen.dart';
 import '../models/product_model.dart';
 
+/// Internal model na nagre-represent ng isang feed item (post o product).
 class _FeedItem {
-  final DateTime ts;
-  final Post? post;
-  final dynamic product; // Product
+  final DateTime ts;      // Timestamp para sa sorting
+  final Post? post;       // Post data (null kung product)
+  final dynamic product; // Product (null kung post)
   _FeedItem({required this.ts, this.post, this.product});
 }
 
@@ -25,15 +39,15 @@ class MarketplaceFeed extends StatefulWidget {
 }
 
 class MarketplaceFeedState extends State<MarketplaceFeed> {
-  final List<Post> _posts = [];
-  final List<Product> _products = [];
-  final List<_FeedItem> _items = [];
+  final List<Post> _posts = [];         // Na-load na posts
+  final List<Product> _products = [];   // Na-load na products
+  final List<_FeedItem> _items = [];    // Merged at sorted feed items
 
-  final ScrollController _sc = ScrollController();
-  bool _loading = false;
-  bool _postHasMore = true;
-  bool _prodHasMore = true;
-  static const int _pageSize = 10;
+  final ScrollController _sc = ScrollController(); // Para sa infinite scroll detection
+  bool _loading = false;     // True habang nag-lo-load ng bagong items
+  bool _postHasMore = true;  // True kung may pa talagang posts na pwede i-load
+  bool _prodHasMore = true;  // True kung may pa talagang products na pwede i-load
+  static const int _pageSize = 10; // Bilang ng items per page
 
   @override
   void initState() {
@@ -49,6 +63,7 @@ class MarketplaceFeedState extends State<MarketplaceFeed> {
     super.dispose();
   }
 
+  /// Nag-me-merge ng posts at products sa iisang sorted list by timestamp.
   List<_FeedItem> _merge() {
     final l = <_FeedItem>[];
     for (final post in _posts) {
@@ -68,17 +83,19 @@ class MarketplaceFeedState extends State<MarketplaceFeed> {
     return l;
   }
 
+  /// Nag-de-detect kung malapit na sa dulo ng scroll para mag-trigger ng load more.
   void _onScroll() {
     if (_sc.position.pixels >= _sc.position.maxScrollExtent - 300 && !_loading && (_postHasMore || _prodHasMore)) {
       _loadMore();
     }
   }
 
+  /// Nag-lo-load ng susunod na batch ng posts at products.
   Future<void> _loadMore() async {
     if (_loading) return;
     _loading = true;
     try {
-      // Fetch next page for posts
+      // I-fetch ang susunod na page ng posts
       String? postStart;
       if (_posts.isNotEmpty) {
         postStart = _posts.last.timestamp;

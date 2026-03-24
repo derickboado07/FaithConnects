@@ -1,17 +1,45 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST SERVICE — Ang service na ito ang nag-ha-handle ng lahat ng
+// post-related operations sa app (social media feed). Mga responsibilidad:
+//   • Pag-create ng posts (with optional image/video media)
+//   • Pag-fetch ng feed (latest posts, paged)
+//   • Real-time streaming ng posts
+//   • Reactions system (like, love, etc.)
+//   • Comments at comment reactions
+//   • Post sharing (reshare/quote)
+//   • Post deletion (with Storage cleanup)
+//   • Post search
+//   • Save/unsave posts
+//   • Upload quota per user (20 uploads per day)
+//
+// Firestore collections:
+//   - posts/{postId}                         — Post documents
+//   - posts/{postId}/comments/{commentId}    — Comments
+//   - users/{userId}/saved/{postId}          — Saved posts
+//   - upload_quotas/{uid}                    — Upload limits
+//
+// Firebase Storage: posts/{postId}/media
+// ─────────────────────────────────────────────────────────────────────────────
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'notification_service.dart'; // For showing notifications to post owner
+import 'notification_service.dart'; // Para sa notifications sa post owner
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODEL — Comment
+// Nagre-represent ng isang comment sa post.
+// May support para sa reactions per comment.
+// ─────────────────────────────────────────────────────────────────────────────
 class Comment {
-  final String id;
-  final String authorId;
-  final String author;
-  final String text;
-  final String ts;
-  final Map<String, List<String>> reactions;
+  final String id;                              // Unique comment ID
+  final String authorId;                        // UID ng nag-comment
+  final String author;                          // Email/display ng nag-comment
+  final String text;                            // Comment text
+  final String ts;                              // Timestamp (ISO 8601)
+  final Map<String, List<String>> reactions;     // Reactions sa comment
 
   Comment({
     required this.id,
@@ -44,27 +72,31 @@ class Comment {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA MODEL — Post
+// Nagre-represent ng isang post sa social feed.
+// May support para sa media (image/video), reactions, comments, at sharing.
+// ─────────────────────────────────────────────────────────────────────────────
 class Post {
-  final String id;
-  final String authorId;
-  final String authorEmail;
-  final String authorAvatarUrl;
-  final String content;
-  final String timestamp;
-  final String? mediaUrl;
-  final String? mediaType; // 'image' or 'video' or null
-  final Map<String, List<String>>
-  reactions; // reaction -> list of user ids/emails
-  final List<Comment> comments;
-  final int commentCount;
+  final String id;                              // Unique post ID
+  final String authorId;                        // UID ng nag-post
+  final String authorEmail;                     // Email ng nag-post
+  final String authorAvatarUrl;                 // Avatar URL ng nag-post
+  final String content;                         // Post text content
+  final String timestamp;                       // Kailan ginawa (ISO 8601)
+  final String? mediaUrl;                       // URL ng attached media (kung meron)
+  final String? mediaType;                      // 'image' o 'video' o null
+  final Map<String, List<String>> reactions;     // reaction → list ng user ids
+  final List<Comment> comments;                 // Mga comments sa post
+  final int commentCount;                       // Bilang ng comments
 
-  // Shared post fields (populated when this post is a share of another)
-  final String? sharedPostId;
-  final String? sharedAuthorEmail;
-  final String? sharedAuthorAvatarUrl;
-  final String? sharedContent;
-  final String? sharedMediaUrl;
-  final String? sharedMediaType;
+  // Shared post fields — populated kapag ito ay reshare ng ibang post.
+  final String? sharedPostId;                   // ID ng original post
+  final String? sharedAuthorEmail;              // Email ng original author
+  final String? sharedAuthorAvatarUrl;          // Avatar ng original author
+  final String? sharedContent;                  // Content ng original post
+  final String? sharedMediaUrl;                 // Media URL ng original post
+  final String? sharedMediaType;                // Media type ng original post
 
   Post({
     required this.id,
@@ -87,8 +119,9 @@ class Post {
   }) : reactions = reactions ?? {},
        comments = comments ?? [];
 
-  bool get isSharedPost => sharedPostId != null;
+  bool get isSharedPost => sharedPostId != null; // True kung reshare ito ng ibang post
 
+  /// Kino-convert ang Post object sa Map para ma-save sa Firestore.
   Map<String, dynamic> toJson() => {
     'id': id,
     'authorId': authorId,
@@ -108,6 +141,7 @@ class Post {
     if (sharedMediaType != null) 'sharedMediaType': sharedMediaType,
   };
 
+  /// Ginagawa ang Post object mula sa Firestore data (Map).
   static Post fromJson(Map<String, dynamic> j) => Post(
     id: j['id'],
     authorId: j['authorId'],
@@ -132,16 +166,23 @@ class Post {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// POST SERVICE CLASS
+// Singleton na nag-ha-handle ng lahat ng post CRUD operations,
+// media uploads, reactions, comments, sharing, at saving.
+// ═══════════════════════════════════════════════════════════════════════════
 class PostService {
-  PostService._internal();
-  static final PostService instance = PostService._internal();
+  PostService._internal(); // Private constructor para sa Singleton pattern
+  static final PostService instance = PostService._internal(); // Global instance
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;   // Firestore reference
+  final FirebaseStorage _storage = FirebaseStorage.instance;  // Storage reference
 
-  // Simple per-user upload quota to limit uploads and avoid unexpected overage.
-  // Tracks uploads per rolling window (defaults to daily). Uses collection
-  // `upload_quotas/{uid}` with fields: `count` (int) and `windowStart` (Timestamp).
+  // ─── UPLOAD QUOTA ─────────────────────────────────────────────────────
+  // Simple per-user upload quota para i-limit ang uploads at iwasan ang
+  // unexpected overage sa Firebase Storage. Nag-ttrack ng uploads per
+  // rolling window (default: 1 araw). Ginagamit ang Firestore collection
+  // `upload_quotas/{uid}` na may fields: `count` (int) at `windowStart` (Timestamp).
   Future<void> _checkAndIncrementUploadQuota(
     String uid, {
     int limit = 20,
@@ -175,11 +216,15 @@ class PostService {
     });
   }
 
+  /// Init method — wala pang local cache; Firestore ang gamit.
   Future<void> init() async {
     // Nothing to cache locally; Firestore will be used.
     return;
   }
 
+  // ─── FEED — FETCH & STREAM ────────────────────────────────────────────
+  /// Kino-fetch ang latest posts mula sa Firestore (default: 50).
+  /// Nilo-load din ang mga comments at nireresolve ang missing avatars.
   Future<List<Post>> fetchFeed({int limit = 50}) async {
     final snap = await _db
         .collection('posts')
@@ -188,7 +233,7 @@ class PostService {
         .get();
     final posts = snap.docs.map((d) => Post.fromJson(d.data())).toList();
 
-    // Batch-fetch author avatars for posts that don't have one stored yet.
+    // Batch-fetch ng author avatars para sa posts na walang avatar.
     final missingAvatarIds = posts
         .where((p) => p.authorAvatarUrl.isEmpty && p.authorId.isNotEmpty)
         .map((p) => p.authorId)
@@ -205,7 +250,7 @@ class PostService {
       } catch (_) {}
     }
 
-    // Load comments and apply cached avatars.
+    // I-load ang comments at i-apply ang cached avatars.
     for (var i = 0; i < posts.length; i++) {
       final p = posts[i];
       final cm = await _loadCommentsForPost(p.id);
@@ -228,9 +273,8 @@ class PostService {
     return posts;
   }
 
-  /// Fetch a paged set of posts ordered by 'ts' (newest first).
-  /// [startAfterTs] should be the ISO8601 timestamp of the last item
-  /// from the previous page (for descending order use the last item's ts).
+  /// Paged na pag-fetch ng posts (newest first).
+  /// Gamitin ang [startAfterTs] — ISO8601 timestamp ng last item sa previous page.
   Future<List<Post>> fetchFeedPaged({int limit = 20, String? startAfterTs}) async {
     Query<Map<String, dynamic>> query = _db.collection('posts').orderBy('ts', descending: true);
     if (startAfterTs != null && startAfterTs.isNotEmpty) {
@@ -241,7 +285,7 @@ class PostService {
     return posts;
   }
 
-  /// Real-time stream of feed posts.
+  /// Real-time stream ng feed posts — automatic update kapag may bago.
   Stream<List<Post>> streamFeed({int limit = 50}) {
     return _db
         .collection('posts')
@@ -251,6 +295,7 @@ class PostService {
         .map((snap) => snap.docs.map((d) => Post.fromJson(d.data())).toList());
   }
 
+  /// Kukunin ang isang post by ID (kasama ang comments).
   Future<Post?> getById(String id) async {
     final doc = await _db.collection('posts').doc(id).get();
     if (!doc.exists) return null;
@@ -270,9 +315,10 @@ class PostService {
     );
   }
 
-  /// Basic search over posts by content or author (prefix match).
-  /// Note: Firestore does not provide full-text search; this does prefix
-  /// matching on the 'content' and 'author' fields and merges results.
+  // ─── SEARCH ─────────────────────────────────────────────────────────
+  /// Basic search sa posts by content o author (prefix match).
+  /// Note: Firestore walang built-in full-text search; prefix matching lang
+  /// sa 'content' at 'author' fields tapos merge results.
   Future<List<Post>> searchPosts(String query, {int limit = 20}) async {
     final q = query.trim();
     if (q.isEmpty) return [];
@@ -302,9 +348,10 @@ class PostService {
     return posts;
   }
 
-  // Upload media either from a local file path (mobile/desktop) or from
-  // raw bytes (web). If [data] is provided it will be uploaded using
-  // [filename], otherwise [localPath] is used.
+  // ─── MEDIA UPLOAD ─────────────────────────────────────────────────────
+  // Nag-a-upload ng media either mula sa local file path (mobile/desktop)
+  // o mula sa raw bytes (web). Kapag may [data], gagamitin ang [filename];
+  // kung wala, gagamitin ang [localPath].
   Future<String?> _uploadMedia(
     String postId, {
     String? localPath,
@@ -381,6 +428,9 @@ class PostService {
     }
   }
 
+  // ─── ADD POST ─────────────────────────────────────────────────────────
+  /// Gumagawa ng bagong post (with optional media upload).
+  /// Nag-che-check muna ng upload quota bago mag-proceed.
   Future<void> addPost(
     String authorId,
     String authorEmail,
@@ -391,7 +441,7 @@ class PostService {
     String? mediaFilename,
     String? mediaType,
   }) async {
-    // Enforce per-user quota to avoid accidental overage. Throws if limit exceeded.
+    // Enforce per-user quota para iwasan ang accidental overage. Mag-throw kung exceeded.
     try {
       await _checkAndIncrementUploadQuota(
         authorId,
@@ -446,8 +496,10 @@ class PostService {
     debugPrint('PostService: post created successfully');
   }
 
-  /// Creates a new post that is a share of [originalPost].
-  /// [content] is the sharer's optional caption.
+  // ─── SHARED POST ─────────────────────────────────────────────────────
+  /// Gumagawa ng share/reshare ng existing post.
+  /// Kinokopya ang original post data sa new post document.
+  /// [content] ay ang optional caption ng sharer.
   Future<void> addSharedPost({
     required String authorId,
     required String authorEmail,
@@ -489,7 +541,7 @@ class PostService {
     await docRef.set(post.toJson());
     debugPrint('PostService: shared post created successfully');
 
-    // Notify the original post owner if someone else shared their post
+    // I-notify ang original post owner kung may nag-share
     if (originalPost.authorId != authorId) {
       try {
         await NotificationService.instance.showNotification(
@@ -504,6 +556,8 @@ class PostService {
     }
   }
 
+  // ─── COMMENTS ─────────────────────────────────────────────────────────
+  /// Nilo-load ang lahat ng comments para sa isang post.
   Future<List<Comment>> _loadCommentsForPost(String postId) async {
     final snap = await _db
         .collection('posts')
@@ -514,7 +568,7 @@ class PostService {
     return snap.docs.map((d) => Comment.fromJson(d.data())).toList();
   }
 
-  /// Real-time stream of comments for a post.
+  /// Real-time stream ng comments para sa isang post.
   Stream<List<Comment>> streamComments(String postId) {
     return _db
         .collection('posts')
@@ -530,8 +584,9 @@ class PostService {
         });
   }
 
-  /// Toggle a reaction on a comment. Uses a per-comment `reactions` map
-  /// where keys are reaction ids and values are lists of user ids.
+  // ─── COMMENT REACTIONS ────────────────────────────────────────────────
+  /// Toggle ng reaction sa isang comment. Gumagamit ng per-comment `reactions` map
+  /// kung saan keys ang reaction ids at values ang lists ng user ids.
   Future<void> toggleCommentReaction(
     String postId,
     String commentId,
@@ -565,7 +620,7 @@ class PostService {
       tx.update(docRef, {'reactions': updated});
     });
 
-    // Notify comment author when someone adds a reaction to their comment
+    // I-notify ang comment author kapag may nag-react sa comment nila
     if (reactionAdded && commentAuthorId != null && commentAuthorId != userId) {
       try {
         final userDoc = await _db.collection('users').doc(userId).get();
@@ -587,6 +642,9 @@ class PostService {
     }
   }
 
+  // ─── USER POSTS ──────────────────────────────────────────────────────
+  /// Kinukuha ang lahat ng posts ng isang user (by email o userId).
+  /// Kasama na ang comments ng bawat post.
   Future<List<Post>> getPostsForUser(String email, {String? userId}) async {
     // Query by authorId if available (avoids composite index requirement),
     // otherwise fall back to querying by author email.
@@ -617,7 +675,7 @@ class PostService {
     return posts;
   }
 
-  /// Real-time stream of posts for a specific user.
+  /// Real-time stream ng posts para sa specific user.
   Stream<List<Post>> streamPostsForUser(String userId) {
     return _db
         .collection('posts')
@@ -630,7 +688,8 @@ class PostService {
         });
   }
 
-  /// Delete a post document and any associated storage media under posts/{postId}
+  // ─── DELETE POST ─────────────────────────────────────────────────────
+  /// Binu-bura ang post document at mga associated storage media sa posts/{postId}.
   Future<void> deletePost(String postId) async {
     // Delete storage objects under posts/{postId}
     try {
@@ -664,6 +723,9 @@ class PostService {
     }
   }
 
+  // ─── POST REACTIONS ───────────────────────────────────────────────────
+  /// Toggle ng reaction sa post (isang reaction lang per user per post).
+  /// Kapag nag-react ulit ng same reaction, tatanggalin. Kapag ibang reaction, papalitan.
   Future<void> toggleReaction(
     String postId,
     String reaction,
@@ -689,11 +751,11 @@ class PostService {
             (k, v) => MapEntry(k, List<String>.from(v as List)),
           ) ??
           {};
-      // Check whether user already has this exact reaction (toggle-off scenario)
+      // Check kung naka-react na ang user ng same reaction (toggle-off scenario)
       final existingList = reactions[reaction];
       final wasReacted =
           existingList != null && (existingList as List).contains(userId);
-      // Remove user from ALL other reactions first (one reaction per post)
+      // Tanggalin muna ang user sa LAHAT ng ibang reactions (isang reaction lang per post)
       for (final key in reactions.keys.toList()) {
         reactions[key]?.remove(userId);
       }
@@ -709,7 +771,7 @@ class PostService {
       'PostService: reaction toggled successfully (added=$reactionAdded)',
     );
 
-    // Notify post owner when someone ADDS a reaction (not on toggle-off)
+    // I-notify ang post owner kapag may nag-ADD ng reaction (hindi kapag toggle-off)
     if (reactionAdded && postOwnerId != null && postOwnerId != userId) {
       try {
         final userDoc = await _db.collection('users').doc(userId).get();
@@ -729,6 +791,9 @@ class PostService {
     }
   }
 
+  // ─── ADD COMMENT ─────────────────────────────────────────────────────
+  /// Nagdadagdag ng bagong comment sa isang post.
+  /// Ina-increment din ang commentsCount sa post document.
   Future<void> addComment(
     String postId,
     String authorId,
@@ -749,7 +814,7 @@ class PostService {
       ts: DateTime.now().toIso8601String(),
     );
     await doc.set(comment.toJson());
-    // Increment comment count (best-effort — don't fail the comment if this fails)
+    // Increment comment count (best-effort — hindi pa-fail ang comment kung magka-error dito)
     try {
       await _db.collection('posts').doc(postId).update({
         'commentsCount': FieldValue.increment(1),
@@ -759,7 +824,7 @@ class PostService {
     }
     debugPrint('PostService: comment added successfully');
 
-    // Notify the post owner if someone else commented
+    // I-notify ang post owner kung may ibang nag-comment
     try {
       final postSnap = await _db.collection('posts').doc(postId).get();
       final postData = postSnap.data();
@@ -776,11 +841,14 @@ class PostService {
     }
   }
 
+  /// Placeholder para sa share via share_plus (handled sa UI layer).
   Future<void> sharePost(String postId) async {
     // Leaving implementation to UI layer using share_plus; placeholder here
     return;
   }
 
+  // ─── SAVED POSTS ─────────────────────────────────────────────────────
+  /// Chinechecheck kung naka-save na ba ang post ng user.
   Future<bool> isSaved(String postId, String userId) async {
     final doc = await _db
         .collection('users')
@@ -791,6 +859,8 @@ class PostService {
     return doc.exists;
   }
 
+  /// Toggle ng save/unsave ng post.
+  /// Kung naka-save na, burahin; kung hindi pa, i-save.
   Future<void> toggleSave(String postId, String userId) async {
     final docRef = _db
         .collection('users')

@@ -1,7 +1,22 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BIBLE NOTES SCREEN — Screen para sa Bible note-taking system.
+// Pwede mag-create, edit, at delete ng notes na naka-organize sa folders.
+// May rich text editor at folder management (add/delete/rename folders).
+//
+// Features:
+//   • Folder-based note organization (default: 'General')
+//   • Full CRUD ng notes (Create, Read, Update, Delete)
+//   • Rich text editor para sa note content
+//   • Notes na naka-link sa specific Bible verses
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 
 import '../services/bible_service.dart';
 
+// ─── Theme-aware color helpers ───────────────────────────────────────────
+// Mga helper functions na nag-re-return ng tamang color
+// depende kung dark mode o light mode ang current theme.
 const _gold = Color(0xFFD4AF37);
 
 Color _bg(BuildContext c) =>
@@ -21,6 +36,8 @@ Color _onBgMuted(BuildContext c) =>
 Color _onBgFaint(BuildContext c) =>
     Theme.of(c).brightness == Brightness.dark ? Colors.white24 : const Color(0xFFBDBDBD);
 
+/// Main screen para sa Bible notes management.
+/// Nagdi-display ng folders at notes, may CRUD operations.
 class BibleNotesScreen extends StatefulWidget {
   const BibleNotesScreen({super.key});
 
@@ -30,10 +47,10 @@ class BibleNotesScreen extends StatefulWidget {
 
 class _BibleNotesScreenState extends State<BibleNotesScreen> {
 
-  List<Map<String, dynamic>> _notes = [];
-  List<String> _folders = ['General'];
-  String? _activeFolder;
-  bool _loading = true;
+  List<Map<String, dynamic>> _notes = [];       // Lahat ng notes ng user
+  List<String> _folders = ['General'];           // Mga note folders
+  String? _activeFolder;                         // Currently selected folder (null = show all)
+  bool _loading = true;                          // Loading state
 
   @override
   void initState() {
@@ -41,6 +58,7 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     _load();
   }
 
+  /// I-load ang lahat ng notes at folders mula sa BibleService.
   Future<void> _load() async {
     final notes = await BibleService.instance.getNotes();
     final folders = await BibleService.instance.getNoteFolders();
@@ -54,10 +72,12 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     });
   }
 
+  /// Bilang ng notes sa isang folder.
   int _folderCount(String folder) {
     return _notes.where((note) => note['folder'] == folder).length;
   }
 
+  /// Mga notes na naka-filter by active folder.
   List<Map<String, dynamic>> get _activeFolderNotes {
     if (_activeFolder == null) {
       return _notes;
@@ -65,6 +85,7 @@ class _BibleNotesScreenState extends State<BibleNotesScreen> {
     return _notes.where((note) => note['folder'] == _activeFolder).toList();
   }
 
+  /// Dialog para mag-add ng bagong folder.
   Future<void> _addFolder() async {
     final controller = TextEditingController();
     final name = await showDialog<String>(

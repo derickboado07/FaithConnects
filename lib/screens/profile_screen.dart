@@ -1,3 +1,19 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PROFILE SCREEN — Ang sariling profile page ng current user.
+// Features:
+//   • Avatar at banner/cover photo upload
+//   • User info display (name, email, bio, member since)
+//   • Stats (posts count, followers, following)
+//   • User's own posts feed
+//   • Edit profile navigation
+//   • Share profile link
+//   • Theme toggle (dark/light)
+//   • Logout button
+//   • Settings options
+//
+// Ginagamit ang AuthService para sa user data at PostService para sa posts.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +29,7 @@ import 'chat_screen.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Sariling profile screen ng current user.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -26,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
   }
 
+  /// Pumipili ng new avatar mula sa gallery at ina-upload via AuthService.
   Future<void> _pickAndUploadAvatar() async {
     final user = AuthService.instance.currentUser.value;
     if (user == null) return;
@@ -64,6 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Pumipili ng new banner/cover photo mula sa gallery at ina-upload.
   Future<void> _pickAndUploadBanner() async {
     final user = AuthService.instance.currentUser.value;
     if (user == null) return;
@@ -102,6 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Nagpapakita ng in-progress upload SnackBar habang nag-a-upload.
   void _showUploadSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -127,6 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Nagko-copy ng profile link sa clipboard at nagpapakita ng confirmation snackbar.
   void _shareProfile(AuthUser user) async {
     final url =
         'https://faithconnect.page.link/u/${Uri.encodeComponent(user.email)}';

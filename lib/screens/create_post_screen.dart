@@ -1,3 +1,10 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CREATE POST SCREEN — Screen para gumawa ng bagong community post.
+// May caption/text field, image/video upload (mula gallery o camera),
+// hashtag tagging, at submission sa PostService.
+// Supports both mobile (File) at web (Uint8List bytes) media.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,11 +20,11 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-  final TextEditingController _captionCtrl = TextEditingController();
-  XFile? _media;
-  Uint8List? _mediaBytes;
-  String? _mediaType;
-  bool _submitting = false;
+  final TextEditingController _captionCtrl = TextEditingController(); // Caption/text ng post
+  XFile? _media;                  // Napiling media file (mobile)
+  Uint8List? _mediaBytes;         // Bytes ng media (web)
+  String? _mediaType;             // 'image' o 'video'
+  bool _submitting = false;       // True habang nag-su-submit ang post
   final ImagePicker _picker = ImagePicker();
 
   static const _gold = Color(0xFFD4AF37);
@@ -31,9 +38,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     });
   }
 
-  final List<String> _tags = [];
+  final List<String> _tags = [];   // Mga hashtag na naka-attach sa post
 
-  bool get _canShare =>
+  bool get _canShare =>            // True kung pwede nang mag-submit (may content)
       !_submitting && (_media != null || _captionCtrl.text.trim().isNotEmpty);
 
   @override
@@ -42,10 +49,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  // 10 MB limit for images, 100 MB for videos (must match storage.rules).
+  // 10 MB limit para sa images, 100 MB para sa videos (dapat match ang storage.rules).
   static const int _maxImageBytes = 10 * 1024 * 1024;
   static const int _maxVideoBytes = 100 * 1024 * 1024;
 
+  /// Pumipili ng image mula sa gallery (mobile: ImagePicker, web: file bytes).
   Future<void> _pickImage() async {
     try {
       final file = await _picker.pickImage(
@@ -70,6 +78,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  /// Pumipili ng video mula sa gallery (mobile: ImagePicker, web: file bytes).
   Future<void> _pickVideo() async {
     try {
       final file = await _picker.pickVideo(source: ImageSource.gallery);
@@ -106,6 +115,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
+  /// Nagpapakita ng hashtag dialog para magdagdag ng tags sa post.
   void _showTagDialog() {
     final tagCtrl = TextEditingController();
     showModalBottomSheet(
@@ -212,6 +222,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  /// Nagdadagdag ng hashtag sa listahan (after validation at dedup).
   void _addTag(TextEditingController tagCtrl, BuildContext ctx) {
     final tag = tagCtrl.text.trim();
     if (tag.isEmpty) return;
@@ -225,6 +236,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     Navigator.pop(ctx);
   }
 
+  /// Helper para magpakita ng SnackBar message.
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -236,6 +248,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  /// Nag-va-validate ng form at nag-su-submit ng bagong post via PostService.
   Future<void> _submit() async {
     if (!_canShare) return;
     final user = AuthService.instance.currentUser.value;

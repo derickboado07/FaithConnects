@@ -1,3 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC PROFILE SCREEN — Profile page ng ibang users.
+// Nakikita ng current user ang profile ng iba na may:
+//   • Avatar, banner, name, bio
+//   • Follower/following counts
+//   • Follow/unfollow toggle button
+//   • User's posts feed
+//   • Message button para mag-start ng conversation
+//   • Online/offline status indicator
+//
+// Ginagamit ang AuthService para sa follow status at PostService para sa posts.
+// ═══════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/post_service.dart';
@@ -8,14 +21,16 @@ import 'chat_screen.dart';
 const _gold = Color(0xFFD4AF37);
 const _goldLight = Color(0xFFF5E6B3);
 
+/// Helper para i-format ang counts (e.g. 1500 -> '1.5K', 1000000 -> '1.0M').
 String _fmtCount(int n) {
   if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
   if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
   return '$n';
 }
 
+/// Profile screen para sa ibang users (hindi sariling profile).
 class PublicProfileScreen extends StatefulWidget {
-  final String userId;
+  final String userId; // UID ng user na tini-tingnan
   const PublicProfileScreen({super.key, required this.userId});
 
   @override
@@ -23,13 +38,13 @@ class PublicProfileScreen extends StatefulWidget {
 }
 
 class _PublicProfileScreenState extends State<PublicProfileScreen> {
-  bool _isFollowing = false;
-  bool _followLoading = false;
-  // Store streams as fields so they survive outer-StreamBuilder rebuilds.
-  late final Stream<AuthUser?> _userStream;
-  late final Stream<List<Post>> _postsStream;
-  late final Stream<int> _followersStream;
-  late final Stream<int> _followingStream;
+  bool _isFollowing = false;     // True kung sinusundan na ng current user ang profile na ito
+  bool _followLoading = false;   // True habang nag-to-toggle ng follow
+  // Sine-store ang streams bilang fields para manatiling alive kahit na mag-rebuild ang outer StreamBuilder.
+  late final Stream<AuthUser?> _userStream;    // Real-time stream ng user data
+  late final Stream<List<Post>> _postsStream;  // Real-time stream ng user's posts
+  late final Stream<int> _followersStream;     // Real-time followers count
+  late final Stream<int> _followingStream;     // Real-time following count
 
   @override
   void initState() {
@@ -41,11 +56,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     _checkFollowing();
   }
 
+  /// Niche-check kung sinusundan na ba ng current user ang profile na ito.
   Future<void> _checkFollowing() async {
     final following = await AuthService.instance.isFollowingById(widget.userId);
     if (mounted) setState(() => _isFollowing = following);
   }
 
+  /// Nag-to-toggle ng follow/unfollow. Nire-refresh ang _isFollowing state pagkatapos.
   Future<void> _toggleFollow() async {
     if (_followLoading) return;
     setState(() => _followLoading = true);
