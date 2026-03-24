@@ -20,10 +20,9 @@ import 'package:flutter/services.dart';
 
 enum RepeatMode { none, all, one }
 
-/// Data model para sa isang song — may title, artist, at asset path.
 class Song {
   final String title;       // Pangalan ng song
-  final String artist;      // Artist/singer ng song
+  final String artist;      // Artist ng song
   final String assetPath;   // Path sa asset file o device file
   /// True kapag pinili ng user mula sa device niya, hindi bundled asset.
   final bool isUserAdded;
