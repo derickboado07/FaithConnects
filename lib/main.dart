@@ -5110,7 +5110,47 @@ class _MarketplaceProductCard extends StatelessWidget {
                       ),
               ),
             ),
-            // Product Info\n            Padding(\n              padding: const EdgeInsets.all(12),\n              child: Column(\n                crossAxisAlignment: CrossAxisAlignment.start,\n                children: [\n                  Text(\n                    product.productName,\n                    style: const TextStyle(\n                      fontSize: 13,\n                      fontWeight: FontWeight.w600,\n                      color: Color(0xFF333333),\n                    ),\n                    maxLines: 2,\n                    overflow: TextOverflow.ellipsis,\n                  ),\n                  const SizedBox(height: 8),\n                  Text(\n                    '₱${product.price.toStringAsFixed(2)}',\n                    style: const TextStyle(\n                      fontSize: 15,\n                      fontWeight: FontWeight.bold,\n                      color: Color(0xFFD4AF37),\n                    ),\n                  ),\n                  const SizedBox(height: 8),\n                  SizedBox(\n                    width: double.infinity,\n                    child: Container(\n                      padding: const EdgeInsets.symmetric(vertical: 8),\n                      decoration: BoxDecoration(\n                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),\n                        borderRadius: BorderRadius.circular(8),\n                        border: Border.all(color: const Color(0xFFD4AF37)),\n                      ),\n                      child: const Text(\n                        'View',\n                        textAlign: TextAlign.center,\n                        style: TextStyle(\n                          fontSize: 12,\n                          fontWeight: FontWeight.w600,
+            // Product Info
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.productName,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF333333),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '₱${product.price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFD4AF37),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFD4AF37)),
+                      ),
+                      child: const Text(
+                        'View',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: Color(0xFFD4AF37),
                         ),
                       ),
